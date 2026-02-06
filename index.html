@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
 </head>
 <body>
     <!-- Access Key Landing Page -->
@@ -25,7 +26,21 @@
     </div>
 
     <!-- Full-Screen Video Container -->
-    <div id="video-container" class="hidden"></div>
+    <div id="video-container" class="hidden">
+        <!-- Transcription Toggle Button -->
+        <button id="stt-toggle" class="stt-toggle hidden" title="Toggle Speech-to-Text">
+            <span id="stt-icon">📝</span>
+        </button>
+        
+        <!-- Transcription Feed -->
+        <div id="transcript-feed" class="transcript-feed hidden">
+            <div class="transcript-header">
+                <span>TRANSCRIPTION</span>
+                <button id="clear-transcript" class="clear-btn">CLEAR</button>
+            </div>
+            <div id="transcript-content" class="transcript-content"></div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

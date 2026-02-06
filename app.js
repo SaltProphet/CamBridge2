@@ -17,6 +17,9 @@ const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.en
 
 // Application state
 let dailyCall = null;
+let deepgramSocket = null;
+let mediaRecorder = null;
+let isTranscriptionActive = false;
 
 // DOM Elements
 const gatekeeper = document.getElementById('gatekeeper');
@@ -24,6 +27,11 @@ const videoContainer = document.getElementById('video-container');
 const accessKeyInput = document.getElementById('access-key');
 const unlockBtn = document.getElementById('unlock-btn');
 const errorMessage = document.getElementById('error-message');
+const sttToggle = document.getElementById('stt-toggle');
+const sttIcon = document.getElementById('stt-icon');
+const transcriptFeed = document.getElementById('transcript-feed');
+const transcriptContent = document.getElementById('transcript-content');
+const clearTranscriptBtn = document.getElementById('clear-transcript');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -100,8 +108,132 @@ function startCall() {
     
     // Join the room
     dailyCall.join({ url: DAILY_URL })
+        .then(() => {
+            // Show STT controls if Deepgram key is configured
+            if (DEEPGRAM_KEY) {
+                sttToggle.classList.remove('hidden');
+                initializeSTTControls();
+            }
+        })
         .catch(error => {
             console.error('Failed to join room:', error);
             errorMessage.textContent = 'Failed to join video room';
         });
+}
+
+// Initialize Speech-to-Text controls
+function initializeSTTControls() {
+    sttToggle.addEventListener('click', toggleTranscription);
+    clearTranscriptBtn.addEventListener('click', clearTranscript);
+}
+
+// Toggle transcription on/off
+async function toggleTranscription() {
+    if (!isTranscriptionActive) {
+        await startTranscription();
+    } else {
+        stopTranscription();
+    }
+}
+
+// Start Deepgram transcription
+async function startTranscription() {
+    if (!DEEPGRAM_KEY) {
+        console.error('Deepgram API key not configured');
+        return;
+    }
+
+    try {
+        // Get audio stream from user's microphone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Connect to Deepgram WebSocket
+        const wsUrl = `wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&language=en`;
+        deepgramSocket = new WebSocket(wsUrl, ['token', DEEPGRAM_KEY]);
+
+        deepgramSocket.onopen = () => {
+            console.log('Deepgram connection opened');
+            isTranscriptionActive = true;
+            sttToggle.classList.add('active');
+            transcriptFeed.classList.remove('hidden');
+
+            // Start recording audio
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm'
+            });
+
+            mediaRecorder.addEventListener('dataavailable', (event) => {
+                if (event.data.size > 0 && deepgramSocket.readyState === WebSocket.OPEN) {
+                    deepgramSocket.send(event.data);
+                }
+            });
+
+            mediaRecorder.start(250); // Send data every 250ms
+        };
+
+        deepgramSocket.onmessage = (message) => {
+            const data = JSON.parse(message.data);
+            if (data.channel && data.channel.alternatives[0]) {
+                const transcript = data.channel.alternatives[0].transcript;
+                if (transcript && transcript.trim().length > 0) {
+                    addTranscriptLine(transcript, 'you');
+                }
+            }
+        };
+
+        deepgramSocket.onerror = (error) => {
+            console.error('Deepgram error:', error);
+            stopTranscription();
+        };
+
+        deepgramSocket.onclose = () => {
+            console.log('Deepgram connection closed');
+            stopTranscription();
+        };
+
+    } catch (error) {
+        console.error('Failed to start transcription:', error);
+    }
+}
+
+// Stop transcription
+function stopTranscription() {
+    isTranscriptionActive = false;
+    sttToggle.classList.remove('active');
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+
+    if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+        deepgramSocket.close();
+    }
+
+    mediaRecorder = null;
+    deepgramSocket = null;
+}
+
+// Add transcript line to feed
+function addTranscriptLine(text, speaker) {
+    const line = document.createElement('div');
+    line.className = `transcript-line ${speaker}`;
+    
+    const speakerSpan = document.createElement('span');
+    speakerSpan.className = 'speaker';
+    speakerSpan.textContent = speaker === 'you' ? '[YOU]' : '[REMOTE]';
+    
+    const textSpan = document.createElement('span');
+    textSpan.textContent = text;
+    
+    line.appendChild(speakerSpan);
+    line.appendChild(textSpan);
+    
+    transcriptContent.appendChild(line);
+    transcriptContent.scrollTop = transcriptContent.scrollHeight;
+}
+
+// Clear transcript
+function clearTranscript() {
+    transcriptContent.innerHTML = '';
 }
