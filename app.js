@@ -441,8 +441,16 @@ function sendGhostMessage() {
 }
 
 function sanitizeGhostMessage(text) {
-    // Remove any HTML tags and limit length
-    const sanitized = text.replace(/<[^>]*>/g, '').substring(0, 200);
+    // More comprehensive sanitization to prevent XSS
+    // Remove ALL HTML-like tags and entities, limit length
+    let sanitized = text
+        .replace(/<[^>]*>/g, '')  // Remove tags
+        .replace(/</g, '')        // Remove < 
+        .replace(/>/g, '')        // Remove >
+        .replace(/&/g, '')        // Remove &
+        .replace(/"/g, '')        // Remove quotes
+        .replace(/'/g, '')        // Remove single quotes
+        .substring(0, 200);       // Limit length
     return sanitized;
 }
 
