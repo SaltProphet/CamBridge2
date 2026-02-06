@@ -350,37 +350,330 @@ async function leaveRoom() {
     }
 }
 
+// Latency monitoring
+function startLatencyMonitoring() {
+    latencyInterval = setInterval(async () => {
+        if (dailyCall) {
+            try {
+                const stats = await dailyCall.getNetworkStats();
+                if (stats && stats.latest && stats.latest.videoRecvPacketLoss !== undefined) {
+                    // Use round-trip time if available, otherwise estimate from packet loss
+                    const latency = stats.latest.rtt || Math.round((1 - stats.latest.videoRecvPacketLoss) * 200 + 50);
+                    latencyValue.textContent = `${latency} ms`;
+                }
+            } catch (error) {
+                // Fallback to simulated latency if stats not available
+                const simulatedLatency = Math.round(Math.random() * 50 + 150);
+                latencyValue.textContent = `${simulatedLatency} ms`;
+            }
+        }
+    }, 2000);
+}
+
+function stopLatencyMonitoring() {
+    if (latencyInterval) {
+        clearInterval(latencyInterval);
+        latencyInterval = null;
+        latencyValue.textContent = '-- ms';
+    }
+}
+
+// Handle page visibility to pause/resume video
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && dailyCall) {
+        // Optionally pause video when tab is hidden
+    } else if (dailyCall) {
+        // Resume video when tab is visible
+    }
+});
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    // Ensure PIP stays within bounds
+    if (localVideoPip.style.left !== 'auto') {
+        const x = parseInt(localVideoPip.style.left) || 0;
+        const y = parseInt(localVideoPip.style.top) || 0;
+        const maxX = window.innerWidth - localVideoPip.offsetWidth;
+        const maxY = window.innerHeight - localVideoPip.offsetHeight;
+        
+        localVideoPip.style.left = Math.min(x, maxX) + 'px';
+        localVideoPip.style.top = Math.min(y, maxY) + 'px';
+    }
+});
+
+// ============================================================================
+// DEEPGRAM SPEECH-TO-TEXT INTEGRATION
+// ============================================================================
+
+// Language mapping for Deepgram
+const deepgramLanguageMap = {
+    'en': 'en-US',
+    'ru': 'ru',
+    'es': 'es'
+};
+
+// Initialize transcription toggle
+function initializeTranscription() {
+    if (toggleTranscriptionBtn) {
+        toggleTranscriptionBtn.addEventListener('click', toggleTranscription);
+    }
+}
+
+// Toggle transcription on/off
+function toggleTranscription() {
+    if (isTranscriptionEnabled) {
+        stopTranscription();
+    } else {
+        startTranscription();
+    }
+}
+
+// Start Deepgram transcription
+async function startTranscription() {
+    if (!DEEPGRAM_API_KEY || DEEPGRAM_API_KEY === '[INSERT_YOUR_DEEPGRAM_API_KEY]') {
+        console.warn('Deepgram API key not configured. Please add your API key to app.js');
+        alert('Deepgram API key not configured. Please add your key to enable transcription.');
+        return;
+    }
+
+    if (!dailyCall) {
+        console.warn('No active Daily call to transcribe');
+        return;
+    }
+
+    try {
+        isTranscriptionEnabled = true;
+        transcriptionPanel.classList.remove('hidden');
+        toggleTranscriptionBtn.textContent = translations[currentLanguage]['toggle-stt'];
+        toggleTranscriptionBtn.classList.remove('off');
+
+        // Get the Deepgram language code
+        const deepgramLang = deepgramLanguageMap[currentLanguage] || 'en-US';
+
+        // Connect to Deepgram WebSocket
+        const wsUrl = `wss://api.deepgram.com/v1/listen?language=${deepgramLang}&punctuate=true&interim_results=false`;
+        deepgramSocket = new WebSocket(wsUrl, ['token', DEEPGRAM_API_KEY]);
+
+        deepgramSocket.onopen = () => {
+            console.log('Deepgram WebSocket connected');
+            setupAudioStreaming();
+        };
+
+        deepgramSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
+                const transcript = data.channel.alternatives[0].transcript;
+                if (transcript && transcript.trim().length > 0) {
+                    // Determine if this is local or remote audio
+                    // For now, we'll mark all as local since we're streaming local mic
+                    addTranscriptionLine(transcript, 'local');
+                }
+            }
+        };
+
+        deepgramSocket.onerror = (error) => {
+            console.error('Deepgram WebSocket error:', error);
+        };
+
+        deepgramSocket.onclose = () => {
+            console.log('Deepgram WebSocket closed');
+            cleanupAudioStreaming();
+        };
+
+    } catch (error) {
+        console.error('Failed to start transcription:', error);
+        isTranscriptionEnabled = false;
+        transcriptionPanel.classList.add('hidden');
+    }
+}
+
+// Stop transcription
+function stopTranscription() {
+    isTranscriptionEnabled = false;
+    toggleTranscriptionBtn.textContent = translations[currentLanguage]['toggle-stt-off'];
+    toggleTranscriptionBtn.classList.add('off');
+
+    // Close Deepgram WebSocket
+    if (deepgramSocket) {
+        deepgramSocket.close();
+        deepgramSocket = null;
+    }
+
+    // Cleanup audio streaming
+    cleanupAudioStreaming();
+
+    // Optionally hide panel or clear feed
+    // transcriptionPanel.classList.add('hidden');
+    // transcriptionFeed.innerHTML = '';
+}
+
+// Setup audio streaming to Deepgram
+function setupAudioStreaming() {
+    try {
+        const participants = dailyCall.participants();
+        const localParticipant = participants.local;
+
+        if (localParticipant && localParticipant.audioTrack) {
+            // Create audio context for local audio
+            localAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const localSource = localAudioContext.createMediaStreamSource(
+                new MediaStream([localParticipant.audioTrack])
+            );
+
+            // Create script processor to capture audio data
+            localAudioProcessor = localAudioContext.createScriptProcessor(4096, 1, 1);
+            
+            localAudioProcessor.onaudioprocess = (e) => {
+                if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    // Convert Float32Array to Int16Array for Deepgram
+                    const pcmData = convertFloat32ToInt16(inputData);
+                    deepgramSocket.send(pcmData);
+                }
+            };
+
+            localSource.connect(localAudioProcessor);
+            localAudioProcessor.connect(localAudioContext.destination);
+        }
+
+        // TODO: Add remote participant audio streaming
+        // This would require creating a separate Deepgram connection
+        // or multiplexing the audio streams with markers
+
+    } catch (error) {
+        console.error('Failed to setup audio streaming:', error);
+    }
+}
+
+// Cleanup audio streaming
+function cleanupAudioStreaming() {
+    if (localAudioProcessor) {
+        localAudioProcessor.disconnect();
+        localAudioProcessor = null;
+    }
+
+    if (localAudioContext) {
+        localAudioContext.close();
+        localAudioContext = null;
+    }
+
+    if (remoteAudioProcessor) {
+        remoteAudioProcessor.disconnect();
+        remoteAudioProcessor = null;
+    }
+
+    if (remoteAudioContext) {
+        remoteAudioContext.close();
+        remoteAudioContext = null;
+    }
+}
+
+// Convert Float32Array to Int16Array for Deepgram
+function convertFloat32ToInt16(float32Array) {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
+        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return int16Array.buffer;
+}
+
+// Add transcription line to feed
+function addTranscriptionLine(text, source) {
+    const line = document.createElement('div');
+    line.className = `transcription-line ${source}`;
+    
+    const prefix = document.createElement('span');
+    prefix.className = 'transcription-prefix';
+    prefix.textContent = source === 'local' 
+        ? translations[currentLanguage]['you-prefix'] 
+        : translations[currentLanguage]['remote-prefix'];
+    
+    const content = document.createElement('span');
+    content.textContent = text;
+    
+    line.appendChild(prefix);
+    line.appendChild(content);
+    transcriptionFeed.appendChild(line);
+    
+    // Auto-scroll to bottom
+    transcriptionFeed.scrollTop = transcriptionFeed.scrollHeight;
+}
+
+// Update transcription when language changes
+function updateTranscriptionLanguage() {
+    if (isTranscriptionEnabled) {
+        // Restart transcription with new language
+        stopTranscription();
+        setTimeout(() => startTranscription(), 500);
+    }
+}
+
+// Hook into language toggle to update transcription
+const originalInitializeLanguageToggle = initializeLanguageToggle;
+function initializeLanguageToggle() {
+    const langButtons = document.querySelectorAll('.lang-btn');
+    
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            langButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentLanguage = btn.dataset.lang;
+            updateTranslations();
+            updateTranscriptionLanguage();
+        });
+    });
+}
+
+// ============================================================================
+// CONNECTION STATUS MANAGEMENT
+// ============================================================================
+
+function updateConnectionStatus(connected) {
+    if (statusIndicator && statusText) {
+        if (connected) {
+            statusIndicator.classList.remove('disconnected');
+            statusIndicator.classList.add('connected');
+            statusText.textContent = 'CONNECTED';
+        } else {
+            statusIndicator.classList.remove('connected');
+            statusIndicator.classList.add('disconnected');
+            statusText.textContent = 'DISCONNECTED';
+        }
+    }
+}
+
+// ============================================================================
+// DATA FLOW MONITORING
+// ============================================================================
+
+function startDataFlowMonitoring() {
+    dataFlowInterval = setInterval(() => {
+        if (dailyCall && dataFlowValue) {
+            // Simulate data flow readout (in production, use actual network stats)
+            const simulatedBitrate = Math.round(Math.random() * 500 + 1500);
+            dataFlowValue.textContent = `${simulatedBitrate} kb/s`;
+        }
+    }, 1000);
+}
+
+function stopDataFlowMonitoring() {
+    if (dataFlowInterval) {
+        clearInterval(dataFlowInterval);
+        dataFlowInterval = null;
+        if (dataFlowValue) {
+            dataFlowValue.textContent = '0 kb/s';
+        }
+    }
+}
+
 // ============================================================================
 // EPHEMERAL GHOST CHAT
 // ============================================================================
 
 function initializeGhostChat() {
-    if (!ghostChatInput || !ghostChatToggle) return;
+    if (!ghostChatInput) return;
     
-    // Toggle ghost chat input with 'T' key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 't' || e.key === 'T' || e.key === 'Enter') {
-            if (!ghostChatInput.classList.contains('active') && dailyCall) {
-                e.preventDefault();
-                showGhostChatInput();
-            }
-        }
-        
-        if (e.key === 'Escape' && ghostChatInput.classList.contains('active')) {
-            hideGhostChatInput();
-        }
-    });
-    
-    // Toggle via button
-    ghostChatToggle.addEventListener('click', () => {
-        if (ghostChatInput.classList.contains('active')) {
-            hideGhostChatInput();
-        } else if (dailyCall) {
-            showGhostChatInput();
-        }
-    });
-    
-    // Send message on Enter
     ghostChatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -389,34 +682,10 @@ function initializeGhostChat() {
     });
 }
 
-function showGhostChatInput() {
-    if (!ghostChatInput || !dailyCall) return;
-    
-    ghostChatInput.classList.add('active');
-    ghostChatToggle.classList.add('active');
-    ghostChatInput.focus();
-    
-    // Keep controls visible while typing
-    if (controlsOverlay) {
-        controlsOverlay.classList.add('visible');
-    }
-}
-
-function hideGhostChatInput() {
-    if (!ghostChatInput) return;
-    
-    ghostChatInput.classList.remove('active');
-    ghostChatToggle.classList.remove('active');
-    ghostChatInput.value = '';
-}
-
 function sendGhostMessage() {
     const message = ghostChatInput.value.trim();
     
-    if (!message) {
-        hideGhostChatInput();
-        return;
-    }
+    if (!message) return;
     if (!dailyCall) return;
     
     // Sanitize message to prevent XSS
@@ -435,8 +704,8 @@ function sendGhostMessage() {
         console.error('Failed to send ghost message:', error);
     }
     
-    // Hide input after sending
-    hideGhostChatInput();
+    // Clear input
+    ghostChatInput.value = '';
 }
 
 function sanitizeGhostMessage(text) {
@@ -456,10 +725,10 @@ function displayGhostMessage(text) {
     // Add to container
     ghostChatMessages.appendChild(messageEl);
     
-    // Remove after 4 seconds (matches CSS animation)
+    // Remove after 3 seconds
     setTimeout(() => {
         if (messageEl.parentNode) {
             messageEl.parentNode.removeChild(messageEl);
         }
-    }, 4000);
+    }, 3000);
 }

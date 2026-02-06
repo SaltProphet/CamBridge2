@@ -15,102 +15,60 @@
         <div class="access-container">
             <h1 class="app-title">CAMBRIDGE</h1>
             <div class="input-group">
-                <label id="access-label" for="access-key">Access Key</label>
+                <label id="access-label" for="access-key">ACCESS_KEY</label>
                 <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">
                 <div id="error-message" class="error-message"></div>
             </div>
-            <button id="unlock-btn" class="btn-primary hidden" data-i18n="unlock">Establish Link</button>
+            <button id="unlock-btn" class="btn-primary hidden">ESTABLISH_LINK</button>
         </div>
     </div>
 
     <!-- Main Video Interface -->
     <div id="video-interface" class="hidden">
-        <!-- Scanline Overlay -->
-        <div class="scanline-overlay"></div>
-        
-        <!-- LINK STATUS Bar -->
-        <div id="link-status-bar" class="link-status-bar">
-            <span class="status-label">LINK_STATUS</span>
-            <span id="status-indicator" class="status-indicator disconnected"></span>
-            <span id="status-text" class="status-text">DISCONNECTED</span>
-        </div>
-        
-        <!-- SYS_LANG Module -->
-        <div id="language-toggle" class="language-toggle">
-            <span class="module-label">SYS_LANG</span>
-            <button class="lang-btn active" data-lang="en">EN</button>
-            <button class="lang-btn" data-lang="ru">RU</button>
-            <button class="lang-btn" data-lang="es">ES</button>
-        </div>
-
-        <!-- View Mode Toggle -->
-        <div id="mode-toggle" class="mode-toggle">
-            <button class="mode-btn active" data-mode="shadow">Shadow Intel</button>
-            <button class="mode-btn" data-mode="nexus">Nexus Architect</button>
-        </div>
-
-        <!-- Latency HUD -->
-        <div id="latency-hud" class="latency-hud">
-            <span class="latency-label" data-i18n="latency">LATENCY</span>
-            <span id="latency-value" class="latency-value">-- ms</span>
-        </div>
-        
-        <!-- DATA FLOW Readout -->
-        <div id="data-flow-hud" class="data-flow-hud">
-            <span class="data-flow-label">DATA_FLOW</span>
-            <span id="data-flow-value" class="data-flow-value">0 kb/s</span>
-        </div>
-
-        <!-- Connection Controls -->
-        <div id="connection-panel" class="connection-panel">
-            <div class="control-group">
-                <label id="room-label" for="room-input" data-i18n="room-name">Room ID</label>
-                <input type="text" id="room-input" placeholder="Enter room name" autocomplete="off">
-            </div>
-            <div class="control-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="low-bandwidth-toggle">
-                    <span data-i18n="low-bandwidth">Data Save (Low BW)</span>
-                </label>
-            </div>
-            <button id="join-btn" class="btn-primary" data-i18n="join">ESTABLISH_LINK</button>
-            <button id="leave-btn" class="btn-danger hidden" data-i18n="leave">CUT_LINK</button>
-        </div>
-
-        <!-- Video Container -->
+        <!-- Full-Screen Video Container -->
         <div id="video-container" class="video-container">
-            <div id="remote-video-wrapper" class="remote-video-wrapper">
-                <video id="remote-video" autoplay playsinline></video>
-                <div id="connection-status" class="connection-status" data-i18n="waiting">Waiting for connection...</div>
-            </div>
-            
-            <!-- Draggable PIP Local Video -->
-            <div id="local-video-pip" class="local-video-pip">
-                <div class="pip-title" data-i18n="local-monitor">Local Monitor</div>
-                <video id="local-video" autoplay muted playsinline></video>
-            </div>
-            
-            <!-- Ghost Chat Input -->
-            <input type="text" id="ghost-chat-input" class="ghost-chat-input" placeholder="Ghost message..." autocomplete="off">
-            
-            <!-- Ghost Chat Messages Container -->
-            <div id="ghost-chat-messages" class="ghost-chat-messages"></div>
+            <video id="remote-video" autoplay playsinline></video>
+            <video id="local-video" class="local-video-pip" autoplay muted playsinline></video>
+            <div id="connection-status" class="connection-status">WAITING_FOR_CONNECTION...</div>
         </div>
 
-        <!-- Transcription Feed -->
-        <div id="transcription-panel" class="transcription-panel hidden">
-            <div class="transcription-header">
-                <span class="transcription-title" data-i18n="transcription">LIVE TRANSCRIPTION</span>
-                <button id="toggle-transcription-btn" class="toggle-transcription-btn" data-i18n="toggle-stt">STT ON</button>
+        <!-- Auto-Hide Controls Overlay -->
+        <div id="controls-overlay" class="controls-overlay">
+            <!-- Language Toggle (Top Right) -->
+            <div id="language-toggle" class="language-toggle">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+                <button class="lang-btn" data-lang="es">ES</button>
             </div>
-            <div id="transcription-feed" class="transcription-feed"></div>
+
+            <!-- Connection Panel (Bottom Center) -->
+            <div id="connection-panel" class="connection-panel">
+                <div class="control-group">
+                    <input type="text" id="room-input" placeholder="ROOM_ID" autocomplete="off">
+                </div>
+                <div class="control-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="low-bandwidth-toggle">
+                        <span data-i18n="low-bandwidth">DATA_SAVE</span>
+                    </label>
+                </div>
+                <button id="join-btn" class="btn-primary" data-i18n="join">ESTABLISH_LINK</button>
+                <button id="leave-btn" class="btn-danger hidden" data-i18n="leave">LINK_TERMINATE</button>
+            </div>
         </div>
+
+        <!-- Ghost Chat Toggle Icon -->
+        <button id="ghost-chat-toggle" class="ghost-chat-toggle" title="Ghost Message (T)">T</button>
+
+        <!-- Ghost Chat Input -->
+        <input type="text" id="ghost-chat-input" class="ghost-chat-input" placeholder="Ghost message..." autocomplete="off">
+
+        <!-- Ghost Chat Messages Container -->
+        <div id="ghost-chat-messages" class="ghost-chat-messages"></div>
     </div>
 
     <!-- Daily.co SDK -->
     <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
-    <!-- Deepgram SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.4.0/dist/browser/index.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
