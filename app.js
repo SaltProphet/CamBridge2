@@ -13,7 +13,7 @@ const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.D
     : 'https://saltprophet.daily.co/cambridge';
 const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
     ? process.env.DEEPGRAM_KEY 
-    : '';
+    : '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f';
 
 // Application state
 let dailyCall = null;
