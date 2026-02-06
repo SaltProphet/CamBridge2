@@ -32,19 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Access key validation
 function initializeAccessKeyValidation() {
+    // Always show the button
+    unlockBtn.classList.remove('hidden');
+    
+    // Clear error on input
     accessKeyInput.addEventListener('input', () => {
-        const value = accessKeyInput.value;
         errorMessage.textContent = '';
-        
-        if (value === ACCESS_KEY) {
-            unlockBtn.classList.remove('hidden');
-        } else {
-            unlockBtn.classList.add('hidden');
-        }
     });
     
+    // Enter key to submit
     accessKeyInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && accessKeyInput.value === ACCESS_KEY) {
+        if (e.key === 'Enter') {
             validateAndJoin();
         }
     });
@@ -54,7 +52,14 @@ function initializeAccessKeyValidation() {
 
 // Validate and join
 function validateAndJoin() {
-    if (accessKeyInput.value === ACCESS_KEY) {
+    const enteredKey = accessKeyInput.value.trim();
+    
+    if (!enteredKey) {
+        errorMessage.textContent = 'ENTER_ACCESS_KEY';
+        return;
+    }
+    
+    if (enteredKey === ACCESS_KEY) {
         // Hide gatekeeper
         gatekeeper.classList.remove('active');
         gatekeeper.classList.add('hidden');
@@ -65,7 +70,9 @@ function validateAndJoin() {
         // Start the call
         startCall();
     } else {
-        errorMessage.textContent = 'INVALID_ACCESS_KEY';
+        errorMessage.textContent = 'INVALID_ACCESS_KEY - TRY AGAIN';
+        accessKeyInput.value = '';
+        accessKeyInput.focus();
     }
 }
 
