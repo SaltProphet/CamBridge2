@@ -441,16 +441,11 @@ function sendGhostMessage() {
 }
 
 function sanitizeGhostMessage(text) {
-    // More comprehensive sanitization to prevent XSS
-    // Remove ALL HTML-like tags and entities, limit length
-    let sanitized = text
-        .replace(/<[^>]*>/g, '')  // Remove tags
-        .replace(/</g, '')        // Remove < 
-        .replace(/>/g, '')        // Remove >
-        .replace(/&/g, '')        // Remove &
-        .replace(/"/g, '')        // Remove quotes
-        .replace(/'/g, '')        // Remove single quotes
-        .substring(0, 200);       // Limit length
+    // Whitelist approach: only allow alphanumeric, spaces, and basic punctuation
+    // This completely prevents any HTML injection
+    const sanitized = text
+        .replace(/[^a-zA-Z0-9\s.,!?'-]/g, '') // Only allow safe characters
+        .substring(0, 200);                     // Limit length
     return sanitized;
 }
 
