@@ -337,39 +337,44 @@ function enableEditMode(line, textSpan) {
     input.focus();
     input.select();
     
-    // Save on Enter or blur
-    const saveEdit = () => {
-        const newText = input.value.trim();
-        if (newText) {
-            const newTextSpan = document.createElement('span');
-            newTextSpan.className = 'text-content edited';
-            newTextSpan.textContent = newText;
-            newTextSpan.title = 'Edited';
-            input.replaceWith(newTextSpan);
-        } else {
-            // Restore original if empty
-            const newTextSpan = document.createElement('span');
-            newTextSpan.className = 'text-content';
-            newTextSpan.textContent = currentText;
-            input.replaceWith(newTextSpan);
+    // Track if editing was cancelled
+    let cancelled = false;
+    
+    // Helper to create text span
+    const createTextSpan = (text, isEdited) => {
+        const span = document.createElement('span');
+        span.className = isEdited ? 'text-content edited' : 'text-content';
+        span.textContent = text;
+        if (isEdited) {
+            span.title = 'Edited';
         }
+        return span;
     };
     
-    input.addEventListener('keypress', (e) => {
+    // Save edit
+    const saveEdit = () => {
+        if (cancelled) return;
+        
+        const newText = input.value.trim();
+        const textToUse = newText || currentText;
+        const isEdited = newText && newText !== currentText;
+        input.replaceWith(createTextSpan(textToUse, isEdited));
+    };
+    
+    // Cancel edit
+    const cancelEdit = () => {
+        cancelled = true;
+        input.replaceWith(createTextSpan(currentText, false));
+    };
+    
+    // Handle keyboard events
+    input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             saveEdit();
+        } else if (e.key === 'Escape') {
+            cancelEdit();
         }
     });
     
     input.addEventListener('blur', saveEdit);
-    
-    // Cancel on Escape
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const newTextSpan = document.createElement('span');
-            newTextSpan.className = 'text-content';
-            newTextSpan.textContent = currentText;
-            input.replaceWith(newTextSpan);
-        }
-    });
 }
