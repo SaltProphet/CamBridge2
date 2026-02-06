@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Environment Variables</title>
+</head>
+<body>
+    <h1>Testing process.env usage</h1>
+    <div id="results"></div>
+    <script>
+        const results = document.getElementById('results');
+        
+        // Test if process.env can be accessed
+        try {
+            const accessKey = process.env.ACCESS_KEY || '[INSERT_YOUR_PASSWORD_HERE]';
+            const dailyUrl = process.env.DAILY_URL || 'https://saltprophet.daily.co/cambridge';
+            const deepgramKey = process.env.DEEPGRAM_KEY || '';
+            
+            results.innerHTML = `
+                <p>✓ ACCESS_KEY: ${accessKey.length > 0 ? '✓ Set' : '✗ Not set'}</p>
+                <p>✓ DAILY_URL: ${dailyUrl}</p>
+                <p>✓ DEEPGRAM_KEY: ${deepgramKey.length > 0 ? '✓ Set' : '✗ Not set'}</p>
+            `;
+        } catch (e) {
+            results.innerHTML = `<p style="color: red;">Error: ${e.message}</p>
+            <p>Note: process.env is not available in browser context. This is expected.</p>
+            <p>In Vercel Browser Editor, environment variables will be injected at build time.</p>`;
+        }
+    </script>
+</body>
+</html>

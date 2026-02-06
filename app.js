@@ -1,9 +1,19 @@
 // CamBridge - Secure P2P Video Bridge - Clean Picture (Nexus Architect)
 
-// Environment variables (use process.env in production)
-const ACCESS_KEY = process.env.ACCESS_KEY || '[INSERT_YOUR_PASSWORD_HERE]';
-const DAILY_URL = process.env.DAILY_URL || 'https://saltprophet.daily.co/cambridge';
-const DEEPGRAM_KEY = process.env.DEEPGRAM_KEY || '';
+// Environment variables - Replace these at build time with actual values
+// In Vercel Browser Editor, set these as environment variables:
+// - ACCESS_KEY: Your password for accessing the bridge
+// - DAILY_URL: Your Daily.co room URL
+// - DEEPGRAM_KEY: Your Deepgram API key for transcription
+const ACCESS_KEY = typeof process !== 'undefined' && process.env && process.env.ACCESS_KEY 
+    ? process.env.ACCESS_KEY 
+    : '[INSERT_YOUR_PASSWORD_HERE]';
+const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.DAILY_URL 
+    ? process.env.DAILY_URL 
+    : 'https://saltprophet.daily.co/cambridge';
+const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
+    ? process.env.DEEPGRAM_KEY 
+    : '';
 
 // Application state
 let dailyCall = null;
