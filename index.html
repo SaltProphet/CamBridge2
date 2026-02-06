@@ -8,10 +8,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
 </head>
 <body>
     <!-- Access Key Landing Page -->
-    <div id="landing-page" class="active">
+    <div id="gatekeeper" class="active">
         <div class="access-container">
             <h1 class="app-title">CAMBRIDGE</h1>
             <div class="input-group">
@@ -19,56 +21,27 @@
                 <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">
                 <div id="error-message" class="error-message"></div>
             </div>
-            <button id="unlock-btn" class="btn-primary hidden">ESTABLISH_LINK</button>
+            <button id="unlock-btn" class="btn-primary">ESTABLISH_LINK</button>
         </div>
     </div>
 
-    <!-- Main Video Interface -->
-    <div id="video-interface" class="hidden">
-        <!-- Full-Screen Video Container -->
-        <div id="video-container" class="video-container">
-            <video id="remote-video" autoplay playsinline></video>
-            <video id="local-video" class="local-video-pip" autoplay muted playsinline></video>
-            <div id="connection-status" class="connection-status">WAITING_FOR_CONNECTION...</div>
-        </div>
-
-        <!-- Auto-Hide Controls Overlay -->
-        <div id="controls-overlay" class="controls-overlay">
-            <!-- Language Toggle (Top Right) -->
-            <div id="language-toggle" class="language-toggle">
-                <button class="lang-btn active" data-lang="en">EN</button>
-                <button class="lang-btn" data-lang="ru">RU</button>
-                <button class="lang-btn" data-lang="es">ES</button>
+    <!-- Full-Screen Video Container -->
+    <div id="video-container" class="hidden">
+        <!-- Transcription Toggle Button -->
+        <button id="stt-toggle" class="stt-toggle hidden" title="Toggle Speech-to-Text">
+            <span id="stt-icon">📝</span>
+        </button>
+        
+        <!-- Transcription Feed -->
+        <div id="transcript-feed" class="transcript-feed hidden">
+            <div class="transcript-header">
+                <span>TRANSCRIPTION</span>
+                <button id="clear-transcript" class="clear-btn">CLEAR</button>
             </div>
-
-            <!-- Connection Panel (Bottom Center) -->
-            <div id="connection-panel" class="connection-panel">
-                <div class="control-group">
-                    <input type="text" id="room-input" placeholder="ROOM_ID" autocomplete="off">
-                </div>
-                <div class="control-group checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="low-bandwidth-toggle">
-                        <span data-i18n="low-bandwidth">DATA_SAVE</span>
-                    </label>
-                </div>
-                <button id="join-btn" class="btn-primary" data-i18n="join">ESTABLISH_LINK</button>
-                <button id="leave-btn" class="btn-danger hidden" data-i18n="leave">LINK_TERMINATE</button>
-            </div>
+            <div id="transcript-content" class="transcript-content"></div>
         </div>
-
-        <!-- Ghost Chat Toggle Icon -->
-        <button id="ghost-chat-toggle" class="ghost-chat-toggle" title="Ghost Message (T)">T</button>
-
-        <!-- Ghost Chat Input -->
-        <input type="text" id="ghost-chat-input" class="ghost-chat-input" placeholder="Ghost message..." autocomplete="off">
-
-        <!-- Ghost Chat Messages Container -->
-        <div id="ghost-chat-messages" class="ghost-chat-messages"></div>
     </div>
 
-    <!-- Daily.co SDK -->
-    <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
     <script src="app.js"></script>
 </body>
 </html>

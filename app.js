@@ -1,469 +1,239 @@
 // CamBridge - Secure P2P Video Bridge - Clean Picture (Nexus Architect)
-// Multi-language support
-const translations = {
-    en: {
-        'access-key': 'ACCESS_KEY',
-        'unlock': 'ESTABLISH_LINK',
-        'room-name': 'ROOM_ID',
-        'join': 'ESTABLISH_LINK',
-        'leave': 'LINK_TERMINATE',
-        'low-bandwidth': 'DATA_SAVE',
-        'waiting': 'WAITING_FOR_CONNECTION...',
-        'connected': 'CONNECTED',
-        'error-invalid': 'INVALID_ACCESS_KEY',
-        'error-room': 'ENTER_ROOM_NAME'
-    },
-    ru: {
-        'access-key': 'КЛЮЧ_ДОСТУПА',
-        'unlock': 'ПОДКЛЮЧИТЬСЯ',
-        'room-name': 'ID_КОМНАТЫ',
-        'join': 'ПОДКЛЮЧИТЬСЯ',
-        'leave': 'РАЗОРВАТЬ',
-        'low-bandwidth': 'ЭКОНОМИЯ_ДАННЫХ',
-        'waiting': 'ОЖИДАНИЕ_ПОДКЛЮЧЕНИЯ...',
-        'connected': 'ПОДКЛЮЧЕНО',
-        'error-invalid': 'НЕВЕРНЫЙ_КЛЮЧ',
-        'error-room': 'ВВЕДИТЕ_ИМЯ_КОМНАТЫ'
-    },
-    es: {
-        'access-key': 'CLAVE_DE_ACCESO',
-        'unlock': 'CONECTAR',
-        'room-name': 'ID_DE_SALA',
-        'join': 'CONECTAR',
-        'leave': 'TERMINAR',
-        'low-bandwidth': 'AHORRO_DE_DATOS',
-        'waiting': 'ESPERANDO_CONEXIÓN...',
-        'connected': 'CONECTADO',
-        'error-invalid': 'CLAVE_INVÁLIDA',
-        'error-room': 'INGRESE_NOMBRE_DE_SALA'
-    }
-};
 
-// Hardcoded access key (GHOST PROTOCOL)
-const ACCESS_KEY = '[INSERT_YOUR_PASSWORD_HERE]';
+// Environment variables - Replace these at build time with actual values
+// In Vercel Browser Editor, set these as environment variables:
+// - ACCESS_KEY: Your password for accessing the bridge
+// - DAILY_URL: Your Daily.co room URL
+// - DEEPGRAM_KEY: Your Deepgram API key for transcription
+const ACCESS_KEY = typeof process !== 'undefined' && process.env && process.env.ACCESS_KEY 
+    ? process.env.ACCESS_KEY 
+    : 'C2C';
+const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.DAILY_URL 
+    ? process.env.DAILY_URL 
+    : 'https://cambridge.daily.co/Cambridge';
+const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
+    ? process.env.DEEPGRAM_KEY 
+    : '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f';
 
 // Application state
-let currentLanguage = 'en';
 let dailyCall = null;
-let controlsTimeout = null;
-let remoteAudioElement = null;
+let deepgramSocket = null;
+let mediaRecorder = null;
+let isTranscriptionActive = false;
 
 // DOM Elements
-const landingPage = document.getElementById('landing-page');
-const videoInterface = document.getElementById('video-interface');
+const gatekeeper = document.getElementById('gatekeeper');
+const videoContainer = document.getElementById('video-container');
 const accessKeyInput = document.getElementById('access-key');
 const unlockBtn = document.getElementById('unlock-btn');
 const errorMessage = document.getElementById('error-message');
-const roomInput = document.getElementById('room-input');
-const joinBtn = document.getElementById('join-btn');
-const leaveBtn = document.getElementById('leave-btn');
-const lowBandwidthToggle = document.getElementById('low-bandwidth-toggle');
-const remoteVideo = document.getElementById('remote-video');
-const localVideo = document.getElementById('local-video');
-const connectionStatus = document.getElementById('connection-status');
-const controlsOverlay = document.getElementById('controls-overlay');
-const ghostChatToggle = document.getElementById('ghost-chat-toggle');
-const ghostChatInput = document.getElementById('ghost-chat-input');
-const ghostChatMessages = document.getElementById('ghost-chat-messages');
+const sttToggle = document.getElementById('stt-toggle');
+const sttIcon = document.getElementById('stt-icon');
+const transcriptFeed = document.getElementById('transcript-feed');
+const transcriptContent = document.getElementById('transcript-content');
+const clearTranscriptBtn = document.getElementById('clear-transcript');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    initializeLanguageToggle();
     initializeAccessKeyValidation();
-    initializeAutoHideControls();
-    initializeGhostChat();
 });
-
-// Language toggle functionality
-function initializeLanguageToggle() {
-    const langButtons = document.querySelectorAll('.lang-btn');
-    
-    langButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            langButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentLanguage = btn.dataset.lang;
-            updateTranslations();
-        });
-    });
-}
-
-// Update all text based on current language
-function updateTranslations() {
-    const elements = document.querySelectorAll('[data-i18n]');
-    elements.forEach(el => {
-        const key = el.dataset.i18n;
-        if (translations[currentLanguage][key]) {
-            el.textContent = translations[currentLanguage][key];
-        }
-    });
-}
 
 // Access key validation
 function initializeAccessKeyValidation() {
+    // Always show the button
+    unlockBtn.classList.remove('hidden');
+    
+    // Clear error on input
     accessKeyInput.addEventListener('input', () => {
-        const value = accessKeyInput.value;
         errorMessage.textContent = '';
-        
-        if (value === ACCESS_KEY) {
-            unlockBtn.classList.remove('hidden');
-        } else {
-            unlockBtn.classList.add('hidden');
-        }
     });
     
+    // Enter key to submit
     accessKeyInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && accessKeyInput.value === ACCESS_KEY) {
-            unlockApp();
+        if (e.key === 'Enter') {
+            validateAndJoin();
         }
     });
     
-    unlockBtn.addEventListener('click', unlockApp);
+    unlockBtn.addEventListener('click', validateAndJoin);
 }
 
-// Unlock application
-function unlockApp() {
-    if (accessKeyInput.value === ACCESS_KEY) {
-        landingPage.classList.remove('active');
-        videoInterface.classList.remove('hidden');
-        videoInterface.classList.add('active');
-    } else {
-        errorMessage.textContent = translations[currentLanguage]['error-invalid'];
-    }
-}
-
-// Auto-hide controls on mouse movement
-function initializeAutoHideControls() {
-    let hideTimeout;
+// Validate and join
+function validateAndJoin() {
+    const enteredKey = accessKeyInput.value.trim();
     
-    const showControls = () => {
-        if (controlsOverlay) {
-            controlsOverlay.classList.add('visible');
-        }
-        
-        clearTimeout(hideTimeout);
-        hideTimeout = setTimeout(() => {
-            if (controlsOverlay && !ghostChatInput.classList.contains('active')) {
-                controlsOverlay.classList.remove('visible');
-            }
-        }, 3000);
-    };
-    
-    // Show controls on mouse move
-    videoInterface.addEventListener('mousemove', showControls);
-    
-    // Show controls on touch
-    videoInterface.addEventListener('touchstart', showControls);
-    
-    // Keep controls visible when interacting with them
-    if (controlsOverlay) {
-        controlsOverlay.addEventListener('mouseenter', () => {
-            clearTimeout(hideTimeout);
-        });
-        
-        controlsOverlay.addEventListener('mouseleave', () => {
-            hideTimeout = setTimeout(() => {
-                if (!ghostChatInput.classList.contains('active')) {
-                    controlsOverlay.classList.remove('visible');
-                }
-            }, 1000);
-        });
-    }
-}
-
-// Daily.co P2P Video Connection
-joinBtn.addEventListener('click', joinRoom);
-leaveBtn.addEventListener('click', leaveRoom);
-
-roomInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        joinRoom();
-    }
-});
-
-async function joinRoom() {
-    const roomName = roomInput.value.trim();
-    
-    if (!roomName) {
-        alert(translations[currentLanguage]['error-room']);
+    if (!enteredKey) {
+        errorMessage.textContent = 'ENTER_ACCESS_KEY';
         return;
     }
     
-    // Sanitize room name to prevent security issues
-    const sanitizedRoomName = roomName.replace(/[^a-zA-Z0-9-_]/g, '-');
+    if (enteredKey === ACCESS_KEY) {
+        // Hide gatekeeper
+        gatekeeper.classList.remove('active');
+        gatekeeper.classList.add('hidden');
+        
+        // Show video container
+        videoContainer.classList.remove('hidden');
+        
+        // Start the call
+        startCall();
+    } else {
+        errorMessage.textContent = 'INVALID_ACCESS_KEY - TRY AGAIN';
+        accessKeyInput.value = '';
+        accessKeyInput.focus();
+    }
+}
+
+// Start Daily.co call with iframe
+function startCall() {
+    if (!DAILY_URL) {
+        console.error('DAILY_URL not configured');
+        errorMessage.textContent = 'Configuration error';
+        return;
+    }
     
-    try {
-        // Create Daily call object with P2P optimizations
-        dailyCall = window.DailyIframe.createCallObject({
-            audioSource: true,
-            videoSource: true,
-            subscribeToTracksAutomatically: true
-        });
-        
-        // Set up event listeners
-        dailyCall
-            .on('joined-meeting', handleJoinedMeeting)
-            .on('participant-joined', handleParticipantJoined)
-            .on('participant-left', handleParticipantLeft)
-            .on('participant-updated', handleParticipantUpdated)
-            .on('app-message', handleAppMessage)
-            .on('error', handleError);
-        
-        // Join the room with P2P configuration and SA link optimization
-        const roomUrl = `https://saltprophet.daily.co/${sanitizedRoomName}`;
-        
-        await dailyCall.join({
-            url: roomUrl,
-            // P2P optimization for trans-Atlantic link
-            dailyConfig: {
-                experimentalOptimizeForPrerecordedVideo: false,
-                experimentalGetUserMediaConstraints: {
-                    video: lowBandwidthToggle.checked ? 
-                        { width: 640, height: 480, frameRate: 15 } :
-                        { width: 1920, height: 1080, frameRate: 30 }
-                }
+    // Create Daily.co iframe
+    dailyCall = window.DailyIframe.createFrame(videoContainer, {
+        showLeaveButton: true,
+        showFullscreenButton: true,
+        iframeStyle: {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            border: '0'
+        }
+    });
+    
+    // Join the room
+    dailyCall.join({ url: DAILY_URL })
+        .then(() => {
+            // Show STT controls if Deepgram key is configured
+            if (DEEPGRAM_KEY) {
+                sttToggle.classList.remove('hidden');
+                initializeSTTControls();
             }
+        })
+        .catch(error => {
+            console.error('Failed to join room:', error);
+            errorMessage.textContent = 'Failed to join video room';
         });
-        
-        // Set bandwidth optimization for SA link (removed no-limit as it may not be valid)
-        // Using high bitrate limit for trans-Atlantic link quality
-        try {
-            await dailyCall.setBandwidth({ 
-                trackConstraints: {
-                    video: { 
-                        maxBitrate: lowBandwidthToggle.checked ? 800 : 2500
-                    }
+}
+
+// Initialize Speech-to-Text controls
+function initializeSTTControls() {
+    sttToggle.addEventListener('click', toggleTranscription);
+    clearTranscriptBtn.addEventListener('click', clearTranscript);
+}
+
+// Toggle transcription on/off
+async function toggleTranscription() {
+    if (!isTranscriptionActive) {
+        await startTranscription();
+    } else {
+        stopTranscription();
+    }
+}
+
+// Start Deepgram transcription
+async function startTranscription() {
+    if (!DEEPGRAM_KEY) {
+        console.error('Deepgram API key not configured');
+        return;
+    }
+
+    try {
+        // Get audio stream from user's microphone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Connect to Deepgram WebSocket
+        const wsUrl = `wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&language=en`;
+        deepgramSocket = new WebSocket(wsUrl, ['token', DEEPGRAM_KEY]);
+
+        deepgramSocket.onopen = () => {
+            console.log('Deepgram connection opened');
+            isTranscriptionActive = true;
+            sttToggle.classList.add('active');
+            transcriptFeed.classList.remove('hidden');
+
+            // Start recording audio
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm'
+            });
+
+            mediaRecorder.addEventListener('dataavailable', (event) => {
+                if (event.data.size > 0 && deepgramSocket.readyState === WebSocket.OPEN) {
+                    deepgramSocket.send(event.data);
                 }
             });
-        } catch (e) {
-            console.warn('Bandwidth optimization not available:', e);
-        }
-        
-        // Update UI
-        joinBtn.classList.add('hidden');
-        leaveBtn.classList.remove('hidden');
-        roomInput.disabled = true;
-        lowBandwidthToggle.disabled = true;
-        
-    } catch (error) {
-        console.error('Failed to join room:', error);
-        alert('Failed to join room. Please check the room name and try again.');
-    }
-}
 
-function handleJoinedMeeting(event) {
-    console.log('Joined meeting:', event);
-    
-    // Get local video track
-    const localParticipant = dailyCall.participants().local;
-    if (localParticipant && localParticipant.video) {
-        localVideo.srcObject = new MediaStream([localParticipant.videoTrack]);
-    }
-}
+            mediaRecorder.start(250); // Send data every 250ms
+        };
 
-function handleParticipantJoined(event) {
-    console.log('Participant joined:', event);
-    updateRemoteVideo();
-}
-
-function handleParticipantLeft(event) {
-    console.log('Participant left:', event);
-    connectionStatus.textContent = translations[currentLanguage]['waiting'];
-    connectionStatus.style.display = 'block';
-    remoteVideo.srcObject = null;
-}
-
-function handleParticipantUpdated(event) {
-    console.log('Participant updated:', event);
-    updateRemoteVideo();
-}
-
-function updateRemoteVideo() {
-    const participants = dailyCall.participants();
-    const remoteParticipants = Object.values(participants).filter(p => !p.local);
-    
-    if (remoteParticipants.length > 0) {
-        const remoteParticipant = remoteParticipants[0];
-        if (remoteParticipant.video && remoteParticipant.videoTrack) {
-            remoteVideo.srcObject = new MediaStream([remoteParticipant.videoTrack]);
-            connectionStatus.style.display = 'none';
-        }
-        
-        if (remoteParticipant.audio && remoteParticipant.audioTrack) {
-            // Clean up existing audio element if any
-            if (remoteAudioElement) {
-                remoteAudioElement.srcObject = null;
-                remoteAudioElement = null;
+        deepgramSocket.onmessage = (message) => {
+            const data = JSON.parse(message.data);
+            if (data.channel && data.channel.alternatives[0]) {
+                const transcript = data.channel.alternatives[0].transcript;
+                if (transcript && transcript.trim().length > 0) {
+                    addTranscriptLine(transcript, 'you');
+                }
             }
-            
-            // Create new audio element for remote audio
-            const audioStream = new MediaStream([remoteParticipant.audioTrack]);
-            remoteAudioElement = new Audio();
-            remoteAudioElement.srcObject = audioStream;
-            remoteAudioElement.play().catch(err => console.log('Audio autoplay prevented:', err));
-        }
-    }
-}
+        };
 
-function handleError(error) {
-    console.error('Daily.co error:', error);
-    alert('Connection error occurred. Please try again.');
-}
+        deepgramSocket.onerror = (error) => {
+            console.error('Deepgram error:', error);
+            stopTranscription();
+        };
 
-function handleAppMessage(event) {
-    // Handle incoming ghost chat messages
-    if (event.data && event.data.type === 'ghost-chat') {
-        displayGhostMessage(event.data.message);
-    }
-}
+        deepgramSocket.onclose = () => {
+            console.log('Deepgram connection closed');
+            stopTranscription();
+        };
 
-async function leaveRoom() {
-    if (dailyCall) {
-        await dailyCall.leave();
-        dailyCall.destroy();
-        dailyCall = null;
-    }
-    
-    // Clean up audio element
-    if (remoteAudioElement) {
-        remoteAudioElement.srcObject = null;
-        remoteAudioElement = null;
-    }
-    
-    // Reset UI
-    joinBtn.classList.remove('hidden');
-    leaveBtn.classList.add('hidden');
-    roomInput.disabled = false;
-    lowBandwidthToggle.disabled = false;
-    connectionStatus.textContent = translations[currentLanguage]['waiting'];
-    connectionStatus.style.display = 'block';
-    remoteVideo.srcObject = null;
-    localVideo.srcObject = null;
-    
-    // Hide ghost chat
-    if (ghostChatInput) {
-        ghostChatInput.classList.remove('active');
-        ghostChatInput.value = '';
-    }
-    if (ghostChatToggle) {
-        ghostChatToggle.classList.remove('active');
-    }
-}
-
-// ============================================================================
-// EPHEMERAL GHOST CHAT
-// ============================================================================
-
-const GHOST_MESSAGE_DURATION = 4000; // Must match CSS animation duration
-
-function initializeGhostChat() {
-    if (!ghostChatInput || !ghostChatToggle) return;
-    
-    // Toggle ghost chat input with 'T' key (but not Enter to avoid conflicts)
-    document.addEventListener('keydown', (e) => {
-        // Only activate with 'T' key, not Enter (to avoid form submission conflicts)
-        if ((e.key === 't' || e.key === 'T') && !ghostChatInput.classList.contains('active') && dailyCall) {
-            e.preventDefault();
-            showGhostChatInput();
-        }
-        
-        if (e.key === 'Escape' && ghostChatInput.classList.contains('active')) {
-            hideGhostChatInput();
-        }
-    });
-    
-    // Toggle via button
-    ghostChatToggle.addEventListener('click', () => {
-        if (ghostChatInput.classList.contains('active')) {
-            hideGhostChatInput();
-        } else if (dailyCall) {
-            showGhostChatInput();
-        }
-    });
-    
-    // Send message on Enter
-    ghostChatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            sendGhostMessage();
-        }
-    });
-}
-
-function showGhostChatInput() {
-    if (!ghostChatInput || !dailyCall) return;
-    
-    ghostChatInput.classList.add('active');
-    ghostChatToggle.classList.add('active');
-    ghostChatInput.focus();
-    
-    // Keep controls visible while typing
-    if (controlsOverlay) {
-        controlsOverlay.classList.add('visible');
-    }
-}
-
-function hideGhostChatInput() {
-    if (!ghostChatInput) return;
-    
-    ghostChatInput.classList.remove('active');
-    ghostChatToggle.classList.remove('active');
-    ghostChatInput.value = '';
-}
-
-function sendGhostMessage() {
-    const message = ghostChatInput.value.trim();
-    
-    if (!message) {
-        hideGhostChatInput();
-        return;
-    }
-    if (!dailyCall) return;
-    
-    // Sanitize message to prevent XSS
-    const sanitizedMessage = sanitizeGhostMessage(message);
-    
-    // Display message locally
-    displayGhostMessage(sanitizedMessage);
-    
-    // Send to remote participant via Daily.co app message
-    try {
-        dailyCall.sendAppMessage({
-            type: 'ghost-chat',
-            message: sanitizedMessage
-        });
     } catch (error) {
-        console.error('Failed to send ghost message:', error);
+        console.error('Failed to start transcription:', error);
     }
-    
-    // Hide input after sending
-    hideGhostChatInput();
 }
 
-function sanitizeGhostMessage(text) {
-    // Whitelist approach: only allow alphanumeric, spaces, and basic punctuation
-    // This completely prevents any HTML injection
-    const sanitized = text
-        .replace(/[^a-zA-Z0-9\s.,!?'-]/g, '') // Only allow safe characters
-        .substring(0, 200);                     // Limit length
-    return sanitized;
+// Stop transcription
+function stopTranscription() {
+    isTranscriptionActive = false;
+    sttToggle.classList.remove('active');
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+
+    if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+        deepgramSocket.close();
+    }
+
+    mediaRecorder = null;
+    deepgramSocket = null;
 }
 
-function displayGhostMessage(text) {
-    if (!ghostChatMessages) return;
+// Add transcript line to feed
+function addTranscriptLine(text, speaker) {
+    const line = document.createElement('div');
+    line.className = `transcript-line ${speaker}`;
     
-    // Create ghost message element
-    const messageEl = document.createElement('div');
-    messageEl.className = 'ghost-message';
-    messageEl.textContent = text;
+    const speakerSpan = document.createElement('span');
+    speakerSpan.className = 'speaker';
+    speakerSpan.textContent = speaker === 'you' ? '[YOU]' : '[REMOTE]';
     
-    // Add to container
-    ghostChatMessages.appendChild(messageEl);
+    const textSpan = document.createElement('span');
+    textSpan.textContent = text;
     
-    // Remove after animation completes (matches CSS animation duration)
-    setTimeout(() => {
-        if (messageEl.parentNode) {
-            messageEl.parentNode.removeChild(messageEl);
-        }
-    }, GHOST_MESSAGE_DURATION);
+    line.appendChild(speakerSpan);
+    line.appendChild(textSpan);
+    
+    transcriptContent.appendChild(line);
+    transcriptContent.scrollTop = transcriptContent.scrollHeight;
+}
+
+// Clear transcript
+function clearTranscript() {
+    transcriptContent.innerHTML = '';
 }
