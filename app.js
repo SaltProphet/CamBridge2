@@ -73,6 +73,7 @@ const DEEPGRAM_API_KEY = '[INSERT_YOUR_DEEPGRAM_API_KEY]';
 let currentLanguage = 'en';
 let dailyCall = null;
 let latencyInterval = null;
+let dataFlowInterval = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
 let remoteAudioElement = null;
@@ -101,6 +102,11 @@ const localVideoPip = document.getElementById('local-video-pip');
 const transcriptionPanel = document.getElementById('transcription-panel');
 const transcriptionFeed = document.getElementById('transcription-feed');
 const toggleTranscriptionBtn = document.getElementById('toggle-transcription-btn');
+const statusIndicator = document.getElementById('status-indicator');
+const statusText = document.getElementById('status-text');
+const dataFlowValue = document.getElementById('data-flow-value');
+const ghostChatInput = document.getElementById('ghost-chat-input');
+const ghostChatMessages = document.getElementById('ghost-chat-messages');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -109,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeAccessKeyValidation();
     initializeDraggablePIP();
     initializeTranscription();
+    initializeGhostChat();
 });
 
 // Language toggle functionality
@@ -286,6 +293,7 @@ async function joinRoom() {
             .on('participant-joined', handleParticipantJoined)
             .on('participant-left', handleParticipantLeft)
             .on('participant-updated', handleParticipantUpdated)
+            .on('app-message', handleAppMessage)
             .on('error', handleError);
         
         // Join the room with P2P configuration
@@ -313,6 +321,14 @@ async function joinRoom() {
         // Start latency monitoring
         startLatencyMonitoring();
         
+        // Start data flow monitoring
+        startDataFlowMonitoring();
+        
+        // Enable ghost chat input
+        if (ghostChatInput) {
+            ghostChatInput.classList.add('active');
+        }
+        
     } catch (error) {
         console.error('Failed to join room:', error);
         alert('Failed to join room. Please check the room name and try again.');
@@ -321,6 +337,9 @@ async function joinRoom() {
 
 function handleJoinedMeeting(event) {
     console.log('Joined meeting:', event);
+    
+    // Update connection status
+    updateConnectionStatus(true);
     
     // Get local video track
     const localParticipant = dailyCall.participants().local;
@@ -332,6 +351,7 @@ function handleJoinedMeeting(event) {
 function handleParticipantJoined(event) {
     console.log('Participant joined:', event);
     updateRemoteVideo();
+    updateConnectionStatus(true);
 }
 
 function handleParticipantLeft(event) {
@@ -339,6 +359,7 @@ function handleParticipantLeft(event) {
     connectionStatus.textContent = translations[currentLanguage]['waiting'];
     connectionStatus.style.display = 'block';
     remoteVideo.srcObject = null;
+    updateConnectionStatus(false);
 }
 
 function handleParticipantUpdated(event) {
@@ -378,6 +399,13 @@ function handleError(error) {
     alert('Connection error occurred. Please try again.');
 }
 
+function handleAppMessage(event) {
+    // Handle incoming ghost chat messages
+    if (event.data && event.data.type === 'ghost-chat') {
+        displayGhostMessage(event.data.message);
+    }
+}
+
 async function leaveRoom() {
     if (dailyCall) {
         await dailyCall.leave();
@@ -398,6 +426,18 @@ async function leaveRoom() {
     
     // Stop latency monitoring
     stopLatencyMonitoring();
+    
+    // Stop data flow monitoring
+    stopDataFlowMonitoring();
+    
+    // Disable ghost chat input
+    if (ghostChatInput) {
+        ghostChatInput.classList.remove('active');
+        ghostChatInput.value = '';
+    }
+    
+    // Update connection status
+    updateConnectionStatus(false);
     
     // Reset UI
     joinBtn.classList.remove('hidden');
@@ -685,4 +725,112 @@ function initializeLanguageToggle() {
             updateTranscriptionLanguage();
         });
     });
+}
+
+// ============================================================================
+// CONNECTION STATUS MANAGEMENT
+// ============================================================================
+
+function updateConnectionStatus(connected) {
+    if (statusIndicator && statusText) {
+        if (connected) {
+            statusIndicator.classList.remove('disconnected');
+            statusIndicator.classList.add('connected');
+            statusText.textContent = 'CONNECTED';
+        } else {
+            statusIndicator.classList.remove('connected');
+            statusIndicator.classList.add('disconnected');
+            statusText.textContent = 'DISCONNECTED';
+        }
+    }
+}
+
+// ============================================================================
+// DATA FLOW MONITORING
+// ============================================================================
+
+function startDataFlowMonitoring() {
+    dataFlowInterval = setInterval(() => {
+        if (dailyCall && dataFlowValue) {
+            // Simulate data flow readout (in production, use actual network stats)
+            const simulatedBitrate = Math.round(Math.random() * 500 + 1500);
+            dataFlowValue.textContent = `${simulatedBitrate} kb/s`;
+        }
+    }, 1000);
+}
+
+function stopDataFlowMonitoring() {
+    if (dataFlowInterval) {
+        clearInterval(dataFlowInterval);
+        dataFlowInterval = null;
+        if (dataFlowValue) {
+            dataFlowValue.textContent = '0 kb/s';
+        }
+    }
+}
+
+// ============================================================================
+// EPHEMERAL GHOST CHAT
+// ============================================================================
+
+function initializeGhostChat() {
+    if (!ghostChatInput) return;
+    
+    ghostChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendGhostMessage();
+        }
+    });
+}
+
+function sendGhostMessage() {
+    const message = ghostChatInput.value.trim();
+    
+    if (!message) return;
+    if (!dailyCall) return;
+    
+    // Sanitize message to prevent XSS
+    const sanitizedMessage = sanitizeGhostMessage(message);
+    
+    // Display message locally
+    displayGhostMessage(sanitizedMessage);
+    
+    // Send to remote participant via Daily.co app message
+    try {
+        dailyCall.sendAppMessage({
+            type: 'ghost-chat',
+            message: sanitizedMessage
+        });
+    } catch (error) {
+        console.error('Failed to send ghost message:', error);
+    }
+    
+    // Clear input
+    ghostChatInput.value = '';
+}
+
+function sanitizeGhostMessage(text) {
+    // Remove any HTML tags and limit length
+    const sanitized = text.replace(/<[^>]*>/g, '').substring(0, 200);
+    return sanitized;
+}
+
+function displayGhostMessage(text) {
+    if (!ghostChatMessages) return;
+    
+    // Create ghost message element
+    const messageEl = document.createElement('div');
+    messageEl.className = 'ghost-message';
+    messageEl.textContent = text;
+    
+    // Add to container
+    ghostChatMessages.appendChild(messageEl);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        if (messageEl.parentNode) {
+            messageEl.parentNode.removeChild(messageEl);
+        }
+    }, 3000);
 }
