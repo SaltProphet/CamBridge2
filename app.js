@@ -46,6 +46,8 @@ const translations = {
 };
 
 // Hardcoded access key (GHOST PROTOCOL)
+// WARNING: Change this value before deployment! This is a placeholder that must be replaced.
+// Set this to your secure password to protect access to the video bridge.
 const ACCESS_KEY = '[INSERT_YOUR_PASSWORD_HERE]';
 
 // Application state
@@ -54,6 +56,7 @@ let dailyCall = null;
 let latencyInterval = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
+let remoteAudioElement = null;
 
 // DOM Elements
 const landingPage = document.getElementById('landing-page');
@@ -99,11 +102,7 @@ function updateTranslations() {
     elements.forEach(el => {
         const key = el.dataset.i18n;
         if (translations[currentLanguage][key]) {
-            if (el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
-                el.textContent = translations[currentLanguage][key];
-            } else {
-                el.textContent = translations[currentLanguage][key];
-            }
+            el.textContent = translations[currentLanguage][key];
         }
     });
     
@@ -242,6 +241,9 @@ async function joinRoom() {
         return;
     }
     
+    // Sanitize room name to prevent security issues
+    const sanitizedRoomName = roomName.replace(/[^a-zA-Z0-9-_]/g, '-');
+    
     try {
         // Create Daily call object with P2P enabled
         dailyCall = window.DailyIframe.createCallObject({
@@ -258,7 +260,7 @@ async function joinRoom() {
             .on('error', handleError);
         
         // Join the room with P2P configuration
-        const roomUrl = `https://saltprophet.daily.co/${roomName}`;
+        const roomUrl = `https://saltprophet.daily.co/${sanitizedRoomName}`;
         
         await dailyCall.join({
             url: roomUrl,
@@ -327,11 +329,17 @@ function updateRemoteVideo() {
         }
         
         if (remoteParticipant.audio && remoteParticipant.audioTrack) {
-            // Audio will play automatically through the video element
+            // Clean up existing audio element if any
+            if (remoteAudioElement) {
+                remoteAudioElement.srcObject = null;
+                remoteAudioElement = null;
+            }
+            
+            // Create new audio element for remote audio
             const audioStream = new MediaStream([remoteParticipant.audioTrack]);
-            const audio = new Audio();
-            audio.srcObject = audioStream;
-            audio.play().catch(err => console.log('Audio autoplay prevented:', err));
+            remoteAudioElement = new Audio();
+            remoteAudioElement.srcObject = audioStream;
+            remoteAudioElement.play().catch(err => console.log('Audio autoplay prevented:', err));
         }
     }
 }
@@ -346,6 +354,12 @@ async function leaveRoom() {
         await dailyCall.leave();
         dailyCall.destroy();
         dailyCall = null;
+    }
+    
+    // Clean up audio element
+    if (remoteAudioElement) {
+        remoteAudioElement.srcObject = null;
+        remoteAudioElement = null;
     }
     
     // Stop latency monitoring
@@ -368,8 +382,9 @@ function startLatencyMonitoring() {
         if (dailyCall) {
             try {
                 const stats = await dailyCall.getNetworkStats();
-                if (stats && stats.latest) {
-                    const latency = Math.round(stats.latest.recvPacketLoss * 1000 || Math.random() * 50 + 100);
+                if (stats && stats.latest && stats.latest.videoRecvPacketLoss !== undefined) {
+                    // Use round-trip time if available, otherwise estimate from packet loss
+                    const latency = stats.latest.rtt || Math.round((1 - stats.latest.videoRecvPacketLoss) * 200 + 50);
                     latencyValue.textContent = `${latency} ms`;
                 }
             } catch (error) {
