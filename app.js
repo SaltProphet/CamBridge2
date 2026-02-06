@@ -231,8 +231,9 @@ function addTranscriptLine(text, speaker) {
     const editBtn = document.createElement('button');
     editBtn.className = 'edit-btn';
     editBtn.textContent = '✎';
+    editBtn.setAttribute('aria-label', 'Edit message');
     editBtn.title = 'Edit message';
-    editBtn.addEventListener('click', () => enableEditMode(line, textSpan));
+    editBtn.addEventListener('click', () => enableEditMode(textSpan));
     
     line.appendChild(speakerSpan);
     line.appendChild(textSpan);
@@ -285,7 +286,7 @@ function makeDraggable(element) {
         
         if (e.target === header || header.contains(e.target)) {
             // Don't drag if clicking on the clear button
-            if (e.target.classList.contains('clear-btn')) {
+            if (e.target.classList?.contains('clear-btn')) {
                 return;
             }
             isDragging = true;
@@ -323,7 +324,7 @@ function makeDraggable(element) {
 }
 
 // Enable edit mode for a message
-function enableEditMode(line, textSpan) {
+function enableEditMode(textSpan) {
     const currentText = textSpan.textContent;
     
     // Create input field
@@ -331,6 +332,7 @@ function enableEditMode(line, textSpan) {
     input.type = 'text';
     input.className = 'edit-input';
     input.value = currentText;
+    input.setAttribute('aria-label', 'Edit message text');
     
     // Replace text span with input
     textSpan.replaceWith(input);
@@ -347,6 +349,7 @@ function enableEditMode(line, textSpan) {
         span.textContent = text;
         if (isEdited) {
             span.title = 'Edited';
+            span.setAttribute('aria-label', `Message edited: ${text}`);
         }
         return span;
     };
