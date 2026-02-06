@@ -7,7 +7,7 @@
 // - DEEPGRAM_KEY: Your Deepgram API key for transcription
 const ACCESS_KEY = typeof process !== 'undefined' && process.env && process.env.ACCESS_KEY 
     ? process.env.ACCESS_KEY 
-    : '[INSERT_YOUR_PASSWORD_HERE]';
+    : 'C2C';
 const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.DAILY_URL 
     ? process.env.DAILY_URL 
     : 'https://saltprophet.daily.co/cambridge';
