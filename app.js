@@ -225,10 +225,10 @@ async function joinRoom() {
             }
         });
         
-        // Set bandwidth to no limit with predictive optimization for SA link
+        // Set bandwidth optimization for SA link (removed no-limit as it may not be valid)
+        // Using high bitrate limit for trans-Atlantic link quality
         try {
             await dailyCall.setBandwidth({ 
-                kbs: 'no-limit',
                 trackConstraints: {
                     video: { 
                         maxBitrate: lowBandwidthToggle.checked ? 800 : 2500
@@ -354,16 +354,17 @@ async function leaveRoom() {
 // EPHEMERAL GHOST CHAT
 // ============================================================================
 
+const GHOST_MESSAGE_DURATION = 4000; // Must match CSS animation duration
+
 function initializeGhostChat() {
     if (!ghostChatInput || !ghostChatToggle) return;
     
-    // Toggle ghost chat input with 'T' key
+    // Toggle ghost chat input with 'T' key (but not Enter to avoid conflicts)
     document.addEventListener('keydown', (e) => {
-        if (e.key === 't' || e.key === 'T' || e.key === 'Enter') {
-            if (!ghostChatInput.classList.contains('active') && dailyCall) {
-                e.preventDefault();
-                showGhostChatInput();
-            }
+        // Only activate with 'T' key, not Enter (to avoid form submission conflicts)
+        if ((e.key === 't' || e.key === 'T') && !ghostChatInput.classList.contains('active') && dailyCall) {
+            e.preventDefault();
+            showGhostChatInput();
         }
         
         if (e.key === 'Escape' && ghostChatInput.classList.contains('active')) {
@@ -456,10 +457,10 @@ function displayGhostMessage(text) {
     // Add to container
     ghostChatMessages.appendChild(messageEl);
     
-    // Remove after 4 seconds (matches CSS animation)
+    // Remove after animation completes (matches CSS animation duration)
     setTimeout(() => {
         if (messageEl.parentNode) {
             messageEl.parentNode.removeChild(messageEl);
         }
-    }, 4000);
+    }, GHOST_MESSAGE_DURATION);
 }

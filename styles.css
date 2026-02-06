@@ -363,11 +363,11 @@ input[type="password"]:focus {
     max-width: 70%;
     text-align: center;
     opacity: 0;
-    animation: ghostFloatClean 4s ease-out forwards;
+    animation: ghostMessageFloat 4s ease-out forwards;
     pointer-events: none;
 }
 
-@keyframes ghostFloatClean {
+@keyframes ghostMessageFloat {
     0% {
         opacity: 0;
         bottom: 10%;
