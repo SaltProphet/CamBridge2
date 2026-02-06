@@ -439,6 +439,93 @@ body.nexus-mode .transcription-panel {
     border-top: none;
 }
 
+/* Ghost Chat Input */
+.ghost-chat-input {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    max-width: 80%;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(18, 18, 18, 0.3);
+    border: 1px solid rgba(68, 68, 68, 0.3);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.3s;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 80;
+}
+
+.ghost-chat-input.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ghost-chat-input:focus {
+    background-color: rgba(18, 18, 18, 0.5);
+    border-color: rgba(0, 255, 136, 0.3);
+}
+
+.ghost-chat-input::placeholder {
+    color: var(--text-dim);
+    opacity: 0.5;
+}
+
+/* Ghost Chat Messages Container */
+.ghost-chat-messages {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ghost Chat Message */
+.ghost-message {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 80%;
+    text-align: center;
+    opacity: 0;
+    animation: ghostFloat 3s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes ghostFloat {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%);
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+        transform: translate(-50%, -150%);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -150%);
+    }
+}
+
 /* Mobile Optimizations */
 @media (max-width: 768px) {
     .app-title {
