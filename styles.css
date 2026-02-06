@@ -350,6 +350,95 @@ body.nexus-mode .local-video-pip {
     border: 1px solid rgba(68, 68, 68, 0.3);
 }
 
+/* Transcription Panel */
+.transcription-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 180px;
+    background-color: rgba(18, 18, 18, 0.95);
+    border-top: 1px solid var(--border);
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+}
+
+.transcription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.transcription-title {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.15rem;
+    color: var(--text-dim);
+}
+
+.toggle-transcription-btn {
+    padding: 0.35rem 0.75rem;
+    background-color: var(--slate);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+.toggle-transcription-btn:hover {
+    background-color: rgba(0, 255, 136, 0.1);
+}
+
+.toggle-transcription-btn.off {
+    border-color: var(--text-dim);
+    color: var(--text-dim);
+}
+
+.transcription-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.transcription-line {
+    margin-bottom: 0.5rem;
+    word-wrap: break-word;
+}
+
+.transcription-line.local {
+    color: var(--accent);
+}
+
+.transcription-line.remote {
+    color: var(--text);
+}
+
+.transcription-prefix {
+    font-weight: 700;
+    margin-right: 0.5rem;
+}
+
+/* Adjust connection panel when transcription is visible */
+.transcription-panel:not(.hidden) ~ .connection-panel {
+    bottom: 195px;
+}
+
+/* Nexus mode styling for transcription */
+body.nexus-mode .transcription-panel {
+    border-top: none;
+}
+
 /* Mobile Optimizations */
 @media (max-width: 768px) {
     .app-title {
@@ -402,6 +491,19 @@ body.nexus-mode .local-video-pip {
     .pip-title {
         font-size: 0.5rem;
         padding: 0.2rem 0.4rem;
+    }
+
+    .transcription-panel {
+        height: 150px;
+    }
+
+    .transcription-feed {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .transcription-panel:not(.hidden) ~ .connection-panel {
+        bottom: 165px;
     }
 }
 

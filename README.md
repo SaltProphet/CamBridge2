@@ -30,6 +30,13 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - Low bandwidth mode for data saving
 - P2P optimized routing via Daily.co
 
+### 🎙️ Real-Time Speech-to-Text
+- Live transcription using Deepgram SDK
+- Automatic language detection based on UI language (EN/RU/ES)
+- Scrolling transcription feed with [YOU] and [REMOTE] prefixes
+- Toggle STT on/off during calls
+- No transcripts saved or logged (privacy-first)
+
 ### 📱 Mobile Optimized
 - Touch-responsive interface
 - Fits standard mobile viewports without scrolling
@@ -40,6 +47,7 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 ### Prerequisites
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - Daily.co account (for room creation)
+- Deepgram API key (for speech-to-text feature)
 
 ### Configuration
 
@@ -48,7 +56,13 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
    const ACCESS_KEY = 'your-secret-password-here';
    ```
 
-2. **Configure Daily.co Domain** (Optional): By default, the app uses `saltprophet.daily.co`. To use your own Daily.co domain, edit `app.js`:
+2. **Set Deepgram API Key** (Optional, for transcription): Edit `app.js` and add your Deepgram API key:
+   ```javascript
+   const DEEPGRAM_API_KEY = 'your-deepgram-api-key';
+   ```
+   Get your free API key from: https://console.deepgram.com/
+
+3. **Configure Daily.co Domain** (Optional): By default, the app uses `saltprophet.daily.co`. To use your own Daily.co domain, edit `app.js`:
    ```javascript
    const roomUrl = `https://your-domain.daily.co/${roomName}`;
    ```
@@ -103,6 +117,8 @@ Deploy the files to any static hosting service:
 - **Mode Toggle** (top-left): Switch between Shadow Intel and Nexus Architect
 - **Latency HUD** (left side): Real-time connection latency display
 - **PIP Window**: Drag to reposition your local video feed
+- **STT Toggle**: Enable/disable real-time speech-to-text transcription
+- **Transcription Feed**: Scrolling display at bottom showing live transcriptions with [YOU] and [REMOTE] labels
 - **Cut Link**: Disconnect from the current session
 
 ## Technical Details
@@ -112,6 +128,13 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - Direct peer-to-peer connections
 - No server-side media relay (unless required by network)
 - Optimized for trans-Atlantic high-latency scenarios
+
+### Speech-to-Text
+- Real-time transcription via Deepgram WebSocket API
+- Language automatically synced with UI language selection (EN/RU/ES)
+- Audio streaming from local microphone to Deepgram
+- No transcripts stored on server (privacy-first design)
+- Transcripts only displayed in browser and cleared on disconnect
 
 ### Bandwidth Modes
 - **Standard**: 1280x720 @ 30fps
@@ -125,9 +148,11 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 
 ## Security Notes
 - Change the default access key before deployment
+- Add your Deepgram API key if using transcription
 - Use HTTPS in production (required for camera/microphone access)
 - Room names act as the only identifier - keep them private
 - No data is stored or logged anywhere
+- Transcriptions are client-side only and not recorded
 
 ## Troubleshooting
 

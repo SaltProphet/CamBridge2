@@ -13,7 +13,12 @@ const translations = {
         'connected': 'Connected',
         'latency': 'Latency',
         'error-invalid': 'Invalid access key',
-        'error-room': 'Please enter a room name'
+        'error-room': 'Please enter a room name',
+        'transcription': 'LIVE TRANSCRIPTION',
+        'toggle-stt': 'STT ON',
+        'toggle-stt-off': 'STT OFF',
+        'you-prefix': '[YOU]',
+        'remote-prefix': '[REMOTE]'
     },
     ru: {
         'access-key': 'Ключ доступа',
@@ -27,7 +32,12 @@ const translations = {
         'connected': 'Подключено',
         'latency': 'Задержка',
         'error-invalid': 'Неверный ключ доступа',
-        'error-room': 'Введите имя комнаты'
+        'error-room': 'Введите имя комнаты',
+        'transcription': 'ПРЯМАЯ РАСШИФРОВКА',
+        'toggle-stt': 'РРР ВКЛ',
+        'toggle-stt-off': 'РРР ВЫКЛ',
+        'you-prefix': '[ВЫ]',
+        'remote-prefix': '[УДАЛЕННО]'
     },
     es: {
         'access-key': 'Clave de acceso',
@@ -41,7 +51,12 @@ const translations = {
         'connected': 'Conectado',
         'latency': 'Latencia',
         'error-invalid': 'Clave de acceso inválida',
-        'error-room': 'Ingrese un nombre de sala'
+        'error-room': 'Ingrese un nombre de sala',
+        'transcription': 'TRANSCRIPCIÓN EN VIVO',
+        'toggle-stt': 'STT ON',
+        'toggle-stt-off': 'STT OFF',
+        'you-prefix': '[TÚ]',
+        'remote-prefix': '[REMOTO]'
     }
 };
 
@@ -50,6 +65,10 @@ const translations = {
 // Set this to your secure password to protect access to the video bridge.
 const ACCESS_KEY = '[INSERT_YOUR_PASSWORD_HERE]';
 
+// Deepgram API Key - REPLACE with your actual Deepgram API key
+// Get your key from: https://console.deepgram.com/
+const DEEPGRAM_API_KEY = '[INSERT_YOUR_DEEPGRAM_API_KEY]';
+
 // Application state
 let currentLanguage = 'en';
 let dailyCall = null;
@@ -57,6 +76,12 @@ let latencyInterval = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
 let remoteAudioElement = null;
+let deepgramSocket = null;
+let localAudioContext = null;
+let remoteAudioContext = null;
+let localAudioProcessor = null;
+let remoteAudioProcessor = null;
+let isTranscriptionEnabled = false;
 
 // DOM Elements
 const landingPage = document.getElementById('landing-page');
@@ -73,6 +98,9 @@ const localVideo = document.getElementById('local-video');
 const connectionStatus = document.getElementById('connection-status');
 const latencyValue = document.getElementById('latency-value');
 const localVideoPip = document.getElementById('local-video-pip');
+const transcriptionPanel = document.getElementById('transcription-panel');
+const transcriptionFeed = document.getElementById('transcription-feed');
+const toggleTranscriptionBtn = document.getElementById('toggle-transcription-btn');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -80,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeModeToggle();
     initializeAccessKeyValidation();
     initializeDraggablePIP();
+    initializeTranscription();
 });
 
 // Language toggle functionality
@@ -356,6 +385,11 @@ async function leaveRoom() {
         dailyCall = null;
     }
     
+    // Stop transcription
+    if (isTranscriptionEnabled) {
+        stopTranscription();
+    }
+    
     // Clean up audio element
     if (remoteAudioElement) {
         remoteAudioElement.srcObject = null;
@@ -374,6 +408,8 @@ async function leaveRoom() {
     connectionStatus.style.display = 'block';
     remoteVideo.srcObject = null;
     localVideo.srcObject = null;
+    transcriptionPanel.classList.add('hidden');
+    transcriptionFeed.innerHTML = '';
 }
 
 // Latency monitoring
@@ -426,3 +462,227 @@ window.addEventListener('resize', () => {
         localVideoPip.style.top = Math.min(y, maxY) + 'px';
     }
 });
+
+// ============================================================================
+// DEEPGRAM SPEECH-TO-TEXT INTEGRATION
+// ============================================================================
+
+// Language mapping for Deepgram
+const deepgramLanguageMap = {
+    'en': 'en-US',
+    'ru': 'ru',
+    'es': 'es'
+};
+
+// Initialize transcription toggle
+function initializeTranscription() {
+    if (toggleTranscriptionBtn) {
+        toggleTranscriptionBtn.addEventListener('click', toggleTranscription);
+    }
+}
+
+// Toggle transcription on/off
+function toggleTranscription() {
+    if (isTranscriptionEnabled) {
+        stopTranscription();
+    } else {
+        startTranscription();
+    }
+}
+
+// Start Deepgram transcription
+async function startTranscription() {
+    if (!DEEPGRAM_API_KEY || DEEPGRAM_API_KEY === '[INSERT_YOUR_DEEPGRAM_API_KEY]') {
+        console.warn('Deepgram API key not configured. Please add your API key to app.js');
+        alert('Deepgram API key not configured. Please add your key to enable transcription.');
+        return;
+    }
+
+    if (!dailyCall) {
+        console.warn('No active Daily call to transcribe');
+        return;
+    }
+
+    try {
+        isTranscriptionEnabled = true;
+        transcriptionPanel.classList.remove('hidden');
+        toggleTranscriptionBtn.textContent = translations[currentLanguage]['toggle-stt'];
+        toggleTranscriptionBtn.classList.remove('off');
+
+        // Get the Deepgram language code
+        const deepgramLang = deepgramLanguageMap[currentLanguage] || 'en-US';
+
+        // Connect to Deepgram WebSocket
+        const wsUrl = `wss://api.deepgram.com/v1/listen?language=${deepgramLang}&punctuate=true&interim_results=false`;
+        deepgramSocket = new WebSocket(wsUrl, ['token', DEEPGRAM_API_KEY]);
+
+        deepgramSocket.onopen = () => {
+            console.log('Deepgram WebSocket connected');
+            setupAudioStreaming();
+        };
+
+        deepgramSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
+                const transcript = data.channel.alternatives[0].transcript;
+                if (transcript && transcript.trim().length > 0) {
+                    // Determine if this is local or remote audio
+                    // For now, we'll mark all as local since we're streaming local mic
+                    addTranscriptionLine(transcript, 'local');
+                }
+            }
+        };
+
+        deepgramSocket.onerror = (error) => {
+            console.error('Deepgram WebSocket error:', error);
+        };
+
+        deepgramSocket.onclose = () => {
+            console.log('Deepgram WebSocket closed');
+            cleanupAudioStreaming();
+        };
+
+    } catch (error) {
+        console.error('Failed to start transcription:', error);
+        isTranscriptionEnabled = false;
+        transcriptionPanel.classList.add('hidden');
+    }
+}
+
+// Stop transcription
+function stopTranscription() {
+    isTranscriptionEnabled = false;
+    toggleTranscriptionBtn.textContent = translations[currentLanguage]['toggle-stt-off'];
+    toggleTranscriptionBtn.classList.add('off');
+
+    // Close Deepgram WebSocket
+    if (deepgramSocket) {
+        deepgramSocket.close();
+        deepgramSocket = null;
+    }
+
+    // Cleanup audio streaming
+    cleanupAudioStreaming();
+
+    // Optionally hide panel or clear feed
+    // transcriptionPanel.classList.add('hidden');
+    // transcriptionFeed.innerHTML = '';
+}
+
+// Setup audio streaming to Deepgram
+function setupAudioStreaming() {
+    try {
+        const participants = dailyCall.participants();
+        const localParticipant = participants.local;
+
+        if (localParticipant && localParticipant.audioTrack) {
+            // Create audio context for local audio
+            localAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const localSource = localAudioContext.createMediaStreamSource(
+                new MediaStream([localParticipant.audioTrack])
+            );
+
+            // Create script processor to capture audio data
+            localAudioProcessor = localAudioContext.createScriptProcessor(4096, 1, 1);
+            
+            localAudioProcessor.onaudioprocess = (e) => {
+                if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    // Convert Float32Array to Int16Array for Deepgram
+                    const pcmData = convertFloat32ToInt16(inputData);
+                    deepgramSocket.send(pcmData);
+                }
+            };
+
+            localSource.connect(localAudioProcessor);
+            localAudioProcessor.connect(localAudioContext.destination);
+        }
+
+        // TODO: Add remote participant audio streaming
+        // This would require creating a separate Deepgram connection
+        // or multiplexing the audio streams with markers
+
+    } catch (error) {
+        console.error('Failed to setup audio streaming:', error);
+    }
+}
+
+// Cleanup audio streaming
+function cleanupAudioStreaming() {
+    if (localAudioProcessor) {
+        localAudioProcessor.disconnect();
+        localAudioProcessor = null;
+    }
+
+    if (localAudioContext) {
+        localAudioContext.close();
+        localAudioContext = null;
+    }
+
+    if (remoteAudioProcessor) {
+        remoteAudioProcessor.disconnect();
+        remoteAudioProcessor = null;
+    }
+
+    if (remoteAudioContext) {
+        remoteAudioContext.close();
+        remoteAudioContext = null;
+    }
+}
+
+// Convert Float32Array to Int16Array for Deepgram
+function convertFloat32ToInt16(float32Array) {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
+        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return int16Array.buffer;
+}
+
+// Add transcription line to feed
+function addTranscriptionLine(text, source) {
+    const line = document.createElement('div');
+    line.className = `transcription-line ${source}`;
+    
+    const prefix = document.createElement('span');
+    prefix.className = 'transcription-prefix';
+    prefix.textContent = source === 'local' 
+        ? translations[currentLanguage]['you-prefix'] 
+        : translations[currentLanguage]['remote-prefix'];
+    
+    const content = document.createElement('span');
+    content.textContent = text;
+    
+    line.appendChild(prefix);
+    line.appendChild(content);
+    transcriptionFeed.appendChild(line);
+    
+    // Auto-scroll to bottom
+    transcriptionFeed.scrollTop = transcriptionFeed.scrollHeight;
+}
+
+// Update transcription when language changes
+function updateTranscriptionLanguage() {
+    if (isTranscriptionEnabled) {
+        // Restart transcription with new language
+        stopTranscription();
+        setTimeout(() => startTranscription(), 500);
+    }
+}
+
+// Hook into language toggle to update transcription
+const originalInitializeLanguageToggle = initializeLanguageToggle;
+function initializeLanguageToggle() {
+    const langButtons = document.querySelectorAll('.lang-btn');
+    
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            langButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentLanguage = btn.dataset.lang;
+            updateTranslations();
+            updateTranscriptionLanguage();
+        });
+    });
+}
