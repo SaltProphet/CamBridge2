@@ -25,8 +25,19 @@
 
     <!-- Main Video Interface -->
     <div id="video-interface" class="hidden">
-        <!-- Language Toggle -->
+        <!-- Scanline Overlay -->
+        <div class="scanline-overlay"></div>
+        
+        <!-- LINK STATUS Bar -->
+        <div id="link-status-bar" class="link-status-bar">
+            <span class="status-label">LINK_STATUS</span>
+            <span id="status-indicator" class="status-indicator disconnected"></span>
+            <span id="status-text" class="status-text">DISCONNECTED</span>
+        </div>
+        
+        <!-- SYS_LANG Module -->
         <div id="language-toggle" class="language-toggle">
+            <span class="module-label">SYS_LANG</span>
             <button class="lang-btn active" data-lang="en">EN</button>
             <button class="lang-btn" data-lang="ru">RU</button>
             <button class="lang-btn" data-lang="es">ES</button>
@@ -40,8 +51,14 @@
 
         <!-- Latency HUD -->
         <div id="latency-hud" class="latency-hud">
-            <span class="latency-label" data-i18n="latency">Latency</span>
+            <span class="latency-label" data-i18n="latency">LATENCY</span>
             <span id="latency-value" class="latency-value">-- ms</span>
+        </div>
+        
+        <!-- DATA FLOW Readout -->
+        <div id="data-flow-hud" class="data-flow-hud">
+            <span class="data-flow-label">DATA_FLOW</span>
+            <span id="data-flow-value" class="data-flow-value">0 kb/s</span>
         </div>
 
         <!-- Connection Controls -->
@@ -56,8 +73,8 @@
                     <span data-i18n="low-bandwidth">Data Save (Low BW)</span>
                 </label>
             </div>
-            <button id="join-btn" class="btn-primary" data-i18n="join">Establish Link</button>
-            <button id="leave-btn" class="btn-danger hidden" data-i18n="leave">Cut Link</button>
+            <button id="join-btn" class="btn-primary" data-i18n="join">ESTABLISH_LINK</button>
+            <button id="leave-btn" class="btn-danger hidden" data-i18n="leave">CUT_LINK</button>
         </div>
 
         <!-- Video Container -->
