@@ -1,87 +1,52 @@
-// CamBridge - Secure P2P Video Bridge
+// CamBridge - Secure P2P Video Bridge - Clean Picture (Nexus Architect)
 // Multi-language support
 const translations = {
     en: {
-        'access-key': 'Access Key',
-        'unlock': 'Establish Link',
-        'room-name': 'Room ID',
-        'join': 'Establish Link',
-        'leave': 'Cut Link',
-        'low-bandwidth': 'Data Save (Low BW)',
-        'local-monitor': 'Local Monitor',
-        'waiting': 'Waiting for connection...',
-        'connected': 'Connected',
-        'latency': 'Latency',
-        'error-invalid': 'Invalid access key',
-        'error-room': 'Please enter a room name',
-        'transcription': 'LIVE TRANSCRIPTION',
-        'toggle-stt': 'STT ON',
-        'toggle-stt-off': 'STT OFF',
-        'you-prefix': '[YOU]',
-        'remote-prefix': '[REMOTE]'
+        'access-key': 'ACCESS_KEY',
+        'unlock': 'ESTABLISH_LINK',
+        'room-name': 'ROOM_ID',
+        'join': 'ESTABLISH_LINK',
+        'leave': 'LINK_TERMINATE',
+        'low-bandwidth': 'DATA_SAVE',
+        'waiting': 'WAITING_FOR_CONNECTION...',
+        'connected': 'CONNECTED',
+        'error-invalid': 'INVALID_ACCESS_KEY',
+        'error-room': 'ENTER_ROOM_NAME'
     },
     ru: {
-        'access-key': 'Ключ доступа',
-        'unlock': 'Подключиться',
-        'room-name': 'ID комнаты',
-        'join': 'Подключиться',
-        'leave': 'Разорвать',
-        'low-bandwidth': 'Экономия данных',
-        'local-monitor': 'Локальный монитор',
-        'waiting': 'Ожидание подключения...',
-        'connected': 'Подключено',
-        'latency': 'Задержка',
-        'error-invalid': 'Неверный ключ доступа',
-        'error-room': 'Введите имя комнаты',
-        'transcription': 'ПРЯМАЯ РАСШИФРОВКА',
-        'toggle-stt': 'РРР ВКЛ',
-        'toggle-stt-off': 'РРР ВЫКЛ',
-        'you-prefix': '[ВЫ]',
-        'remote-prefix': '[УДАЛЕННО]'
+        'access-key': 'КЛЮЧ_ДОСТУПА',
+        'unlock': 'ПОДКЛЮЧИТЬСЯ',
+        'room-name': 'ID_КОМНАТЫ',
+        'join': 'ПОДКЛЮЧИТЬСЯ',
+        'leave': 'РАЗОРВАТЬ',
+        'low-bandwidth': 'ЭКОНОМИЯ_ДАННЫХ',
+        'waiting': 'ОЖИДАНИЕ_ПОДКЛЮЧЕНИЯ...',
+        'connected': 'ПОДКЛЮЧЕНО',
+        'error-invalid': 'НЕВЕРНЫЙ_КЛЮЧ',
+        'error-room': 'ВВЕДИТЕ_ИМЯ_КОМНАТЫ'
     },
     es: {
-        'access-key': 'Clave de acceso',
-        'unlock': 'Conectar',
-        'room-name': 'ID de sala',
-        'join': 'Conectar',
-        'leave': 'Cortar',
-        'low-bandwidth': 'Ahorro de datos',
-        'local-monitor': 'Monitor local',
-        'waiting': 'Esperando conexión...',
-        'connected': 'Conectado',
-        'latency': 'Latencia',
-        'error-invalid': 'Clave de acceso inválida',
-        'error-room': 'Ingrese un nombre de sala',
-        'transcription': 'TRANSCRIPCIÓN EN VIVO',
-        'toggle-stt': 'STT ON',
-        'toggle-stt-off': 'STT OFF',
-        'you-prefix': '[TÚ]',
-        'remote-prefix': '[REMOTO]'
+        'access-key': 'CLAVE_DE_ACCESO',
+        'unlock': 'CONECTAR',
+        'room-name': 'ID_DE_SALA',
+        'join': 'CONECTAR',
+        'leave': 'TERMINAR',
+        'low-bandwidth': 'AHORRO_DE_DATOS',
+        'waiting': 'ESPERANDO_CONEXIÓN...',
+        'connected': 'CONECTADO',
+        'error-invalid': 'CLAVE_INVÁLIDA',
+        'error-room': 'INGRESE_NOMBRE_DE_SALA'
     }
 };
 
 // Hardcoded access key (GHOST PROTOCOL)
-// WARNING: Change this value before deployment! This is a placeholder that must be replaced.
-// Set this to your secure password to protect access to the video bridge.
 const ACCESS_KEY = '[INSERT_YOUR_PASSWORD_HERE]';
-
-// Deepgram API Key - REPLACE with your actual Deepgram API key
-// Get your key from: https://console.deepgram.com/
-const DEEPGRAM_API_KEY = '[INSERT_YOUR_DEEPGRAM_API_KEY]';
 
 // Application state
 let currentLanguage = 'en';
 let dailyCall = null;
-let latencyInterval = null;
-let isDragging = false;
-let dragOffset = { x: 0, y: 0 };
+let controlsTimeout = null;
 let remoteAudioElement = null;
-let deepgramSocket = null;
-let localAudioContext = null;
-let remoteAudioContext = null;
-let localAudioProcessor = null;
-let remoteAudioProcessor = null;
-let isTranscriptionEnabled = false;
 
 // DOM Elements
 const landingPage = document.getElementById('landing-page');
@@ -96,19 +61,17 @@ const lowBandwidthToggle = document.getElementById('low-bandwidth-toggle');
 const remoteVideo = document.getElementById('remote-video');
 const localVideo = document.getElementById('local-video');
 const connectionStatus = document.getElementById('connection-status');
-const latencyValue = document.getElementById('latency-value');
-const localVideoPip = document.getElementById('local-video-pip');
-const transcriptionPanel = document.getElementById('transcription-panel');
-const transcriptionFeed = document.getElementById('transcription-feed');
-const toggleTranscriptionBtn = document.getElementById('toggle-transcription-btn');
+const controlsOverlay = document.getElementById('controls-overlay');
+const ghostChatToggle = document.getElementById('ghost-chat-toggle');
+const ghostChatInput = document.getElementById('ghost-chat-input');
+const ghostChatMessages = document.getElementById('ghost-chat-messages');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initializeLanguageToggle();
-    initializeModeToggle();
     initializeAccessKeyValidation();
-    initializeDraggablePIP();
-    initializeTranscription();
+    initializeAutoHideControls();
+    initializeGhostChat();
 });
 
 // Language toggle functionality
@@ -133,35 +96,6 @@ function updateTranslations() {
         if (translations[currentLanguage][key]) {
             el.textContent = translations[currentLanguage][key];
         }
-    });
-    
-    // Update labels
-    const accessLabel = document.getElementById('access-label');
-    if (accessLabel) {
-        accessLabel.textContent = translations[currentLanguage]['access-key'];
-    }
-    
-    const roomLabel = document.getElementById('room-label');
-    if (roomLabel) {
-        roomLabel.textContent = translations[currentLanguage]['room-name'];
-    }
-}
-
-// Mode toggle functionality (Shadow Intel / Nexus Architect)
-function initializeModeToggle() {
-    const modeButtons = document.querySelectorAll('.mode-btn');
-    
-    modeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modeButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            if (btn.dataset.mode === 'nexus') {
-                document.body.classList.add('nexus-mode');
-            } else {
-                document.body.classList.remove('nexus-mode');
-            }
-        });
     });
 }
 
@@ -198,58 +132,43 @@ function unlockApp() {
     }
 }
 
-// Initialize draggable PIP
-function initializeDraggablePIP() {
-    const pip = localVideoPip;
+// Auto-hide controls on mouse movement
+function initializeAutoHideControls() {
+    let hideTimeout;
     
-    pip.addEventListener('mousedown', startDrag);
-    pip.addEventListener('touchstart', startDrag, { passive: false });
+    const showControls = () => {
+        if (controlsOverlay) {
+            controlsOverlay.classList.add('visible');
+        }
+        
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(() => {
+            if (controlsOverlay && !ghostChatInput.classList.contains('active')) {
+                controlsOverlay.classList.remove('visible');
+            }
+        }, 3000);
+    };
     
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('touchmove', drag, { passive: false });
+    // Show controls on mouse move
+    videoInterface.addEventListener('mousemove', showControls);
     
-    document.addEventListener('mouseup', stopDrag);
-    document.addEventListener('touchend', stopDrag);
-}
-
-function startDrag(e) {
-    isDragging = true;
-    const rect = localVideoPip.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    // Show controls on touch
+    videoInterface.addEventListener('touchstart', showControls);
     
-    dragOffset.x = clientX - rect.left;
-    dragOffset.y = clientY - rect.top;
-    
-    localVideoPip.style.cursor = 'grabbing';
-}
-
-function drag(e) {
-    if (!isDragging) return;
-    
-    e.preventDefault();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    let x = clientX - dragOffset.x;
-    let y = clientY - dragOffset.y;
-    
-    // Keep within bounds
-    const maxX = window.innerWidth - localVideoPip.offsetWidth;
-    const maxY = window.innerHeight - localVideoPip.offsetHeight;
-    
-    x = Math.max(0, Math.min(x, maxX));
-    y = Math.max(0, Math.min(y, maxY));
-    
-    localVideoPip.style.right = 'auto';
-    localVideoPip.style.bottom = 'auto';
-    localVideoPip.style.left = x + 'px';
-    localVideoPip.style.top = y + 'px';
-}
-
-function stopDrag() {
-    isDragging = false;
-    localVideoPip.style.cursor = 'move';
+    // Keep controls visible when interacting with them
+    if (controlsOverlay) {
+        controlsOverlay.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+        });
+        
+        controlsOverlay.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!ghostChatInput.classList.contains('active')) {
+                    controlsOverlay.classList.remove('visible');
+                }
+            }, 1000);
+        });
+    }
 }
 
 // Daily.co P2P Video Connection
@@ -274,10 +193,11 @@ async function joinRoom() {
     const sanitizedRoomName = roomName.replace(/[^a-zA-Z0-9-_]/g, '-');
     
     try {
-        // Create Daily call object with P2P enabled
+        // Create Daily call object with P2P optimizations
         dailyCall = window.DailyIframe.createCallObject({
             audioSource: true,
-            videoSource: true
+            videoSource: true,
+            subscribeToTracksAutomatically: true
         });
         
         // Set up event listeners
@@ -286,32 +206,44 @@ async function joinRoom() {
             .on('participant-joined', handleParticipantJoined)
             .on('participant-left', handleParticipantLeft)
             .on('participant-updated', handleParticipantUpdated)
+            .on('app-message', handleAppMessage)
             .on('error', handleError);
         
-        // Join the room with P2P configuration
+        // Join the room with P2P configuration and SA link optimization
         const roomUrl = `https://saltprophet.daily.co/${sanitizedRoomName}`;
         
         await dailyCall.join({
             url: roomUrl,
-            // Force P2P mode for low-latency trans-Atlantic connections
+            // P2P optimization for trans-Atlantic link
             dailyConfig: {
                 experimentalOptimizeForPrerecordedVideo: false,
                 experimentalGetUserMediaConstraints: {
                     video: lowBandwidthToggle.checked ? 
                         { width: 640, height: 480, frameRate: 15 } :
-                        { width: 1280, height: 720, frameRate: 30 }
+                        { width: 1920, height: 1080, frameRate: 30 }
                 }
             }
         });
+        
+        // Set bandwidth optimization for SA link (removed no-limit as it may not be valid)
+        // Using high bitrate limit for trans-Atlantic link quality
+        try {
+            await dailyCall.setBandwidth({ 
+                trackConstraints: {
+                    video: { 
+                        maxBitrate: lowBandwidthToggle.checked ? 800 : 2500
+                    }
+                }
+            });
+        } catch (e) {
+            console.warn('Bandwidth optimization not available:', e);
+        }
         
         // Update UI
         joinBtn.classList.add('hidden');
         leaveBtn.classList.remove('hidden');
         roomInput.disabled = true;
         lowBandwidthToggle.disabled = true;
-        
-        // Start latency monitoring
-        startLatencyMonitoring();
         
     } catch (error) {
         console.error('Failed to join room:', error);
@@ -378,6 +310,13 @@ function handleError(error) {
     alert('Connection error occurred. Please try again.');
 }
 
+function handleAppMessage(event) {
+    // Handle incoming ghost chat messages
+    if (event.data && event.data.type === 'ghost-chat') {
+        displayGhostMessage(event.data.message);
+    }
+}
+
 async function leaveRoom() {
     if (dailyCall) {
         await dailyCall.leave();
@@ -385,19 +324,11 @@ async function leaveRoom() {
         dailyCall = null;
     }
     
-    // Stop transcription
-    if (isTranscriptionEnabled) {
-        stopTranscription();
-    }
-    
     // Clean up audio element
     if (remoteAudioElement) {
         remoteAudioElement.srcObject = null;
         remoteAudioElement = null;
     }
-    
-    // Stop latency monitoring
-    stopLatencyMonitoring();
     
     // Reset UI
     joinBtn.classList.remove('hidden');
@@ -408,281 +339,131 @@ async function leaveRoom() {
     connectionStatus.style.display = 'block';
     remoteVideo.srcObject = null;
     localVideo.srcObject = null;
-    transcriptionPanel.classList.add('hidden');
-    transcriptionFeed.innerHTML = '';
+    
+    // Hide ghost chat
+    if (ghostChatInput) {
+        ghostChatInput.classList.remove('active');
+        ghostChatInput.value = '';
+    }
+    if (ghostChatToggle) {
+        ghostChatToggle.classList.remove('active');
+    }
 }
 
-// Latency monitoring
-function startLatencyMonitoring() {
-    latencyInterval = setInterval(async () => {
-        if (dailyCall) {
-            try {
-                const stats = await dailyCall.getNetworkStats();
-                if (stats && stats.latest && stats.latest.videoRecvPacketLoss !== undefined) {
-                    // Use round-trip time if available, otherwise estimate from packet loss
-                    const latency = stats.latest.rtt || Math.round((1 - stats.latest.videoRecvPacketLoss) * 200 + 50);
-                    latencyValue.textContent = `${latency} ms`;
-                }
-            } catch (error) {
-                // Fallback to simulated latency if stats not available
-                const simulatedLatency = Math.round(Math.random() * 50 + 150);
-                latencyValue.textContent = `${simulatedLatency} ms`;
-            }
+// ============================================================================
+// EPHEMERAL GHOST CHAT
+// ============================================================================
+
+const GHOST_MESSAGE_DURATION = 4000; // Must match CSS animation duration
+
+function initializeGhostChat() {
+    if (!ghostChatInput || !ghostChatToggle) return;
+    
+    // Toggle ghost chat input with 'T' key (but not Enter to avoid conflicts)
+    document.addEventListener('keydown', (e) => {
+        // Only activate with 'T' key, not Enter (to avoid form submission conflicts)
+        if ((e.key === 't' || e.key === 'T') && !ghostChatInput.classList.contains('active') && dailyCall) {
+            e.preventDefault();
+            showGhostChatInput();
         }
-    }, 2000);
-}
-
-function stopLatencyMonitoring() {
-    if (latencyInterval) {
-        clearInterval(latencyInterval);
-        latencyInterval = null;
-        latencyValue.textContent = '-- ms';
-    }
-}
-
-// Handle page visibility to pause/resume video
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && dailyCall) {
-        // Optionally pause video when tab is hidden
-    } else if (dailyCall) {
-        // Resume video when tab is visible
-    }
-});
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    // Ensure PIP stays within bounds
-    if (localVideoPip.style.left !== 'auto') {
-        const x = parseInt(localVideoPip.style.left) || 0;
-        const y = parseInt(localVideoPip.style.top) || 0;
-        const maxX = window.innerWidth - localVideoPip.offsetWidth;
-        const maxY = window.innerHeight - localVideoPip.offsetHeight;
         
-        localVideoPip.style.left = Math.min(x, maxX) + 'px';
-        localVideoPip.style.top = Math.min(y, maxY) + 'px';
-    }
-});
-
-// ============================================================================
-// DEEPGRAM SPEECH-TO-TEXT INTEGRATION
-// ============================================================================
-
-// Language mapping for Deepgram
-const deepgramLanguageMap = {
-    'en': 'en-US',
-    'ru': 'ru',
-    'es': 'es'
-};
-
-// Initialize transcription toggle
-function initializeTranscription() {
-    if (toggleTranscriptionBtn) {
-        toggleTranscriptionBtn.addEventListener('click', toggleTranscription);
-    }
-}
-
-// Toggle transcription on/off
-function toggleTranscription() {
-    if (isTranscriptionEnabled) {
-        stopTranscription();
-    } else {
-        startTranscription();
-    }
-}
-
-// Start Deepgram transcription
-async function startTranscription() {
-    if (!DEEPGRAM_API_KEY || DEEPGRAM_API_KEY === '[INSERT_YOUR_DEEPGRAM_API_KEY]') {
-        console.warn('Deepgram API key not configured. Please add your API key to app.js');
-        alert('Deepgram API key not configured. Please add your key to enable transcription.');
-        return;
-    }
-
-    if (!dailyCall) {
-        console.warn('No active Daily call to transcribe');
-        return;
-    }
-
-    try {
-        isTranscriptionEnabled = true;
-        transcriptionPanel.classList.remove('hidden');
-        toggleTranscriptionBtn.textContent = translations[currentLanguage]['toggle-stt'];
-        toggleTranscriptionBtn.classList.remove('off');
-
-        // Get the Deepgram language code
-        const deepgramLang = deepgramLanguageMap[currentLanguage] || 'en-US';
-
-        // Connect to Deepgram WebSocket
-        const wsUrl = `wss://api.deepgram.com/v1/listen?language=${deepgramLang}&punctuate=true&interim_results=false`;
-        deepgramSocket = new WebSocket(wsUrl, ['token', DEEPGRAM_API_KEY]);
-
-        deepgramSocket.onopen = () => {
-            console.log('Deepgram WebSocket connected');
-            setupAudioStreaming();
-        };
-
-        deepgramSocket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
-                const transcript = data.channel.alternatives[0].transcript;
-                if (transcript && transcript.trim().length > 0) {
-                    // Determine if this is local or remote audio
-                    // For now, we'll mark all as local since we're streaming local mic
-                    addTranscriptionLine(transcript, 'local');
-                }
-            }
-        };
-
-        deepgramSocket.onerror = (error) => {
-            console.error('Deepgram WebSocket error:', error);
-        };
-
-        deepgramSocket.onclose = () => {
-            console.log('Deepgram WebSocket closed');
-            cleanupAudioStreaming();
-        };
-
-    } catch (error) {
-        console.error('Failed to start transcription:', error);
-        isTranscriptionEnabled = false;
-        transcriptionPanel.classList.add('hidden');
-    }
-}
-
-// Stop transcription
-function stopTranscription() {
-    isTranscriptionEnabled = false;
-    toggleTranscriptionBtn.textContent = translations[currentLanguage]['toggle-stt-off'];
-    toggleTranscriptionBtn.classList.add('off');
-
-    // Close Deepgram WebSocket
-    if (deepgramSocket) {
-        deepgramSocket.close();
-        deepgramSocket = null;
-    }
-
-    // Cleanup audio streaming
-    cleanupAudioStreaming();
-
-    // Optionally hide panel or clear feed
-    // transcriptionPanel.classList.add('hidden');
-    // transcriptionFeed.innerHTML = '';
-}
-
-// Setup audio streaming to Deepgram
-function setupAudioStreaming() {
-    try {
-        const participants = dailyCall.participants();
-        const localParticipant = participants.local;
-
-        if (localParticipant && localParticipant.audioTrack) {
-            // Create audio context for local audio
-            localAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const localSource = localAudioContext.createMediaStreamSource(
-                new MediaStream([localParticipant.audioTrack])
-            );
-
-            // Create script processor to capture audio data
-            localAudioProcessor = localAudioContext.createScriptProcessor(4096, 1, 1);
-            
-            localAudioProcessor.onaudioprocess = (e) => {
-                if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    // Convert Float32Array to Int16Array for Deepgram
-                    const pcmData = convertFloat32ToInt16(inputData);
-                    deepgramSocket.send(pcmData);
-                }
-            };
-
-            localSource.connect(localAudioProcessor);
-            localAudioProcessor.connect(localAudioContext.destination);
+        if (e.key === 'Escape' && ghostChatInput.classList.contains('active')) {
+            hideGhostChatInput();
         }
-
-        // TODO: Add remote participant audio streaming
-        // This would require creating a separate Deepgram connection
-        // or multiplexing the audio streams with markers
-
-    } catch (error) {
-        console.error('Failed to setup audio streaming:', error);
-    }
-}
-
-// Cleanup audio streaming
-function cleanupAudioStreaming() {
-    if (localAudioProcessor) {
-        localAudioProcessor.disconnect();
-        localAudioProcessor = null;
-    }
-
-    if (localAudioContext) {
-        localAudioContext.close();
-        localAudioContext = null;
-    }
-
-    if (remoteAudioProcessor) {
-        remoteAudioProcessor.disconnect();
-        remoteAudioProcessor = null;
-    }
-
-    if (remoteAudioContext) {
-        remoteAudioContext.close();
-        remoteAudioContext = null;
-    }
-}
-
-// Convert Float32Array to Int16Array for Deepgram
-function convertFloat32ToInt16(float32Array) {
-    const int16Array = new Int16Array(float32Array.length);
-    for (let i = 0; i < float32Array.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32Array[i]));
-        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-    return int16Array.buffer;
-}
-
-// Add transcription line to feed
-function addTranscriptionLine(text, source) {
-    const line = document.createElement('div');
-    line.className = `transcription-line ${source}`;
-    
-    const prefix = document.createElement('span');
-    prefix.className = 'transcription-prefix';
-    prefix.textContent = source === 'local' 
-        ? translations[currentLanguage]['you-prefix'] 
-        : translations[currentLanguage]['remote-prefix'];
-    
-    const content = document.createElement('span');
-    content.textContent = text;
-    
-    line.appendChild(prefix);
-    line.appendChild(content);
-    transcriptionFeed.appendChild(line);
-    
-    // Auto-scroll to bottom
-    transcriptionFeed.scrollTop = transcriptionFeed.scrollHeight;
-}
-
-// Update transcription when language changes
-function updateTranscriptionLanguage() {
-    if (isTranscriptionEnabled) {
-        // Restart transcription with new language
-        stopTranscription();
-        setTimeout(() => startTranscription(), 500);
-    }
-}
-
-// Hook into language toggle to update transcription
-const originalInitializeLanguageToggle = initializeLanguageToggle;
-function initializeLanguageToggle() {
-    const langButtons = document.querySelectorAll('.lang-btn');
-    
-    langButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            langButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentLanguage = btn.dataset.lang;
-            updateTranslations();
-            updateTranscriptionLanguage();
-        });
     });
+    
+    // Toggle via button
+    ghostChatToggle.addEventListener('click', () => {
+        if (ghostChatInput.classList.contains('active')) {
+            hideGhostChatInput();
+        } else if (dailyCall) {
+            showGhostChatInput();
+        }
+    });
+    
+    // Send message on Enter
+    ghostChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendGhostMessage();
+        }
+    });
+}
+
+function showGhostChatInput() {
+    if (!ghostChatInput || !dailyCall) return;
+    
+    ghostChatInput.classList.add('active');
+    ghostChatToggle.classList.add('active');
+    ghostChatInput.focus();
+    
+    // Keep controls visible while typing
+    if (controlsOverlay) {
+        controlsOverlay.classList.add('visible');
+    }
+}
+
+function hideGhostChatInput() {
+    if (!ghostChatInput) return;
+    
+    ghostChatInput.classList.remove('active');
+    ghostChatToggle.classList.remove('active');
+    ghostChatInput.value = '';
+}
+
+function sendGhostMessage() {
+    const message = ghostChatInput.value.trim();
+    
+    if (!message) {
+        hideGhostChatInput();
+        return;
+    }
+    if (!dailyCall) return;
+    
+    // Sanitize message to prevent XSS
+    const sanitizedMessage = sanitizeGhostMessage(message);
+    
+    // Display message locally
+    displayGhostMessage(sanitizedMessage);
+    
+    // Send to remote participant via Daily.co app message
+    try {
+        dailyCall.sendAppMessage({
+            type: 'ghost-chat',
+            message: sanitizedMessage
+        });
+    } catch (error) {
+        console.error('Failed to send ghost message:', error);
+    }
+    
+    // Hide input after sending
+    hideGhostChatInput();
+}
+
+function sanitizeGhostMessage(text) {
+    // Whitelist approach: only allow alphanumeric, spaces, and basic punctuation
+    // This completely prevents any HTML injection
+    const sanitized = text
+        .replace(/[^a-zA-Z0-9\s.,!?'-]/g, '') // Only allow safe characters
+        .substring(0, 200);                     // Limit length
+    return sanitized;
+}
+
+function displayGhostMessage(text) {
+    if (!ghostChatMessages) return;
+    
+    // Create ghost message element
+    const messageEl = document.createElement('div');
+    messageEl.className = 'ghost-message';
+    messageEl.textContent = text;
+    
+    // Add to container
+    ghostChatMessages.appendChild(messageEl);
+    
+    // Remove after animation completes (matches CSS animation duration)
+    setTimeout(() => {
+        if (messageEl.parentNode) {
+            messageEl.parentNode.removeChild(messageEl);
+        }
+    }, GHOST_MESSAGE_DURATION);
 }
