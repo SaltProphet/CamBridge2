@@ -10,7 +10,7 @@ const ACCESS_KEY = typeof process !== 'undefined' && process.env && process.env.
     : 'C2C';
 const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.DAILY_URL 
     ? process.env.DAILY_URL 
-    : 'https://saltprophet.daily.co/cambridge';
+    : 'https://cambridge.daily.co/Cambridge';
 const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
     ? process.env.DEEPGRAM_KEY 
     : '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f';
