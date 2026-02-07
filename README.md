@@ -4,6 +4,8 @@ Private 1-on-1 P2P Video Bridge - Optimized for High-Latency Trans-Atlantic Conn
 ## Overview
 CamBridge is a secure, peer-to-peer video communication system designed with the REAPER design language. It features a minimalist, industrial interface optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
 
+**After Hours Portal**: Extended with model-first economy features, modular widget system, and dual-station privacy controls.
+
 ## Features
 
 ### 🔒 Ghost Protocol Security
@@ -11,6 +13,34 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - No database, no tracking, no logs
 - No recording features
 - Private P2P connections only
+
+### 💰 After Hours: Model-First Economy
+- **Tip System**: Real-time tip processing with visual and audio alerts
+- **Ledger Widget**: Transaction history with timestamps and balance tracking
+- **Visual Alerts**: Animate.css powered notifications for incoming tips
+- **Audio Engine**: Customizable sound alerts with global mute/unmute toggle
+- **P2P Transactions**: Tips transmitted via Daily.co app messages
+
+### 🎛️ After Hours: Modular Widget System
+- **Chat Widget**: P2P messaging with Daily.co integration
+- **Tip Ledger Widget**: Balance display, transaction history, and send controls
+- **Controls Widget**: Room switcher, audio toggle, theme customization
+- **Draggable Interface**: Click and drag widgets to custom positions
+- **Persistent Layout**: Widget positions saved to localStorage per-user
+- **Widget Menu**: Bottom toolbar for quick show/hide toggles
+
+### 🚪 After Hours: Dual-Station Privacy
+- **Room Router**: Switch between Public and Private Daily.co rooms
+- **Public Room**: Default open room for general sessions
+- **Private Room**: Secured room requiring separate access validation
+- **Seamless Switching**: Live room transitions without page reload
+
+### 🎨 After Hours: Dynamic Theming
+- **Color Customization**: Change accent color via color picker
+- **Glass Opacity**: Adjust widget transparency (50-95%)
+- **CSS Variables**: Real-time theme updates using `--accent` and `--glass-opacity`
+- **Profile Persistence**: Theme preferences saved to localStorage
+- **REAPER Base**: Built on existing industrial design language
 
 ### 🌐 Multi-Language Support
 - **English (EN)**: Access Key, Establish Link, Data Save (Low BW), Cut Link
@@ -21,7 +51,7 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - **Shadow Intel Mode**: Minimalist HUD with thin borders and real-time latency readout
 - **Nexus Architect Mode**: Clean, borderless view for high-focus interaction
 - High-contrast industrial theme (#121212, #2c2c2c)
-- Monospaced fonts (JetBrains Mono)
+- Monospaced fonts (JetBrains Mono, Inter, Roboto Mono)
 
 ### 📹 Video Features
 - Full-screen remote video display
@@ -41,6 +71,7 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - Touch-responsive interface
 - Fits standard mobile viewports without scrolling
 - Draggable PIP on mobile devices
+- Responsive widget positioning for mobile screens
 
 ## Setup
 
@@ -64,8 +95,22 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 
 3. **Configure Daily.co Domain** (Optional): By default, the app uses `saltprophet.daily.co`. To use your own Daily.co domain, edit `app.js`:
    ```javascript
-   const roomUrl = `https://your-domain.daily.co/${roomName}`;
+   const DAILY_URL = 'https://your-domain.daily.co/YourRoom';
    ```
+
+4. **Configure Private Room** (Optional, for After Hours dual-station): Set a separate private room URL in `app.js`:
+   ```javascript
+   const PRIVATE_ROOM_URL = 'https://your-domain.daily.co/YourPrivateRoom';
+   ```
+
+5. **Add Tip Sound** (Optional, for After Hours audio alerts): Add a `tip.mp3` file to `/assets/sounds/` for audio notifications when tips are received.
+
+### After Hours Environment Variables (Vercel/Production)
+When deploying to Vercel or other platforms, set these environment variables:
+- `ACCESS_KEY`: Your access password
+- `DAILY_URL`: Your public Daily.co room URL
+- `PRIVATE_ROOM_URL`: Your private Daily.co room URL (optional)
+- `DEEPGRAM_KEY`: Your Deepgram API key (optional)
 
 ### Deployment
 
@@ -121,6 +166,44 @@ Deploy the files to any static hosting service:
 - **Transcription Feed**: Scrolling display at bottom showing live transcriptions with [YOU] and [REMOTE] labels
 - **Cut Link**: Disconnect from the current session
 
+### After Hours Widget Controls
+Once connected, access the After Hours features via the widget menu at the bottom center:
+
+#### Widget Menu (Bottom Center)
+- **Chat Icon**: Toggle chat widget for P2P messaging
+- **Dollar Icon**: Toggle tip ledger widget for economy features
+- **Gear Icon**: Toggle controls widget for settings
+
+#### Chat Widget
+- Send instant messages to your peer via P2P
+- Messages are ephemeral (not logged or saved)
+- Input sanitized for security
+- Auto-scroll to latest messages
+
+#### Tip Ledger Widget
+- View current balance at the top
+- See transaction history with timestamps
+- Send tips using the amount input field
+- Tips trigger visual and audio alerts on both sides
+
+#### Controls Widget
+- **Room Mode**: Switch between Public and Private rooms
+- **Audio Alerts**: Toggle tip sound effects on/off
+- **Theme Color**: Pick custom accent color (saved to localStorage)
+- **Glass Opacity**: Adjust widget transparency (50-95%)
+
+#### Widget Dragging
+- Click and hold any widget header to drag
+- Position widgets anywhere on screen
+- Positions auto-save to localStorage
+- Reload page to restore saved layouts
+
+#### Tip Alerts
+- Large centered notification appears when tips are received
+- Shows tipper name and amount
+- 3-second display with fade in/out animation
+- Optional audio notification (toggle in Controls)
+
 ## Technical Details
 
 ### P2P Configuration
@@ -140,6 +223,15 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - **Standard**: 1280x720 @ 30fps
 - **Low Bandwidth**: 640x480 @ 15fps
 
+### After Hours Architecture
+- **AfterHours Class**: Central controller managing tips, widgets, room routing, and themes
+- **Draggable Engine**: Mouse-based drag with position persistence via localStorage
+- **Tip Manager**: Balance tracking, transaction history, visual/audio alerts
+- **Room Router**: Seamless switching between public and private Daily.co rooms
+- **Theme Engine**: Dynamic CSS variable updates for real-time customization
+- **P2P Messaging**: Uses Daily.co `sendAppMessage` API for chat and tips
+- **Widget Lifecycle**: Independent show/hide state with localStorage persistence
+
 ### Browser Compatibility
 - Chrome/Edge: Full support
 - Firefox: Full support
@@ -153,6 +245,9 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - Room names act as the only identifier - keep them private
 - No data is stored or logged anywhere
 - Transcriptions are client-side only and not recorded
+- Tips and chat messages are P2P only (not stored on any server)
+- All user input is sanitized to prevent XSS attacks
+- Widget positions and theme preferences stored in browser localStorage only
 
 ## Troubleshooting
 
