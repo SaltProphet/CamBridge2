@@ -1,16 +1,21 @@
 // CamBridge - Secure P2P Video Bridge - Clean Picture (Nexus Architect)
+// After Hours Portal - Model-First Economy & Modular UI
 
 // Environment variables - Replace these at build time with actual values
 // In Vercel Browser Editor, set these as environment variables:
 // - ACCESS_KEY: Your password for accessing the bridge
 // - DAILY_URL: Your Daily.co room URL
 // - DEEPGRAM_KEY: Your Deepgram API key for transcription
+// - PRIVATE_ROOM_URL: Your private Daily.co room URL (optional)
 const ACCESS_KEY = typeof process !== 'undefined' && process.env && process.env.ACCESS_KEY 
     ? process.env.ACCESS_KEY 
     : 'C2C';
 const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.DAILY_URL 
     ? process.env.DAILY_URL 
     : 'https://cambridge.daily.co/Cambridge';
+const PRIVATE_ROOM_URL = typeof process !== 'undefined' && process.env && process.env.PRIVATE_ROOM_URL 
+    ? process.env.PRIVATE_ROOM_URL 
+    : 'https://cambridge.daily.co/Cambridge-Private';
 const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
     ? process.env.DEEPGRAM_KEY 
     : '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f';
@@ -33,9 +38,178 @@ const transcriptFeed = document.getElementById('transcript-feed');
 const transcriptContent = document.getElementById('transcript-content');
 const clearTranscriptBtn = document.getElementById('clear-transcript');
 
+// ===== AFTER HOURS CORE ENGINE =====
+class AfterHours {
+    constructor() {
+        this.activeUser = null;
+        this.tips = { balance: 0, audio: true };
+        this.audioElement = new Audio('/assets/sounds/tip.mp3');
+        this.currentRoom = 'public';
+        this.widgets = new Map();
+    }
+
+    // --- TIP & ALERT SYSTEM ---
+    processTip(user, amount) {
+        this.tips.balance += amount;
+        document.getElementById('balance-val').innerText = `$${this.tips.balance}`;
+        
+        // Add to ledger history
+        this.addLedgerEntry(user, amount);
+        
+        // Play audio if enabled
+        if (this.tips.audio) {
+            this.audioElement.play().catch(e => console.log('Audio playback failed:', e));
+        }
+        
+        // Trigger visual alert
+        this.triggerVisualAlert(user, amount);
+    }
+
+    triggerVisualAlert(user, amount) {
+        const alert = document.getElementById('tip-alert');
+        alert.innerHTML = `<h1>${this.sanitizeHTML(user)} tipped $${amount}</h1>`;
+        alert.className = 'tip-alert animate__animated animate__fadeInDown';
+        alert.style.display = 'block';
+        
+        setTimeout(() => {
+            alert.className = 'tip-alert animate__animated animate__fadeOutUp';
+            setTimeout(() => alert.style.display = 'none', 1000);
+        }, 3000);
+    }
+
+    addLedgerEntry(user, amount) {
+        const ledgerHistory = document.getElementById('ledger-history');
+        const entry = document.createElement('div');
+        entry.className = 'ledger-entry';
+        
+        const timestamp = new Date().toLocaleTimeString();
+        entry.innerHTML = `
+            <span class="user">${this.sanitizeHTML(user)}</span>
+            <span class="amount">+$${amount}</span>
+            <span class="time">${timestamp}</span>
+        `;
+        
+        ledgerHistory.insertBefore(entry, ledgerHistory.firstChild);
+    }
+
+    // --- MODULAR UI ENGINE ---
+    makeDraggable(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        const header = el.querySelector('.widget-header');
+        
+        if (header) {
+            header.style.cursor = 'move';
+            header.onmousedown = dragMouseDown;
+        } else {
+            el.onmousedown = dragMouseDown;
+        }
+
+        function dragMouseDown(e) {
+            // Don't drag if clicking close button
+            if (e.target.closest('.widget-close')) return;
+            
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            el.style.top = (el.offsetTop - pos2) + "px";
+            el.style.left = (el.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+            Portal.saveLayout(id, el.style.top, el.style.left);
+        }
+    }
+
+    saveLayout(id, top, left) {
+        const layout = { top, left };
+        localStorage.setItem(`pos-${id}`, JSON.stringify(layout));
+    }
+
+    loadLayout(id) {
+        const saved = localStorage.getItem(`pos-${id}`);
+        if (saved) {
+            const pos = JSON.parse(saved);
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.top = pos.top;
+                el.style.left = pos.left;
+            }
+        }
+    }
+
+    // --- ROOM ROUTER ---
+    switchRoom(roomType) {
+        this.currentRoom = roomType;
+        const roomUrl = roomType === 'private' ? PRIVATE_ROOM_URL : DAILY_URL;
+        
+        if (dailyCall) {
+            dailyCall.leave().then(() => {
+                dailyCall.join({ url: roomUrl });
+            });
+        }
+    }
+
+    // --- THEME ENGINE ---
+    updateTheme(color) {
+        document.documentElement.style.setProperty('--accent', color);
+        localStorage.setItem('theme-accent', color);
+    }
+
+    updateGlassOpacity(opacity) {
+        document.documentElement.style.setProperty('--glass-opacity', opacity / 100);
+        localStorage.setItem('glass-opacity', opacity);
+    }
+
+    loadTheme() {
+        const savedColor = localStorage.getItem('theme-accent');
+        const savedOpacity = localStorage.getItem('glass-opacity');
+        
+        if (savedColor) {
+            document.documentElement.style.setProperty('--accent', savedColor);
+            const colorInput = document.getElementById('theme-color');
+            if (colorInput) colorInput.value = savedColor;
+        }
+        
+        if (savedOpacity) {
+            document.documentElement.style.setProperty('--glass-opacity', savedOpacity / 100);
+            const opacityInput = document.getElementById('glass-opacity');
+            if (opacityInput) {
+                opacityInput.value = savedOpacity;
+                document.getElementById('opacity-value').textContent = savedOpacity + '%';
+            }
+        }
+    }
+
+    // --- UTILITY ---
+    sanitizeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+}
+
+// Initialize After Hours Portal
+const Portal = new AfterHours();
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initializeAccessKeyValidation();
+    Portal.loadTheme();
 });
 
 // Access key validation
@@ -114,6 +288,9 @@ function startCall() {
                 sttToggle.classList.remove('hidden');
                 initializeSTTControls();
             }
+            
+            // Initialize After Hours features
+            initializeAfterHours();
         })
         .catch(error => {
             console.error('Failed to join room:', error);
