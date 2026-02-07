@@ -125,6 +125,7 @@ function startCall() {
 function initializeSTTControls() {
     sttToggle.addEventListener('click', toggleTranscription);
     clearTranscriptBtn.addEventListener('click', clearTranscript);
+    makeDraggable(transcriptFeed);
 }
 
 // Toggle transcription on/off
@@ -224,10 +225,19 @@ function addTranscriptLine(text, speaker) {
     speakerSpan.textContent = speaker === 'you' ? '[YOU]' : '[REMOTE]';
     
     const textSpan = document.createElement('span');
+    textSpan.className = 'text-content';
     textSpan.textContent = text;
+    
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
+    editBtn.textContent = '✎';
+    editBtn.setAttribute('aria-label', 'Edit message');
+    editBtn.title = 'Edit message';
+    editBtn.addEventListener('click', () => enableEditMode(textSpan));
     
     line.appendChild(speakerSpan);
     line.appendChild(textSpan);
+    line.appendChild(editBtn);
     
     transcriptContent.appendChild(line);
     transcriptContent.scrollTop = transcriptContent.scrollHeight;
@@ -236,4 +246,138 @@ function addTranscriptLine(text, speaker) {
 // Clear transcript
 function clearTranscript() {
     transcriptContent.innerHTML = '';
+}
+
+// Make element draggable
+function makeDraggable(element) {
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+    
+    // Get the header element as drag handle
+    const header = element.querySelector('.transcript-header');
+    if (!header) return;
+    
+    // Add cursor style to indicate draggable
+    header.style.cursor = 'move';
+    
+    // Mouse events
+    header.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+    
+    // Touch events
+    header.addEventListener('touchstart', dragStart, { passive: false });
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('touchend', dragEnd);
+    
+    function dragStart(e) {
+        if (e.type === 'touchstart') {
+            initialX = e.touches[0].clientX - xOffset;
+            initialY = e.touches[0].clientY - yOffset;
+        } else {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+        }
+        
+        if (e.target === header || header.contains(e.target)) {
+            // Don't drag if clicking on the clear button
+            if (e.target.classList?.contains('clear-btn')) {
+                return;
+            }
+            isDragging = true;
+        }
+    }
+    
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            
+            if (e.type === 'touchmove') {
+                currentX = e.touches[0].clientX - initialX;
+                currentY = e.touches[0].clientY - initialY;
+            } else {
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+            }
+            
+            xOffset = currentX;
+            yOffset = currentY;
+            
+            setTranslate(currentX, currentY, element);
+        }
+    }
+    
+    function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+    }
+    
+    function setTranslate(xPos, yPos, el) {
+        el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+    }
+}
+
+// Enable edit mode for a message
+function enableEditMode(textSpan) {
+    const currentText = textSpan.textContent;
+    
+    // Create input field
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'edit-input';
+    input.value = currentText;
+    input.setAttribute('aria-label', 'Edit message text');
+    
+    // Replace text span with input
+    textSpan.replaceWith(input);
+    input.focus();
+    input.select();
+    
+    // Track if editing was cancelled
+    let cancelled = false;
+    
+    // Helper to create text span
+    const createTextSpan = (text, isEdited) => {
+        const span = document.createElement('span');
+        span.className = isEdited ? 'text-content edited' : 'text-content';
+        span.textContent = text;
+        if (isEdited) {
+            span.title = 'Edited';
+            span.setAttribute('aria-label', `Message edited: ${text}`);
+        }
+        return span;
+    };
+    
+    // Save edit
+    const saveEdit = () => {
+        if (cancelled) return;
+        
+        const newText = input.value.trim();
+        const textToUse = newText || currentText;
+        const isEdited = newText && newText !== currentText;
+        input.replaceWith(createTextSpan(textToUse, isEdited));
+    };
+    
+    // Cancel edit
+    const cancelEdit = () => {
+        cancelled = true;
+        input.replaceWith(createTextSpan(currentText, false));
+    };
+    
+    // Handle keyboard events
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            cancelEdit();
+        }
+    });
+    
+    input.addEventListener('blur', saveEdit);
 }

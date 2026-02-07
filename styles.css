@@ -217,12 +217,56 @@ input[type="password"]:focus {
 .transcript-line {
     margin-bottom: 10px;
     color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    position: relative;
 }
 
 .transcript-line .speaker {
     color: var(--accent);
     font-weight: 500;
-    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+.transcript-line .text-content {
+    flex: 1;
+}
+
+.transcript-line .text-content.edited {
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.transcript-line .edit-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 5px;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.transcript-line:hover .edit-btn {
+    opacity: 1;
+}
+
+.transcript-line .edit-btn:hover {
+    color: var(--accent);
+}
+
+.transcript-line .edit-input {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--accent);
+    color: var(--text-light);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    padding: 2px 5px;
+    outline: none;
 }
 
 .transcript-line.you .speaker {
