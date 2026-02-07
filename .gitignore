@@ -28,3 +28,7 @@ temp/
 .env
 .env.local
 .env.production
+
+# After Hours Assets
+/assets/sounds/*.mp3
+.vercel
