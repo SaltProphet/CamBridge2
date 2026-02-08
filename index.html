@@ -41,22 +41,6 @@
             <div id="transcript-content" class="transcript-content"></div>
         </div>
 
-        <!-- Chat Widget -->
-        <div id="chat-widget" class="widget chat-widget hidden">
-            <div class="widget-header">
-                <i class="fas fa-comments"></i>
-                <span>CHAT</span>
-                <button class="widget-close" data-widget="chat-widget"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="widget-content">
-                <div id="chat-messages" class="chat-messages"></div>
-                <div class="chat-input-container">
-                    <input type="text" id="chat-input" placeholder="Type message..." />
-                    <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
-                </div>
-            </div>
-        </div>
-
         <!-- Ledger Widget -->
         <div id="ledger-widget" class="widget ledger-widget hidden">
             <div class="widget-header">
@@ -77,44 +61,9 @@
             </div>
         </div>
 
-        <!-- Controls Widget -->
-        <div id="controls-widget" class="widget controls-widget hidden">
-            <div class="widget-header">
-                <i class="fas fa-cog"></i>
-                <span>CONTROLS</span>
-                <button class="widget-close" data-widget="controls-widget"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="widget-content">
-                <div class="control-group">
-                    <label>Room Mode:</label>
-                    <div class="room-switcher">
-                        <button id="room-public" class="room-btn active">Public</button>
-                        <button id="room-private" class="room-btn">Private</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>Audio Alerts:</label>
-                    <button id="audio-toggle" class="toggle-btn active">
-                        <i class="fas fa-volume-up"></i> Enabled
-                    </button>
-                </div>
-                <div class="control-group">
-                    <label>Theme Color:</label>
-                    <input type="color" id="theme-color" value="#00ff88" />
-                </div>
-                <div class="control-group">
-                    <label>Glass Opacity:</label>
-                    <input type="range" id="glass-opacity" min="50" max="95" value="85" />
-                    <span id="opacity-value">85%</span>
-                </div>
-            </div>
-        </div>
-
         <!-- Widget Toggle Menu -->
         <div id="widget-menu" class="widget-menu">
-            <button id="toggle-chat" title="Toggle Chat"><i class="fas fa-comments"></i></button>
             <button id="toggle-ledger" title="Toggle Tip Ledger"><i class="fas fa-dollar-sign"></i></button>
-            <button id="toggle-controls" title="Toggle Controls"><i class="fas fa-cog"></i></button>
         </div>
     </div>
 
