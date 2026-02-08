@@ -1,10 +1,38 @@
 # CamBridge
-Private 1-on-1 P2P Video Bridge - Optimized for High-Latency Trans-Atlantic Connections
+Multi-Tenant Private Video Room Platform - Ghost Protocol Security
 
 ## Overview
-CamBridge is a secure, peer-to-peer video communication system designed with the REAPER design language. It features a minimalist, industrial interface optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
+CamBridge is a multi-tenant "room rental" platform where models can rent private video spaces and keep 100% of their tips. Built with the REAPER design language and optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
 
-**After Hours Portal**: Extended with model-first economy features, modular widget system, and dual-station privacy controls.
+**Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and Ghost Protocol security (no database, no tracking, no logs).
+
+## New Multi-Tenant Features
+
+### 🏢 Room Rental Platform
+- **Unique Room URLs**: Each model gets `cambridge.app/room/modelname`
+- **Access Code System**: Models control access with changeable codes
+- **Subscription Management**: Simple active/expired status (hardcoded list, upgradeable to Stripe)
+- **Model Dashboard**: Manage room, view stats, change access codes
+- **Public Landing Page**: Marketing page for model acquisition
+
+### 🔐 Video Watermark Protection
+- **Semi-transparent overlay** with model name + timestamp
+- **Auto-updating**: Refreshes every 30 seconds
+- **Recording deterrent**: Visible if screen recorded, hard to crop out
+- **Center positioned**: Doesn't block view but clearly marks ownership
+
+### ⏱️ Session Management
+- **2-hour max duration**: Auto-disconnect at time limit
+- **Warning system**: Alert at 1:50 remaining (10 minutes before end)
+- **Reconnect button**: Easy rejoin after session ends
+- **Session ended screen**: Clear indication instead of blank screen
+- **Connection monitoring**: Detect and handle drops gracefully
+
+### 🎯 URL Structure
+- `/` or `/landing.html` - Public marketing page
+- `/room/:modelname` - Model's private room with access code gate
+- `/dashboard` or `/dashboard.html` - Model dashboard (password protected)
+- `/app` or `/app.html` - Legacy bridge interface (original single-user mode)
 
 ## Features
 
@@ -79,8 +107,34 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - Daily.co account (for room creation)
 - Deepgram API key (for speech-to-text feature)
+- Hosting with URL rewriting support (Vercel, Netlify, etc.)
 
-### Configuration
+### Multi-Tenant Configuration
+
+1. **Configure Active Rooms**: Edit `config.json` to manage subscriptions:
+   ```json
+   {
+     "activeRooms": ["testmodel", "demo", "saltprophet"],
+     "dailyDomainPrefix": "cambridge",
+     "subscriptionPrice": 30,
+     "maxSessionDuration": 7200,
+     "sessionWarningTime": 6600
+   }
+   ```
+
+2. **Model Dashboard Password**: Edit `dashboard.html` and change the demo password:
+   ```javascript
+   const DEMO_PASSWORD = 'your-secure-password-here';
+   ```
+   *Note: In production, use server-side authentication with a proper backend.*
+
+3. **Daily.co Domain**: The platform generates room URLs as `https://{dailyDomainPrefix}.daily.co/{modelname}-private`
+
+4. **Session Limits**: 
+   - `maxSessionDuration`: Maximum session length in seconds (default: 7200 = 2 hours)
+   - `sessionWarningTime`: When to show warning in seconds (default: 6600 = 1:50)
+
+### Legacy Single-User Configuration
 
 1. **Set Access Key**: Edit `app.js` and replace `[INSERT_YOUR_PASSWORD_HERE]` with your chosen password:
    ```javascript
@@ -114,7 +168,33 @@ When deploying to Vercel or other platforms, set these environment variables:
 
 ### Deployment
 
-#### Option 1: Local Server
+#### Option 1: Vercel (Recommended for Multi-Tenant)
+The included `vercel.json` handles URL routing automatically:
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel --prod
+```
+
+The routing configuration handles:
+- `/room/:modelname` → Serves room.html with model name extraction
+- `/dashboard` → Serves dashboard.html
+- `/app` → Serves legacy bridge (app.html)
+- `/` → Serves landing page
+
+#### Option 2: Netlify
+Create a `_redirects` file:
+```
+/room/*  /room.html  200
+/dashboard  /dashboard.html  200
+/app  /app.html  200
+/  /landing.html  200
+```
+
+#### Option 3: Local Server
+For development and testing:
 ```bash
 # Using Python
 python -m http.server 8000
@@ -123,24 +203,48 @@ python -m http.server 8000
 npx http-server -p 8000
 ```
 
-Then open `http://localhost:8000` in your browser.
+*Note: Local servers won't handle URL routing properly. Access pages directly:*
+- `http://localhost:8000/landing.html`
+- `http://localhost:8000/dashboard.html`
+- `http://localhost:8000/app.html`
 
-#### Option 2: GitHub Pages
-1. Push the code to a GitHub repository
-2. Go to Settings → Pages
-3. Select the main branch as source
-4. Access your site at `https://username.github.io/repository-name/`
-
-#### Option 3: Any Static Host
-Deploy the files to any static hosting service:
-- Netlify
-- Vercel
-- Cloudflare Pages
-- AWS S3 + CloudFront
+#### Option 4: GitHub Pages
+Not recommended for multi-tenant mode due to lack of URL rewriting support. Use for legacy bridge only.
 
 ## Usage
 
-### Step 1: Access Authentication
+### Multi-Tenant Platform Usage
+
+#### For Models:
+1. **Get a Room**: Contact platform operator to add your model name to `activeRooms` in config.json
+2. **Access Dashboard**: Go to `/dashboard` and login with:
+   - Model Name: Your assigned room name (e.g., "testmodel")
+   - Password: The dashboard password (default: "modelpass")
+3. **Manage Your Room**:
+   - Copy your unique room URL to share with clients
+   - View/change your access code anytime
+   - Check subscription status (Active/Expired)
+4. **Share with Clients**: Give clients your room URL and current access code
+
+#### For Clients:
+1. **Enter Room**: Use the model's unique URL (e.g., `cambridge.app/room/testmodel`)
+2. **Enter Access Code**: Input the code provided by the model
+3. **Establish Link**: Click to join the private video session
+4. **Video Features**: 
+   - Full-screen P2P video with watermark protection
+   - Send tips directly to model (100% goes to them)
+   - Optional chat and transcription features
+5. **Session Time**: 2-hour maximum with 10-minute warning
+
+#### For Platform Operators:
+1. **Add Models**: Edit `config.json` → `activeRooms` array
+2. **Monitor Subscriptions**: Remove models from `activeRooms` when subscription expires
+3. **Configure Settings**: Adjust session duration, pricing, Daily.co domain
+4. **Collect Payment**: $30/month per active room (outside of platform)
+
+### Legacy Single-User Bridge Usage
+
+#### Step 1: Access Authentication
 1. Open the application in your browser
 2. Enter the hardcoded access key
 3. The "Establish Link" button appears when the correct key is entered
@@ -239,15 +343,34 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - Mobile browsers: Optimized for touch
 
 ## Security Notes
-- Change the default access key before deployment
-- Add your Deepgram API key if using transcription
+
+### Multi-Tenant Security
+- **Access Codes**: Stored in browser localStorage per model (client-side only)
+- **Room Validation**: Active subscription check before allowing entry
+- **Watermark Protection**: Timestamps and model name overlay to deter recording
+- **Session Limits**: Auto-disconnect after 2 hours to prevent abuse
+- **Ghost Protocol**: No session data, no user data, no logs on server
+
+### General Security
+- Change the dashboard password before deployment (`dashboard.html`)
+- Add model names to `activeRooms` in config.json for subscription control
 - Use HTTPS in production (required for camera/microphone access)
-- Room names act as the only identifier - keep them private
-- No data is stored or logged anywhere
+- Keep Daily.co API credentials secure
+- Add your Deepgram API key if using transcription (optional)
+- Room names act as identifiers - models should keep access codes private
+- No data is stored or logged anywhere (Ghost Protocol)
 - Transcriptions are client-side only and not recorded
 - Tips and chat messages are P2P only (not stored on any server)
 - All user input is sanitized to prevent XSS attacks
 - Widget positions and theme preferences stored in browser localStorage only
+- Watermarks use current timestamp to prove authenticity if needed
+
+### Recommended Practices
+- Rotate access codes regularly via dashboard
+- Use server-side authentication in production (not client-side password check)
+- Implement Stripe or crypto payments for automated subscription management
+- Consider age verification system for compliance
+- Monitor active rooms list for subscription status
 
 ## Troubleshooting
 
