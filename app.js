@@ -44,7 +44,6 @@ class AfterHours {
         this.activeUser = null;
         this.tips = { balance: 0, audio: true };
         this.audioElement = new Audio('/assets/sounds/tip.mp3');
-        this.currentRoom = 'public';
         this.widgets = new Map();
     }
 
@@ -209,7 +208,6 @@ const Portal = new AfterHours();
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initializeAccessKeyValidation();
-    Portal.loadTheme();
 });
 
 // Access key validation
@@ -562,29 +560,17 @@ function enableEditMode(textSpan) {
 // ===== AFTER HOURS INITIALIZATION =====
 function initializeAfterHours() {
     // Make widgets draggable
-    Portal.makeDraggable('chat-widget');
     Portal.makeDraggable('ledger-widget');
-    Portal.makeDraggable('controls-widget');
     
     // Load saved positions
-    Portal.loadLayout('chat-widget');
     Portal.loadLayout('ledger-widget');
-    Portal.loadLayout('controls-widget');
     
-    // Widget toggle buttons
-    document.getElementById('toggle-chat').addEventListener('click', () => {
-        toggleWidget('chat-widget', 'toggle-chat');
-    });
-    
+    // Widget toggle button
     document.getElementById('toggle-ledger').addEventListener('click', () => {
         toggleWidget('ledger-widget', 'toggle-ledger');
     });
     
-    document.getElementById('toggle-controls').addEventListener('click', () => {
-        toggleWidget('controls-widget', 'toggle-controls');
-    });
-    
-    // Widget close buttons
+    // Widget close button
     document.querySelectorAll('.widget-close').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const widgetId = e.currentTarget.dataset.widget;
@@ -595,16 +581,10 @@ function initializeAfterHours() {
         });
     });
     
-    // Chat functionality
-    initializeChat();
-    
     // Tip/Ledger functionality
     initializeTipSystem();
     
-    // Controls functionality
-    initializeControls();
-    
-    // Setup Daily.co app message listener for chat
+    // Setup Daily.co app message listener for tips
     if (dailyCall) {
         dailyCall.on('app-message', handleAppMessage);
     }
@@ -621,58 +601,6 @@ function toggleWidget(widgetId, buttonId) {
         widget.classList.add('hidden');
         button.classList.remove('active');
     }
-}
-
-function initializeChat() {
-    const chatInput = document.getElementById('chat-input');
-    const chatSend = document.getElementById('chat-send');
-    
-    const sendMessage = () => {
-        const message = chatInput.value.trim();
-        if (message && dailyCall) {
-            // Sanitize input
-            const sanitized = message.replace(/[^a-zA-Z0-9\s.,!?'-]/g, '');
-            
-            // Send via Daily.co app message
-            dailyCall.sendAppMessage({
-                type: 'chat',
-                message: sanitized,
-                sender: 'You'
-            }, '*');
-            
-            // Add to local chat
-            addChatMessage('You', sanitized, true);
-            
-            chatInput.value = '';
-        }
-    };
-    
-    chatSend.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
-}
-
-function addChatMessage(sender, message, isSelf = false) {
-    const chatMessages = document.getElementById('chat-messages');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = isSelf ? 'chat-message self' : 'chat-message';
-    
-    const senderSpan = document.createElement('div');
-    senderSpan.className = 'sender';
-    senderSpan.textContent = sender;
-    
-    const textSpan = document.createElement('div');
-    textSpan.className = 'text';
-    textSpan.textContent = message;
-    
-    messageDiv.appendChild(senderSpan);
-    messageDiv.appendChild(textSpan);
-    
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 function initializeTipSystem() {
@@ -700,61 +628,12 @@ function initializeTipSystem() {
     });
 }
 
-function initializeControls() {
-    // Room switcher
-    const publicBtn = document.getElementById('room-public');
-    const privateBtn = document.getElementById('room-private');
-    
-    publicBtn.addEventListener('click', () => {
-        publicBtn.classList.add('active');
-        privateBtn.classList.remove('active');
-        Portal.switchRoom('public');
-    });
-    
-    privateBtn.addEventListener('click', () => {
-        privateBtn.classList.add('active');
-        publicBtn.classList.remove('active');
-        Portal.switchRoom('private');
-    });
-    
-    // Audio toggle
-    const audioToggle = document.getElementById('audio-toggle');
-    audioToggle.addEventListener('click', () => {
-        Portal.tips.audio = !Portal.tips.audio;
-        if (Portal.tips.audio) {
-            audioToggle.classList.add('active');
-            audioToggle.innerHTML = '<i class="fas fa-volume-up"></i> Enabled';
-        } else {
-            audioToggle.classList.remove('active');
-            audioToggle.innerHTML = '<i class="fas fa-volume-mute"></i> Muted';
-        }
-    });
-    
-    // Theme color
-    const themeColor = document.getElementById('theme-color');
-    themeColor.addEventListener('change', (e) => {
-        Portal.updateTheme(e.target.value);
-    });
-    
-    // Glass opacity
-    const glassOpacity = document.getElementById('glass-opacity');
-    const opacityValue = document.getElementById('opacity-value');
-    
-    glassOpacity.addEventListener('input', (e) => {
-        const value = e.target.value;
-        opacityValue.textContent = value + '%';
-        Portal.updateGlassOpacity(value);
-    });
-}
-
 function handleAppMessage(event) {
     if (!event.data) return;
     
-    const { type, message, sender, amount } = event.data;
+    const { type, amount, sender } = event.data;
     
-    if (type === 'chat') {
-        addChatMessage(sender || 'Remote', message, false);
-    } else if (type === 'tip') {
+    if (type === 'tip') {
         Portal.processTip(sender || 'Remote', amount);
     }
 }
