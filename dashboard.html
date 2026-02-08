@@ -455,8 +455,10 @@
     </div>
 
     <script>
-        // Simple authentication system (for demo purposes)
-        const DEMO_PASSWORD = 'modelpass'; // In production, this would be server-side
+        // Simple authentication system (DEMO ONLY - for production use server-side auth)
+        // WARNING: This password check is visible in client code and should be replaced
+        // with proper server-side authentication for production deployments
+        const DEMO_PASSWORD = 'modelpass'; // In production, use server-side validation
 
         // DOM Elements
         const authGate = document.getElementById('auth-gate');

@@ -92,6 +92,10 @@ async function initializeRoom() {
 }
 
 // Environment variables for Deepgram
+// WARNING: API key is exposed in client code. For production:
+// 1. Use environment variables with a build process (e.g., Vite, Webpack)
+// 2. Or proxy transcription requests through a backend endpoint
+// 3. Or use temporary token generation from your server
 const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
     ? process.env.DEEPGRAM_KEY 
     : '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f';
@@ -301,7 +305,7 @@ function validateAndJoin() {
     const enteredKey = accessKeyInput.value.trim().toUpperCase();
     
     if (!enteredKey) {
-        errorMessage.textContent = 'ENTER_ACCESS_CODE';
+        errorMessage.textContent = 'Please enter access code';
         return;
     }
     
@@ -317,7 +321,7 @@ function validateAndJoin() {
         // Start the call
         startCall();
     } else {
-        errorMessage.textContent = 'INVALID_ACCESS_CODE - TRY AGAIN';
+        errorMessage.textContent = 'Invalid access code. Please try again.';
         accessKeyInput.value = '';
         accessKeyInput.focus();
     }
@@ -403,14 +407,14 @@ function startSessionTimer() {
     
     sessionStartTime = Date.now();
     const maxDuration = config.maxSessionDuration * 1000; // Convert to ms
-    const warningTime = config.sessionWarningTime * 1000; // Convert to ms
+    const warningTime = (config.maxSessionDuration - (config.maxSessionDuration - config.sessionWarningTime)) * 1000; // Time before end to warn
     
     sessionTimer = setInterval(() => {
         const elapsed = Date.now() - sessionStartTime;
         const remaining = maxDuration - elapsed;
         
-        // Show warning at configured time (default 1:50 remaining)
-        if (remaining <= (maxDuration - warningTime) && !sessionWarningShown) {
+        // Show warning when remaining time drops below warning threshold
+        if (remaining <= warningTime && !sessionWarningShown) {
             showSessionWarning(remaining);
             sessionWarningShown = true;
         }
