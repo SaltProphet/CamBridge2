@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/landing.html" },
+    { "source": "/room/:modelname", "destination": "/room.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/app", "destination": "/app.html" }
+  ]
+}

@@ -2,17 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAMBRIDGE - Redirecting...</title>
-    <script>
-        // Simple router - redirect to landing page
-        window.location.href = '/landing.html';
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CamBridge - Secure P2P Video Bridge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
 </head>
 <body>
-    <p style="text-align: center; margin-top: 50px; font-family: monospace; color: #555;">Redirecting to CAMBRIDGE...</p>
-</body>
-</html>
+    <!-- Access Key Landing Page -->
+    <div id="gatekeeper" class="active">
+        <div class="access-container">
+            <h1 class="app-title">CAMBRIDGE</h1>
             <div class="input-group">
                 <label id="access-label" for="access-key">ACCESS_KEY</label>
                 <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">

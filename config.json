@@ -1,0 +1,7 @@
+{
+  "activeRooms": ["testmodel", "demo", "saltprophet"],
+  "dailyDomainPrefix": "cambridge",
+  "subscriptionPrice": 30,
+  "maxSessionDuration": 7200,
+  "sessionWarningTime": 6600
+}
