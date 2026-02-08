@@ -151,49 +151,6 @@ class AfterHours {
         }
     }
 
-    // --- ROOM ROUTER ---
-    switchRoom(roomType) {
-        this.currentRoom = roomType;
-        const roomUrl = roomType === 'private' ? PRIVATE_ROOM_URL : DAILY_URL;
-        
-        if (dailyCall) {
-            dailyCall.leave().then(() => {
-                dailyCall.join({ url: roomUrl });
-            });
-        }
-    }
-
-    // --- THEME ENGINE ---
-    updateTheme(color) {
-        document.documentElement.style.setProperty('--accent', color);
-        localStorage.setItem('theme-accent', color);
-    }
-
-    updateGlassOpacity(opacity) {
-        document.documentElement.style.setProperty('--glass-opacity', opacity / 100);
-        localStorage.setItem('glass-opacity', opacity);
-    }
-
-    loadTheme() {
-        const savedColor = localStorage.getItem('theme-accent');
-        const savedOpacity = localStorage.getItem('glass-opacity');
-        
-        if (savedColor) {
-            document.documentElement.style.setProperty('--accent', savedColor);
-            const colorInput = document.getElementById('theme-color');
-            if (colorInput) colorInput.value = savedColor;
-        }
-        
-        if (savedOpacity) {
-            document.documentElement.style.setProperty('--glass-opacity', savedOpacity / 100);
-            const opacityInput = document.getElementById('glass-opacity');
-            if (opacityInput) {
-                opacityInput.value = savedOpacity;
-                document.getElementById('opacity-value').textContent = savedOpacity + '%';
-            }
-        }
-    }
-
     // --- UTILITY ---
     sanitizeHTML(str) {
         const div = document.createElement('div');
