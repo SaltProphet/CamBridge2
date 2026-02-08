@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Model Dashboard - CAMBRIDGE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --bg-darker: #0a0a0a;
+            --text: #555555;
+            --text-light: #ffffff;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+            --error: #ff4444;
+            --warning: #ffaa00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--accent);
+            letter-spacing: 0.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+        }
+
+        /* Auth Gate */
+        #auth-gate {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+
+        #auth-gate.hidden {
+            display: none;
+        }
+
+        .auth-box {
+            background: rgba(0, 255, 136, 0.05);
+            border: 2px solid var(--accent);
+            padding: 3rem;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .auth-box h2 {
+            color: var(--accent);
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2rem;
+        }
+
+        /* Dashboard */
+        #dashboard {
+            display: none;
+        }
+
+        #dashboard.active {
+            display: block;
+        }
+
+        .card {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.15rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+            padding-bottom: 0.5rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(85, 85, 85, 0.2);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            color: var(--text-light);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            border-radius: 2px;
+        }
+
+        .status-active {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .status-expired {
+            background: var(--error);
+            color: var(--text-light);
+        }
+
+        .room-url {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            word-break: break-all;
+        }
+
+        .access-code {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 1.2rem;
+            letter-spacing: 0.2rem;
+        }
+
+        /* Input Groups */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: transparent;
+            border: none;
+            border-bottom: 1px solid var(--text);
+            color: var(--text-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-bottom-color: var(--accent);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-dim);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(0, 255, 136, 0.1);
+        }
+
+        .btn-icon {
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .btn-icon:hover {
+            background-color: rgba(0, 255, 136, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .error-message {
+            color: var(--error);
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            min-height: 1rem;
+        }
+
+        .success-message {
+            color: var(--accent);
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            min-height: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border: 1px solid rgba(85, 85, 85, 0.3);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Logout */
+        .logout-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            transition: color 0.3s ease;
+        }
+
+        .logout-link:hover {
+            color: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .auth-box {
+                padding: 2rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Gate -->
+        <div id="auth-gate">
+            <div class="auth-box">
+                <h2>Model Login</h2>
+                <div class="input-group">
+                    <label for="model-name">Model Name</label>
+                    <input type="text" id="model-name" placeholder="e.g., testmodel" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="access-password">Access Password</label>
+                    <input type="password" id="access-password" placeholder="••••••••••••" autocomplete="off">
+                </div>
+                <div class="error-message" id="auth-error"></div>
+                <button class="btn btn-primary" id="login-btn" style="width: 100%; justify-content: center;">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard">
+            <header>
+                <h1>MODEL DASHBOARD</h1>
+                <p class="subtitle">Room Management & Statistics</p>
+            </header>
+
+            <!-- Room Info Card -->
+            <div class="card">
+                <h2><i class="fas fa-door-open"></i> Room Information</h2>
+                <div class="info-row">
+                    <span class="info-label">Room Name</span>
+                    <span class="info-value" id="display-room-name">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Room URL</span>
+                    <span class="info-value">
+                        <span class="room-url" id="display-room-url">-</span>
+                        <button class="btn-icon" id="copy-url-btn" title="Copy URL">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Subscription Status</span>
+                    <span class="info-value">
+                        <span class="status-badge" id="subscription-status">-</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Current Access Code</span>
+                    <span class="info-value">
+                        <span class="access-code" id="display-access-code">-</span>
+                    </span>
+                </div>
+                <div class="success-message" id="copy-success"></div>
+                <div class="button-group">
+                    <button class="btn btn-primary" id="change-code-btn">
+                        <i class="fas fa-key"></i> Change Access Code
+                    </button>
+                    <button class="btn btn-secondary" id="enter-room-btn">
+                        <i class="fas fa-door-open"></i> Enter Room
+                    </button>
+                </div>
+            </div>
+
+            <!-- Session Stats Card -->
+            <div class="card">
+                <h2><i class="fas fa-chart-line"></i> Session Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Total Sessions</div>
+                        <div class="stat-value">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total Tips</div>
+                        <div class="stat-value">$0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Active Now</div>
+                        <div class="stat-value">0</div>
+                    </div>
+                </div>
+                <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text); font-style: italic;">
+                    <i class="fas fa-info-circle"></i> Enhanced analytics coming soon
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="card">
+                <h2><i class="fas fa-link"></i> Quick Links</h2>
+                <div class="button-group">
+                    <a href="/landing.html" class="btn btn-secondary" style="text-decoration: none;">
+                        <i class="fas fa-home"></i> Landing Page
+                    </a>
+                    <a href="/app" class="btn btn-secondary" style="text-decoration: none;">
+                        <i class="fas fa-video"></i> Legacy Bridge
+                    </a>
+                </div>
+            </div>
+
+            <a href="#" class="logout-link" id="logout-link">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Simple authentication system (for demo purposes)
+        const DEMO_PASSWORD = 'modelpass'; // In production, this would be server-side
+
+        // DOM Elements
+        const authGate = document.getElementById('auth-gate');
+        const dashboard = document.getElementById('dashboard');
+        const modelNameInput = document.getElementById('model-name');
+        const accessPasswordInput = document.getElementById('access-password');
+        const loginBtn = document.getElementById('login-btn');
+        const authError = document.getElementById('auth-error');
+        const logoutLink = document.getElementById('logout-link');
+
+        // Dashboard elements
+        const displayRoomName = document.getElementById('display-room-name');
+        const displayRoomUrl = document.getElementById('display-room-url');
+        const displayAccessCode = document.getElementById('display-access-code');
+        const subscriptionStatus = document.getElementById('subscription-status');
+        const copyUrlBtn = document.getElementById('copy-url-btn');
+        const copySuccess = document.getElementById('copy-success');
+        const changeCodeBtn = document.getElementById('change-code-btn');
+        const enterRoomBtn = document.getElementById('enter-room-btn');
+
+        // Load config
+        let config = null;
+        fetch('/config.json')
+            .then(response => response.json())
+            .then(data => {
+                config = data;
+            })
+            .catch(err => console.error('Failed to load config:', err));
+
+        // Check if already logged in
+        const savedModelName = sessionStorage.getItem('modelName');
+        if (savedModelName) {
+            showDashboard(savedModelName);
+        }
+
+        // Login handler
+        loginBtn.addEventListener('click', handleLogin);
+        accessPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleLogin();
+            }
+        });
+
+        function handleLogin() {
+            const modelName = modelNameInput.value.trim().toLowerCase();
+            const password = accessPasswordInput.value;
+
+            if (!modelName) {
+                authError.textContent = 'Please enter your model name';
+                return;
+            }
+
+            if (!password) {
+                authError.textContent = 'Please enter your password';
+                return;
+            }
+
+            // Sanitize model name
+            const sanitizedName = modelName.replace(/[^a-z0-9-_]/g, '');
+            
+            if (sanitizedName !== modelName) {
+                authError.textContent = 'Invalid model name. Use only letters, numbers, hyphens, and underscores.';
+                return;
+            }
+
+            // Simple password check (in production, this would be server-side)
+            if (password !== DEMO_PASSWORD) {
+                authError.textContent = 'Invalid password';
+                return;
+            }
+
+            // Save to session
+            sessionStorage.setItem('modelName', sanitizedName);
+            showDashboard(sanitizedName);
+        }
+
+        function showDashboard(modelName) {
+            authGate.classList.add('hidden');
+            dashboard.classList.add('active');
+
+            // Populate dashboard
+            displayRoomName.textContent = modelName;
+            
+            const baseUrl = window.location.origin;
+            const roomUrl = `${baseUrl}/room/${modelName}`;
+            displayRoomUrl.textContent = roomUrl;
+
+            // Check subscription status
+            if (config && config.activeRooms.includes(modelName)) {
+                subscriptionStatus.textContent = 'Active';
+                subscriptionStatus.className = 'status-badge status-active';
+            } else {
+                subscriptionStatus.textContent = 'Expired';
+                subscriptionStatus.className = 'status-badge status-expired';
+            }
+
+            // Generate or load access code
+            let accessCode = localStorage.getItem(`accessCode-${modelName}`);
+            if (!accessCode) {
+                accessCode = generateAccessCode();
+                localStorage.setItem(`accessCode-${modelName}`, accessCode);
+            }
+            displayAccessCode.textContent = accessCode;
+        }
+
+        // Copy URL button
+        copyUrlBtn.addEventListener('click', () => {
+            const url = displayRoomUrl.textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                copySuccess.textContent = '✓ URL copied to clipboard!';
+                setTimeout(() => {
+                    copySuccess.textContent = '';
+                }, 3000);
+            });
+        });
+
+        // Change access code
+        changeCodeBtn.addEventListener('click', () => {
+            const modelName = sessionStorage.getItem('modelName');
+            const newCode = generateAccessCode();
+            localStorage.setItem(`accessCode-${modelName}`, newCode);
+            displayAccessCode.textContent = newCode;
+            
+            copySuccess.textContent = '✓ Access code changed!';
+            setTimeout(() => {
+                copySuccess.textContent = '';
+            }, 3000);
+        });
+
+        // Enter room
+        enterRoomBtn.addEventListener('click', () => {
+            const modelName = sessionStorage.getItem('modelName');
+            window.location.href = `/room/${modelName}`;
+        });
+
+        // Logout
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            sessionStorage.removeItem('modelName');
+            authGate.classList.remove('hidden');
+            dashboard.classList.remove('active');
+            modelNameInput.value = '';
+            accessPasswordInput.value = '';
+            authError.textContent = '';
+        });
+
+        // Generate random access code
+        function generateAccessCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // Clear auth error on input
+        modelNameInput.addEventListener('input', () => {
+            authError.textContent = '';
+        });
+
+        accessPasswordInput.addEventListener('input', () => {
+            authError.textContent = '';
+        });
+    </script>
+</body>
+</html>

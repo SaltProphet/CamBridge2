@@ -2,23 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAMBRIDGE - Redirecting...</title>
-    <script>
-        // Simple router - redirect to landing page
-        window.location.href = '/landing.html';
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CAMBRIDGE - Private Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
 </head>
 <body>
-    <p style="text-align: center; margin-top: 50px; font-family: monospace; color: #555;">Redirecting to CAMBRIDGE...</p>
-</body>
-</html>
     <!-- Access Key Landing Page -->
     <div id="gatekeeper" class="active">
         <div class="access-container">
             <h1 class="app-title">CAMBRIDGE</h1>
+            <p class="room-name" id="room-display-name" style="font-size: 1rem; color: #555; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 0.2rem;"></p>
             <div class="input-group">
-                <label id="access-label" for="access-key">ACCESS_KEY</label>
+                <label id="access-label" for="access-key">ACCESS_CODE</label>
                 <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">
                 <div id="error-message" class="error-message"></div>
             </div>
@@ -28,6 +30,24 @@
 
     <!-- Full-Screen Video Container -->
     <div id="video-container" class="hidden">
+        <!-- Watermark Overlay -->
+        <div id="watermark" class="watermark"></div>
+
+        <!-- Session Timer Warning -->
+        <div id="session-warning" class="session-warning" style="display: none;">
+            <i class="fas fa-clock"></i> Session ending in <span id="warning-time">10:00</span>
+        </div>
+
+        <!-- Session Ended Screen -->
+        <div id="session-ended" class="session-ended" style="display: none;">
+            <div class="session-ended-content">
+                <i class="fas fa-stopwatch"></i>
+                <h2>SESSION ENDED</h2>
+                <p>Maximum session duration reached (2 hours)</p>
+                <button id="reconnect-btn" class="btn-primary">RECONNECT</button>
+            </div>
+        </div>
+
         <!-- Tip Alert Overlay -->
         <div id="tip-alert" class="tip-alert" style="display: none;"></div>
 
@@ -90,13 +110,6 @@
             </div>
             <div class="widget-content">
                 <div class="control-group">
-                    <label>Room Mode:</label>
-                    <div class="room-switcher">
-                        <button id="room-public" class="room-btn active">Public</button>
-                        <button id="room-private" class="room-btn">Private</button>
-                    </div>
-                </div>
-                <div class="control-group">
                     <label>Audio Alerts:</label>
                     <button id="audio-toggle" class="toggle-btn active">
                         <i class="fas fa-volume-up"></i> Enabled
@@ -122,7 +135,7 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="room.js"></script>
     <script>
         window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
