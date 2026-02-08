@@ -588,9 +588,9 @@ function initializeTipSystem() {
 function handleAppMessage(event) {
     if (!event.data) return;
     
-    const { type, amount, sender } = event.data;
+    const { type, amount, sender = 'Remote' } = event.data;
     
     if (type === 'tip') {
-        Portal.processTip(sender || 'Remote', amount);
+        Portal.processTip(sender, amount);
     }
 }
