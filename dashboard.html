@@ -160,6 +160,34 @@
             color: var(--text-light);
         }
 
+        /* Database Status Indicator */
+        .db-status {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            padding: 0.5rem 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .db-status.warning {
+            background: rgba(255, 170, 0, 0.05);
+            border-color: var(--warning);
+        }
+
+        .db-status a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+
+        .db-status a:hover {
+            color: var(--text-light);
+        }
+
         .room-url {
             font-family: 'JetBrains Mono', monospace;
             color: var(--accent);
@@ -564,6 +592,14 @@
                 <p class="subtitle">Room Management & Statistics</p>
             </header>
 
+            <!-- Database Status Indicator -->
+            <div class="db-status" id="db-status" style="display: none;">
+                <span id="db-status-text">
+                    <i class="fas fa-exclamation-triangle"></i> Database not initialized
+                </span>
+                <a href="/setup" id="db-status-link">Setup Database →</a>
+            </div>
+
             <!-- Account Status Card -->
             <div class="card">
                 <h2><i class="fas fa-user-circle"></i> Account Status</h2>
@@ -840,6 +876,36 @@
 
             // Load rooms
             loadRooms();
+            
+            // Check database status
+            checkDatabaseStatus();
+        }
+
+        async function checkDatabaseStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                const dbStatusEl = document.getElementById('db-status');
+                const dbStatusText = document.getElementById('db-status-text');
+                
+                if (!data.ready) {
+                    // Show warning banner
+                    dbStatusEl.style.display = 'flex';
+                    dbStatusEl.classList.add('warning');
+                    
+                    if (!data.configured) {
+                        dbStatusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Database secret not configured';
+                    } else if (data.database !== 'connected') {
+                        dbStatusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Database connection failed';
+                    } else {
+                        dbStatusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Database not initialized';
+                    }
+                }
+            } catch (error) {
+                console.error('Database status check error:', error);
+                // Don't show error banner if health check fails - might be normal
+            }
         }
 
         function loadRooms() {
