@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CAMBRIDGE - Private Video Rooms for Adult Creators</title>
+    <title>CamBridge - Premium Private Sessions Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700;900&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --bg-dark: #000000;
-            --bg-darker: #0a0a0a;
-            --text: #555555;
+            --bg-dark: #0a0a0a;
+            --bg-darker: #000000;
+            --bg-card: #1a1a1a;
+            --text: #8a8a8a;
             --text-light: #ffffff;
-            --accent: #00ff88;
-            --accent-dim: #00cc6a;
+            --gold: #d4af37;
+            --gold-dark: #b8860b;
+            --gold-light: #f4d03f;
+            --bronze: #cd7f32;
         }
 
         * {
@@ -25,10 +28,25 @@
         }
 
         body {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Montserrat', sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-light);
             overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(184, 134, 11, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
         }
 
         /* Hero Section */
@@ -38,173 +56,223 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
-            background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            padding: 4rem 2rem;
             position: relative;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 255, 136, 0.03) 2px,
-                rgba(0, 255, 136, 0.03) 4px
-            );
-            pointer-events: none;
+            z-index: 1;
         }
 
         .hero-content {
-            max-width: 1000px;
+            max-width: 1200px;
             text-align: center;
             z-index: 1;
         }
 
         .logo {
-            font-size: 4rem;
-            font-weight: 700;
-            letter-spacing: 0.5rem;
-            color: var(--accent);
-            margin-bottom: 1rem;
-            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            font-family: 'Playfair Display', serif;
+            font-size: 5rem;
+            font-weight: 900;
+            letter-spacing: 0.3rem;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 40px rgba(212, 175, 55, 0.3);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
         }
 
         .tagline {
-            font-size: 1.5rem;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
             font-weight: 400;
             color: var(--text-light);
-            margin-bottom: 3rem;
-            letter-spacing: 0.1rem;
+            margin-bottom: 1rem;
+            letter-spacing: 0.05rem;
+            font-style: italic;
         }
 
         .subheading {
-            font-size: 1.2rem;
-            color: var(--text);
-            margin-bottom: 3rem;
+            font-size: 1rem;
+            color: var(--gold);
+            margin-bottom: 4rem;
             text-transform: uppercase;
-            letter-spacing: 0.2rem;
+            letter-spacing: 0.3rem;
+            font-weight: 300;
         }
 
         /* Value Props */
         .value-props {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
-            margin: 3rem 0;
+            margin: 4rem 0;
             width: 100%;
         }
 
         .value-prop {
-            padding: 2rem;
-            background: rgba(0, 255, 136, 0.05);
-            border: 1px solid rgba(0, 255, 136, 0.2);
-            text-align: left;
-            transition: all 0.3s ease;
+            padding: 2.5rem;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(184, 134, 11, 0.02) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .value-prop::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .value-prop:hover::before {
+            left: 100%;
         }
 
         .value-prop:hover {
-            background: rgba(0, 255, 136, 0.1);
-            border-color: var(--accent);
-            transform: translateY(-5px);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(184, 134, 11, 0.05) 100%);
+            border-color: var(--gold);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.2);
         }
 
         .value-prop i {
-            font-size: 2rem;
-            color: var(--accent);
-            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 1.5rem;
             display: block;
         }
 
         .value-prop h3 {
-            font-size: 1rem;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
             color: var(--text-light);
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.05rem;
         }
 
         .value-prop p {
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             color: var(--text);
-            line-height: 1.6;
+            line-height: 1.7;
         }
 
         /* Pricing */
         .pricing {
-            margin: 3rem 0;
-            padding: 2rem;
-            background: rgba(0, 255, 136, 0.05);
-            border: 2px solid var(--accent);
+            margin: 4rem 0;
+            padding: 3rem 4rem;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(184, 134, 11, 0.04) 100%);
+            border: 2px solid var(--gold);
+            border-radius: 12px;
+            backdrop-filter: blur(20px);
             display: inline-block;
+            box-shadow: 0 8px 32px rgba(212, 175, 55, 0.15);
         }
 
         .pricing .price {
-            font-size: 3rem;
-            color: var(--accent);
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             font-weight: 700;
+            line-height: 1;
         }
 
         .pricing .period {
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: var(--text);
             text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            font-weight: 300;
         }
 
         .pricing .detail {
-            font-size: 0.85rem;
+            font-size: 1rem;
             color: var(--text);
-            margin-top: 1rem;
+            margin-top: 1.5rem;
+            font-weight: 300;
         }
 
         /* CTA Buttons */
         .cta-group {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 3rem;
+            margin-top: 4rem;
         }
 
         .btn {
-            padding: 1rem 2rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            font-weight: 500;
+            padding: 1.2rem 2.5rem;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.1rem;
+            letter-spacing: 0.15rem;
             border: none;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s ease;
             text-decoration: none;
             display: inline-block;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
         }
 
         .btn-primary {
-            background-color: var(--accent);
-            color: var(--bg-dark);
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            color: var(--bg-darker);
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
         }
 
         .btn-primary:hover {
-            background-color: var(--accent-dim);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.5);
         }
 
         .btn-secondary {
             background-color: transparent;
-            color: var(--accent);
-            border: 2px solid var(--accent);
+            color: var(--gold);
+            border: 2px solid var(--gold);
         }
 
         .btn-secondary:hover {
-            background-color: rgba(0, 255, 136, 0.1);
-            transform: translateY(-2px);
+            background-color: rgba(212, 175, 55, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
         }
 
         /* Room Entry Modal */
@@ -215,10 +283,17 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal.active {
@@ -226,92 +301,139 @@
         }
 
         .modal-content {
-            background: var(--bg-darker);
-            padding: 3rem;
-            border: 2px solid var(--accent);
-            max-width: 500px;
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.95) 100%);
+            padding: 3.5rem;
+            border: 2px solid var(--gold);
+            border-radius: 12px;
+            max-width: 550px;
             width: 90%;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(212, 175, 55, 0.2);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-content h2 {
-            color: var(--accent);
-            margin-bottom: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.2rem;
+            font-family: 'Playfair Display', serif;
+            color: var(--gold);
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 0.1rem;
         }
 
         .input-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
         }
 
         .input-group label {
             display: block;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             text-transform: uppercase;
-            letter-spacing: 0.1rem;
-            color: var(--text);
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.15rem;
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+            font-weight: 500;
         }
 
         .input-group input {
             width: 100%;
-            padding: 0.75rem;
-            background-color: transparent;
+            padding: 1rem;
+            background-color: rgba(212, 175, 55, 0.05);
             border: none;
-            border-bottom: 1px solid var(--text);
+            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
             color: var(--text-light);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.1rem;
             outline: none;
+            transition: all 0.3s ease;
+            border-radius: 4px 4px 0 0;
         }
 
         .input-group input:focus {
-            border-bottom-color: var(--accent);
+            border-bottom-color: var(--gold);
+            background-color: rgba(212, 175, 55, 0.08);
         }
 
         .modal-buttons {
             display: flex;
             gap: 1rem;
-            margin-top: 2rem;
+            margin-top: 2.5rem;
         }
 
         .error-message {
-            color: #ff4444;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
-            min-height: 1rem;
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            min-height: 1.2rem;
         }
 
         /* Footer */
         footer {
             text-align: center;
-            padding: 2rem;
+            padding: 3rem 2rem;
             background: var(--bg-darker);
             color: var(--text);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(212, 175, 55, 0.1);
+            position: relative;
+            z-index: 1;
         }
 
         footer a {
-            color: var(--accent);
+            color: var(--gold);
             text-decoration: none;
+            transition: color 0.3s ease;
         }
 
         footer a:hover {
-            text-decoration: underline;
+            color: var(--gold-light);
+        }
+
+        /* Security Badge */
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--gold);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
             .logo {
-                font-size: 2.5rem;
+                font-size: 3rem;
+                letter-spacing: 0.2rem;
             }
 
             .tagline {
-                font-size: 1.2rem;
+                font-size: 1.3rem;
+            }
+
+            .subheading {
+                font-size: 0.85rem;
+                letter-spacing: 0.2rem;
             }
 
             .value-props {
                 grid-template-columns: 1fr;
+            }
+
+            .pricing {
+                padding: 2rem 2.5rem;
+            }
+
+            .pricing .price {
+                font-size: 3rem;
             }
 
             .cta-group {
@@ -322,57 +444,77 @@
             .btn {
                 width: 100%;
             }
+
+            .modal-content {
+                padding: 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+
+            .hero {
+                padding: 3rem 1.5rem;
+            }
+
+            .value-prop {
+                padding: 2rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="animated-bg"></div>
+    
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
             <h1 class="logo">CAMBRIDGE</h1>
-            <p class="tagline">Private Video Rooms for Adult Creators</p>
-            <p class="subheading">No Platform. No Censorship. No Cuts.</p>
+            <p class="tagline">Where Elegance Meets Privacy</p>
+            <p class="subheading">Premium Private Sessions Platform</p>
 
             <!-- Value Props -->
             <div class="value-props">
                 <div class="value-prop">
-                    <i class="fas fa-lock"></i>
-                    <h3>P2P Encrypted Video</h3>
-                    <p>Direct peer-to-peer connections powered by Daily.co. No server middleman.</p>
-                </div>
-                <div class="value-prop">
-                    <i class="fas fa-ghost"></i>
-                    <h3>Zero Logging Policy</h3>
-                    <p>Ghost Protocol: No database, no tracking, no logs. Complete privacy.</p>
-                </div>
-                <div class="value-prop">
-                    <i class="fas fa-dollar-sign"></i>
-                    <h3>Keep 100% of Tips</h3>
-                    <p>All tips go directly to you. We never touch your earnings.</p>
-                </div>
-                <div class="value-prop">
                     <i class="fas fa-shield-alt"></i>
-                    <h3>No Content Moderation</h3>
-                    <p>Your room, your rules. Adult-friendly with zero interference.</p>
+                    <h3>Bank-Grade Security</h3>
+                    <p>End-to-end encrypted P2P video connections. Your sessions remain completely private and secure.</p>
+                </div>
+                <div class="value-prop">
+                    <i class="fas fa-user-secret"></i>
+                    <h3>Absolute Discretion</h3>
+                    <p>Ghost Protocol ensures zero tracking, no databases, no logs. Complete anonymity guaranteed.</p>
+                </div>
+                <div class="value-prop">
+                    <i class="fas fa-gem"></i>
+                    <h3>Premium Experience</h3>
+                    <p>Luxurious interface designed for sophisticated performers and discerning clientele.</p>
+                </div>
+                <div class="value-prop">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <h3>100% of Your Earnings</h3>
+                    <p>Keep every tip you receive. We never take a commission on your hard work.</p>
                 </div>
             </div>
 
             <!-- Pricing -->
             <div class="pricing">
                 <div class="price">$30<span class="period">/month</span></div>
-                <div class="detail">Flat rate per room. No commissions. No hidden fees.</div>
+                <div class="detail">Premium room rental • No commissions • No hidden fees</div>
             </div>
 
             <!-- CTA Buttons -->
             <div class="cta-group">
-                <button class="btn btn-primary" onclick="window.location.href='mailto:contact@cambridge.app?subject=Room%20Rental%20Request'">
-                    Get Your Room
+                <button class="btn btn-primary" onclick="window.location.href='mailto:contact@cambridge.app?subject=Premium%20Room%20Request'">
+                    Request Your Room
                 </button>
                 <button class="btn btn-secondary" id="enter-room-btn">
-                    Enter Room Code
+                    Enter Private Room
                 </button>
                 <a href="/dashboard.html" class="btn btn-secondary">
-                    Model Login
+                    Performer Portal
                 </a>
             </div>
         </div>
@@ -381,14 +523,14 @@
     <!-- Room Entry Modal -->
     <div id="room-modal" class="modal">
         <div class="modal-content">
-            <h2>Enter Room</h2>
+            <h2>Private Room Access</h2>
             <div class="input-group">
-                <label for="room-name">Model Room Name</label>
-                <input type="text" id="room-name" placeholder="e.g., testmodel" autocomplete="off">
+                <label for="room-name">Room Identifier</label>
+                <input type="text" id="room-name" placeholder="Enter room code" autocomplete="off">
             </div>
             <div class="error-message" id="room-error"></div>
             <div class="modal-buttons">
-                <button class="btn btn-primary" id="join-room-btn" style="flex: 1;">Join Room</button>
+                <button class="btn btn-primary" id="join-room-btn" style="flex: 1;">Enter</button>
                 <button class="btn btn-secondary" id="cancel-btn" style="flex: 1;">Cancel</button>
             </div>
         </div>
@@ -396,7 +538,11 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2026 CAMBRIDGE. Ghost Protocol Security. <a href="/app">Legacy Bridge</a></p>
+        <div class="security-badge">
+            <i class="fas fa-lock"></i>
+            <span>Ghost Protocol Security</span>
+        </div>
+        <p style="margin-top: 1.5rem;">&copy; 2026 CAMBRIDGE. All Rights Reserved. <a href="/app">Legacy Access</a></p>
     </footer>
 
     <script>
