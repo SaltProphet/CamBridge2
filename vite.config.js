@@ -20,7 +20,6 @@ export default defineConfig({
         { src: 'styles.css', dest: '.' },
         // Configuration and assets
         { src: 'config.json', dest: '.' },
-        { src: 'api', dest: '.' },
         { src: 'assets', dest: '.' },
       ]
     })
