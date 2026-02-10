@@ -1,14 +1,18 @@
 // CamBridge - Room-Specific Logic for Multi-Tenant Platform
 // Handles dynamic routing, watermark, session management
 
-// Extract room name from URL path
+// Extract room name and room slug from URL path
 const urlPath = window.location.pathname;
-const roomMatch = urlPath.match(/\/room\/([a-z0-9-_]+)/);
-const roomName = roomMatch ? roomMatch[1] : null;
+// Support both /room/:modelname and /room/:modelname/:roomslug
+const roomMatch = urlPath.match(/\/room\/([a-z0-9-_]+)(?:\/([a-z0-9-_]+))?/);
+const modelName = roomMatch ? roomMatch[1] : null;
+const roomSlug = roomMatch && roomMatch[2] ? roomMatch[2] : 'main'; // Default to 'main' if not specified
+const roomName = modelName; // For backward compatibility
 
 // Configuration
 let config = null;
 let roomAccessCode = null;
+let currentRoom = null; // Will hold room metadata from config
 
 // Session Management
 let sessionStartTime = null;
@@ -29,7 +33,7 @@ async function loadConfig() {
 
 // Validate room exists and is active
 function validateRoom() {
-    if (!roomName) {
+    if (!modelName) {
         showError('Invalid room URL');
         return false;
     }
@@ -39,18 +43,37 @@ function validateRoom() {
         return false;
     }
 
-    if (!config.activeRooms.includes(roomName)) {
-        showError('This room subscription has expired or does not exist. Please contact support.');
+    // Check if model exists and is active
+    const model = config.models && config.models[modelName];
+    if (!model || !model.active) {
+        showError('This model subscription has expired or does not exist. Please contact support.');
         return false;
     }
+
+    // Check if the specific room exists and is active
+    const room = model.rooms && model.rooms[roomSlug];
+    if (!room || !room.active) {
+        showError('This room does not exist or is not active. Please contact the model.');
+        return false;
+    }
+
+    // Store room metadata for later use
+    currentRoom = {
+        ...room,
+        modelName: modelName,
+        roomSlug: roomSlug
+    };
 
     return true;
 }
 
-// Get Daily.co room URL for this model
+// Get Daily.co room URL for this model and room
 function getDailyRoomUrl() {
     const domain = config?.dailyDomainPrefix || 'cambridge';
-    return `https://${domain}.daily.co/${roomName}-private`;
+    // Use room type to determine Daily.co room suffix
+    const roomType = currentRoom?.type || 'public';
+    const suffix = roomType === 'private' ? 'private' : 'public';
+    return `https://${domain}.daily.co/${modelName}-${roomSlug}-${suffix}`;
 }
 
 // Show error message
@@ -73,10 +96,11 @@ function showError(message) {
 async function initializeRoom() {
     await loadConfig();
     
-    // Display room name
+    // Display room name with type indicator
     const roomDisplayElement = document.getElementById('room-display-name');
-    if (roomDisplayElement && roomName) {
-        roomDisplayElement.textContent = `Room: ${roomName.toUpperCase()}`;
+    if (roomDisplayElement && modelName) {
+        // Will be updated after validation with actual room name
+        roomDisplayElement.textContent = `Room: ${modelName.toUpperCase()}`;
     }
     
     // Validate room
@@ -84,8 +108,14 @@ async function initializeRoom() {
         return;
     }
     
-    // Load room access code
-    roomAccessCode = localStorage.getItem(`accessCode-${roomName}`);
+    // Update display with actual room name and type
+    if (roomDisplayElement && currentRoom) {
+        const typeIndicator = currentRoom.type === 'private' ? '🔒 PRIVATE' : '🌐 PUBLIC';
+        roomDisplayElement.textContent = `${typeIndicator} | ${currentRoom.name}`;
+    }
+    
+    // Load room access code (unique per model-room combination)
+    roomAccessCode = localStorage.getItem(`accessCode-${modelName}-${roomSlug}`);
     
     // Initialize access key validation
     initializeAccessKeyValidation();
@@ -449,7 +479,8 @@ function initializeWatermark() {
             hour12: false
         });
         
-        watermark.textContent = `${roomName.toUpperCase()} • ${timestamp}`;
+        const displayName = currentRoom ? currentRoom.name : modelName.toUpperCase();
+        watermark.textContent = `${displayName} • ${timestamp}`;
     }
     
     // Update immediately and every 30 seconds

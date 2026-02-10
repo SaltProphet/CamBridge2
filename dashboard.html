@@ -344,6 +344,193 @@
                 justify-content: center;
             }
         }
+
+        /* Room Cards */
+        .room-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(85, 85, 85, 0.3);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .room-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .room-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .room-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            border-radius: 2px;
+        }
+
+        .room-type-public {
+            background: rgba(0, 100, 255, 0.2);
+            border: 1px solid rgba(0, 100, 255, 0.5);
+            color: #66b3ff;
+        }
+
+        .room-type-private {
+            background: rgba(255, 0, 100, 0.2);
+            border: 1px solid rgba(255, 0, 100, 0.5);
+            color: #ff6699;
+        }
+
+        .room-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .room-card-body {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .room-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(85, 85, 85, 0.2);
+            font-size: 0.85rem;
+        }
+
+        .room-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .room-info-label {
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            font-size: 0.75rem;
+        }
+
+        .room-info-value {
+            color: var(--text-light);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .room-url-text {
+            color: var(--accent);
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-darker);
+            border: 2px solid var(--accent);
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .modal-header h2 {
+            color: var(--accent);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15rem;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: var(--text-light);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--text);
+            color: var(--text-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--accent);
+        }
+
+        .form-help {
+            font-size: 0.7rem;
+            color: var(--text);
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -377,21 +564,12 @@
                 <p class="subtitle">Room Management & Statistics</p>
             </header>
 
-            <!-- Room Info Card -->
+            <!-- Account Status Card -->
             <div class="card">
-                <h2><i class="fas fa-door-open"></i> Room Information</h2>
+                <h2><i class="fas fa-user-circle"></i> Account Status</h2>
                 <div class="info-row">
-                    <span class="info-label">Room Name</span>
-                    <span class="info-value" id="display-room-name">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Room URL</span>
-                    <span class="info-value">
-                        <span class="room-url" id="display-room-url">-</span>
-                        <button class="btn-icon" id="copy-url-btn" title="Copy URL">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </span>
+                    <span class="info-label">Model Name</span>
+                    <span class="info-value" id="display-model-name">-</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Subscription Status</span>
@@ -400,19 +578,21 @@
                     </span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Current Access Code</span>
-                    <span class="info-value">
-                        <span class="access-code" id="display-access-code">-</span>
-                    </span>
+                    <span class="info-label">Rooms</span>
+                    <span class="info-value" id="room-count">0 / 8</span>
                 </div>
-                <div class="success-message" id="copy-success"></div>
-                <div class="button-group">
-                    <button class="btn btn-primary" id="change-code-btn">
-                        <i class="fas fa-key"></i> Change Access Code
+            </div>
+
+            <!-- Room Management Card -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0;"><i class="fas fa-door-open"></i> Your Rooms</h2>
+                    <button class="btn btn-primary" id="create-room-btn" style="padding: 0.5rem 1rem;">
+                        <i class="fas fa-plus"></i> Create Room
                     </button>
-                    <button class="btn btn-secondary" id="enter-room-btn">
-                        <i class="fas fa-door-open"></i> Enter Room
-                    </button>
+                </div>
+                <div id="rooms-list">
+                    <p style="color: var(--text); text-align: center; padding: 2rem;">No rooms yet. Create your first room!</p>
                 </div>
             </div>
 
@@ -457,6 +637,46 @@
         </div>
     </div>
 
+    <!-- Create Room Modal -->
+    <div class="modal" id="create-room-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Room</h2>
+                <button class="modal-close" id="close-modal-btn">&times;</button>
+            </div>
+            <form id="create-room-form">
+                <div class="form-group">
+                    <label for="room-name">Room Name *</label>
+                    <input type="text" id="room-name" placeholder="e.g., VIP Lounge" required>
+                    <div class="form-help">Friendly name for your room</div>
+                </div>
+                <div class="form-group">
+                    <label for="room-slug">Room Slug *</label>
+                    <input type="text" id="room-slug" placeholder="e.g., vip-lounge" required pattern="[a-z0-9-_]+">
+                    <div class="form-help">URL-safe identifier (lowercase letters, numbers, hyphens, underscores only)</div>
+                </div>
+                <div class="form-group">
+                    <label for="room-type">Room Type *</label>
+                    <select id="room-type" required>
+                        <option value="">Select room type...</option>
+                        <option value="public">🌐 Public - Requires login for access</option>
+                        <option value="private">🔒 Private Ultra - Exclusive sessions only</option>
+                    </select>
+                    <div class="form-help">Public rooms are accessible with access code. Private Ultra rooms provide exclusive, premium access.</div>
+                </div>
+                <div class="error-message" id="modal-error"></div>
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create Room
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancel-modal-btn">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // API-based authentication system with JWT tokens
         // DOM Elements
@@ -469,20 +689,43 @@
         const logoutLink = document.getElementById('logout-link');
 
         // Dashboard elements
-        const displayRoomName = document.getElementById('display-room-name');
-        const displayRoomUrl = document.getElementById('display-room-url');
-        const displayAccessCode = document.getElementById('display-access-code');
+        const displayModelName = document.getElementById('display-model-name');
         const subscriptionStatus = document.getElementById('subscription-status');
-        const copyUrlBtn = document.getElementById('copy-url-btn');
-        const copySuccess = document.getElementById('copy-success');
-        const changeCodeBtn = document.getElementById('change-code-btn');
-        const enterRoomBtn = document.getElementById('enter-room-btn');
+        const roomCount = document.getElementById('room-count');
+        const roomsList = document.getElementById('rooms-list');
+        const createRoomBtn = document.getElementById('create-room-btn');
+
+        // Modal elements
+        const createRoomModal = document.getElementById('create-room-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const cancelModalBtn = document.getElementById('cancel-modal-btn');
+        const createRoomForm = document.getElementById('create-room-form');
+        const roomNameInput = document.getElementById('room-name');
+        const roomSlugInput = document.getElementById('room-slug');
+        const roomTypeSelect = document.getElementById('room-type');
+        const modalError = document.getElementById('modal-error');
+
+        // Load config
+        let config = null;
+        let currentModelName = null;
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/config.json');
+                config = await response.json();
+                return config;
+            } catch (err) {
+                console.error('Failed to load config:', err);
+                return null;
+            }
+        }
 
         // Check if already logged in
-        const authToken = localStorage.getItem('authToken');
-        if (authToken) {
-            // Validate token and load profile
-            loadProfile();
+        const savedModelName = sessionStorage.getItem('modelName');
+        if (savedModelName) {
+            loadConfig().then(() => showDashboard(savedModelName));
+        } else {
+            loadConfig();
         }
 
         // Login handler
@@ -572,30 +815,19 @@
             }
         }
 
-        function showDashboard(user, rooms) {
+        function showDashboard(modelName) {
+            currentModelName = modelName;
             authGate.classList.add('hidden');
             dashboard.classList.add('active');
 
-            // Populate dashboard with user data
-            displayRoomName.textContent = user.username;
+            // Populate dashboard
+            displayModelName.textContent = modelName;
             
-            // Get first room or use username as fallback
-            const primaryRoom = rooms && rooms.length > 0 ? rooms[0] : null;
-            
-            if (primaryRoom) {
-                const baseUrl = window.location.origin;
-                const roomUrl = `${baseUrl}/room/${primaryRoom.roomName}`;
-                displayRoomUrl.textContent = roomUrl;
-                displayAccessCode.textContent = primaryRoom.accessCode;
-                
-                // Check if room is active
-                if (primaryRoom.isActive) {
-                    subscriptionStatus.textContent = 'Active';
-                    subscriptionStatus.className = 'status-badge status-active';
-                } else {
-                    subscriptionStatus.textContent = 'Inactive';
-                    subscriptionStatus.className = 'status-badge status-expired';
-                }
+            // Check subscription status
+            const model = config?.models?.[modelName];
+            if (model && model.active) {
+                subscriptionStatus.textContent = 'Active';
+                subscriptionStatus.className = 'status-badge status-active';
             } else {
                 // No rooms yet
                 const baseUrl = window.location.origin;
@@ -605,143 +837,246 @@
                 subscriptionStatus.textContent = 'No Room';
                 subscriptionStatus.className = 'status-badge status-expired';
             }
+
+            // Load rooms
+            loadRooms();
         }
 
-        // Copy URL button
-        copyUrlBtn.addEventListener('click', () => {
-            const url = displayRoomUrl.textContent;
-            navigator.clipboard.writeText(url).then(() => {
-                copySuccess.textContent = '✓ URL copied to clipboard!';
-                setTimeout(() => {
-                    copySuccess.textContent = '';
-                }, 3000);
-            });
-        });
+        function loadRooms() {
+            const model = config?.models?.[currentModelName];
+            const rooms = model?.rooms || {};
+            const roomsArray = Object.entries(rooms);
+            const maxRooms = config?.maxRoomsPerModel || 8;
 
-        // Change access code
-        changeCodeBtn.addEventListener('click', async () => {
-            const token = localStorage.getItem('authToken');
-            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-            
-            if (!token) {
-                copySuccess.textContent = 'Error: Not authenticated';
+            // Update room count
+            roomCount.textContent = `${roomsArray.length} / ${maxRooms}`;
+
+            // Update create button state
+            if (roomsArray.length >= maxRooms) {
+                createRoomBtn.disabled = true;
+                createRoomBtn.style.opacity = '0.5';
+                createRoomBtn.style.cursor = 'not-allowed';
+                createRoomBtn.title = `Maximum of ${maxRooms} rooms reached`;
+            }
+
+            // Display rooms
+            if (roomsArray.length === 0) {
+                roomsList.innerHTML = '<p style="color: var(--text); text-align: center; padding: 2rem;">No rooms yet. Create your first room!</p>';
                 return;
             }
 
-            // Get current room data from profile
-            try {
-                const profileResponse = await fetch('/api/profile', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                const profileData = await profileResponse.json();
-                if (!profileData.success) {
-                    copySuccess.textContent = 'Error: Failed to load profile';
-                    return;
-                }
+            roomsList.innerHTML = roomsArray.map(([slug, room]) => {
+                const baseUrl = window.location.origin;
+                const roomUrl = `${baseUrl}/room/${currentModelName}/${slug}`;
+                const accessCode = getAccessCode(currentModelName, slug);
+                const typeClass = room.type === 'private' ? 'room-type-private' : 'room-type-public';
+                const typeIcon = room.type === 'private' ? '🔒' : '🌐';
+                const typeName = room.type === 'private' ? 'PRIVATE ULTRA' : 'PUBLIC';
                 
-                // Check if user has any rooms
-                if (!profileData.rooms || profileData.rooms.length === 0) {
-                    copySuccess.textContent = 'Error: No room found. Please contact support.';
-                    return;
-                }
+                // Escape HTML to prevent XSS
+                const safeName = escapeHTML(room.name);
+                const safeSlug = escapeHTML(slug);
 
-                const room = profileData.rooms[0];
-                const newCode = generateAccessCode();
+                return `
+                    <div class="room-card">
+                        <div class="room-card-header">
+                            <div class="room-card-title">
+                                <h3 style="color: var(--accent); margin: 0; font-size: 1.1rem;">${safeName}</h3>
+                                <span class="room-type-badge ${typeClass}">${typeIcon} ${typeName}</span>
+                            </div>
+                            <div class="room-card-actions">
+                                <button class="btn-icon room-action-copy" data-url="${escapeHTML(roomUrl)}" title="Copy URL">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button class="btn-icon room-action-enter" data-model="${escapeHTML(currentModelName)}" data-slug="${safeSlug}" title="Enter Room">
+                                    <i class="fas fa-door-open"></i>
+                                </button>
+                                <button class="btn-icon room-action-delete" data-slug="${safeSlug}" title="Delete Room" style="color: var(--error); border-color: var(--error);">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="room-card-body">
+                            <div class="room-info-item">
+                                <span class="room-info-label">Room URL</span>
+                                <span class="room-url-text">${escapeHTML(roomUrl)}</span>
+                            </div>
+                            <div class="room-info-item">
+                                <span class="room-info-label">Access Code</span>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="access-code" style="font-size: 1rem;">${escapeHTML(accessCode)}</span>
+                                    <button class="btn-icon room-action-change-code" data-model="${escapeHTML(currentModelName)}" data-slug="${safeSlug}" title="Change Code" style="padding: 0.25rem; font-size: 0.8rem;">
+                                        <i class="fas fa-sync"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="room-info-item">
+                                <span class="room-info-label">Slug</span>
+                                <span class="room-info-value">${safeSlug}</span>
+                            </div>
+                            <div class="room-info-item">
+                                <span class="room-info-label">Status</span>
+                                <span class="room-info-value" style="color: ${room.active ? 'var(--accent)' : 'var(--error)'};">
+                                    ${room.active ? '✓ Active' : '✗ Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-                // Update room with new access code
-                const updateResponse = await fetch('/api/rooms', {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        roomId: room.id,
-                        accessCode: newCode
-                    })
-                });
+            // Attach event listeners to room action buttons
+            document.querySelectorAll('.room-action-copy').forEach(btn => {
+                btn.addEventListener('click', () => copyRoomUrl(btn.dataset.url));
+            });
 
-                const updateData = await updateResponse.json();
-                if (updateResponse.ok && updateData.success) {
-                    displayAccessCode.textContent = newCode;
-                    copySuccess.textContent = '✓ Access code changed!';
-                } else {
-                    copySuccess.textContent = 'Error: ' + (updateData.error || 'Failed to update');
-                }
-            } catch (error) {
-                console.error('Change code error:', error);
-                copySuccess.textContent = 'Error: Network error';
-            }
+            document.querySelectorAll('.room-action-enter').forEach(btn => {
+                btn.addEventListener('click', () => enterRoom(btn.dataset.model, btn.dataset.slug));
+            });
 
-            setTimeout(() => {
-                copySuccess.textContent = '';
-            }, 3000);
+            document.querySelectorAll('.room-action-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteRoom(btn.dataset.slug));
+            });
+
+            document.querySelectorAll('.room-action-change-code').forEach(btn => {
+                btn.addEventListener('click', () => changeAccessCode(btn.dataset.model, btn.dataset.slug));
+            });
+        }
+
+        // Modal handlers
+        createRoomBtn.addEventListener('click', () => {
+            createRoomModal.classList.add('active');
+            createRoomForm.reset();
+            modalError.textContent = '';
         });
 
-        // Enter room
-        enterRoomBtn.addEventListener('click', async () => {
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/profile', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    if (data.rooms && data.rooms.length > 0) {
-                        const roomName = data.rooms[0].roomName;
-                        window.location.href = `/room/${roomName}`;
-                    } else {
-                        alert('No room found. Please create a room first.');
-                    }
-                }
-            } catch (error) {
-                console.error('Enter room error:', error);
-            }
+        closeModalBtn.addEventListener('click', () => {
+            createRoomModal.classList.remove('active');
         });
 
-        // Logout
-        logoutLink.addEventListener('click', async (e) => {
+        cancelModalBtn.addEventListener('click', () => {
+            createRoomModal.classList.remove('active');
+        });
+
+        // Auto-generate slug from room name
+        roomNameInput.addEventListener('input', (e) => {
+            const name = e.target.value;
+            const slug = name.toLowerCase()
+                .replace(/[^a-z0-9\s-_]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .substring(0, 50);
+            roomSlugInput.value = slug;
+        });
+
+        // Create room form handler
+        createRoomForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const token = localStorage.getItem('authToken');
-            if (token) {
-                try {
-                    await fetch('/api/auth/logout', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                } catch (error) {
-                    console.error('Logout error:', error);
-                }
+            const roomName = roomNameInput.value.trim();
+            const roomSlug = roomSlugInput.value.trim().toLowerCase();
+            const roomType = roomTypeSelect.value;
+
+            if (!roomName || !roomSlug || !roomType) {
+                modalError.textContent = 'All fields are required';
+                return;
             }
 
-            // Clear local storage
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
-            
-            // Reset UI
-            authGate.classList.remove('hidden');
-            dashboard.classList.remove('active');
-            modelNameInput.value = '';
-            accessPasswordInput.value = '';
-            authError.textContent = '';
+            // Validate slug format
+            if (!/^[a-z0-9-_]+$/.test(roomSlug)) {
+                modalError.textContent = 'Room slug can only contain lowercase letters, numbers, hyphens, and underscores';
+                return;
+            }
+
+            // Check if slug already exists
+            const model = config.models[currentModelName];
+            if (model.rooms && model.rooms[roomSlug]) {
+                modalError.textContent = 'A room with this slug already exists';
+                return;
+            }
+
+            // Check room limit
+            const roomCount = Object.keys(model.rooms || {}).length;
+            const maxRooms = config.maxRoomsPerModel || 8;
+            if (roomCount >= maxRooms) {
+                modalError.textContent = `Maximum of ${maxRooms} rooms reached`;
+                return;
+            }
+
+            // Create the room
+            if (!config.models[currentModelName].rooms) {
+                config.models[currentModelName].rooms = {};
+            }
+
+            config.models[currentModelName].rooms[roomSlug] = {
+                name: roomName,
+                type: roomType,
+                slug: roomSlug,
+                active: true,
+                createdAt: new Date().toISOString()
+            };
+
+            // Generate access code for the new room
+            const accessCode = generateAccessCode();
+            localStorage.setItem(`accessCode-${currentModelName}-${roomSlug}`, accessCode);
+
+            // Save config (in production, this would be a server API call)
+            alert('⚠️ DEMO MODE: Room created in memory only. In production, this would save to the server.\n\nTo persist this room, manually add it to config.json on your server.');
+
+            // Refresh the room list
+            loadRooms();
+            createRoomModal.classList.remove('active');
         });
 
-        // Generate random access code
+        // Room action functions
+        function copyRoomUrl(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✓ Room URL copied to clipboard!');
+            });
+        }
+
+        function enterRoom(modelName, roomSlug) {
+            window.location.href = `/room/${encodeURIComponent(modelName)}/${encodeURIComponent(roomSlug)}`;
+        }
+
+        function changeAccessCode(modelName, roomSlug) {
+            const newCode = generateAccessCode();
+            localStorage.setItem(`accessCode-${modelName}-${roomSlug}`, newCode);
+            alert(`✓ Access code changed to: ${newCode}`);
+            loadRooms();
+        }
+
+        function deleteRoom(roomSlug) {
+            if (!confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
+                return;
+            }
+
+            delete config.models[currentModelName].rooms[roomSlug];
+            localStorage.removeItem(`accessCode-${currentModelName}-${roomSlug}`);
+
+            alert('⚠️ DEMO MODE: Room deleted from memory only. In production, this would delete from the server.\n\nTo persist this change, manually remove it from config.json on your server.');
+
+            loadRooms();
+        }
+
+        // Helper functions
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Helper functions
+        function getAccessCode(modelName, roomSlug) {
+            let code = localStorage.getItem(`accessCode-${modelName}-${roomSlug}`);
+            if (!code) {
+                code = generateAccessCode();
+                localStorage.setItem(`accessCode-${modelName}-${roomSlug}`, code);
+            }
+            return code;
+        }
+
         function generateAccessCode() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let code = '';
@@ -750,6 +1085,17 @@
             }
             return code;
         }
+
+        // Logout
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            sessionStorage.removeItem('modelName');
+            authGate.classList.remove('hidden');
+            dashboard.classList.remove('active');
+            modelNameInput.value = '';
+            accessPasswordInput.value = '';
+            authError.textContent = '';
+        });
 
         // Clear auth error on input
         modelNameInput.addEventListener('input', () => {

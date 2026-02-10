@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/room/:modelname/:roomslug", "destination": "/room.html" },
     { "source": "/room/:modelname", "destination": "/room.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/register", "destination": "/register.html" },

@@ -29,15 +29,28 @@ See [AUTH_SETUP.md](AUTH_SETUP.md) for complete setup instructions.
 
 ## New Multi-Tenant Features
 
-### 🏢 Room Rental Platform
-- **Unique Room URLs**: Each model gets `cambridge.app/room/modelname`
-- **Access Code System**: Models control access with changeable codes
-- **Subscription Management**: Simple active/expired status (hardcoded list, upgradeable to Stripe)
-- **Model Dashboard**: Manage room, view stats, change access codes
-- **Public Landing Page**: Marketing page for model acquisition
+### 🏢 Multi-Room Management System
+- **Multiple Rooms Per Model**: Each model can create up to 8 rooms (configurable)
+- **Room Types**:
+  - **🌐 Public Rooms**: Require login with access code - suitable for general sessions
+  - **🔒 Private Ultra Rooms**: Exclusive, premium sessions with enhanced security
+- **Unique Room URLs**: Each room gets `cambridge.app/room/modelname/roomslug`
+- **Backward Compatible**: Simple `/room/modelname` URL defaults to 'main' room
+- **Access Code System**: Unique access codes per room, models can change anytime
+- **Room Management Dashboard**: Create, edit, delete rooms with visual type indicators
+
+### 🎛️ Enhanced Dashboard Features
+- **Room Limit Display**: Shows X/8 rooms used
+- **Room Creation Modal**: Easy form to create new public or private rooms
+- **Per-Room Management**: Each room has:
+  - Unique access code
+  - Copy URL button
+  - Direct entry button
+  - Delete option
+- **Visual Type Badges**: Clear indicators for public vs private rooms
 
 ### 🔐 Video Watermark Protection
-- **Semi-transparent overlay** with model name + timestamp
+- **Semi-transparent overlay** with room name + timestamp
 - **Auto-updating**: Refreshes every 30 seconds
 - **Recording deterrent**: Visible if screen recorded, hard to crop out
 - **Center positioned**: Doesn't block view but clearly marks ownership
@@ -51,9 +64,9 @@ See [AUTH_SETUP.md](AUTH_SETUP.md) for complete setup instructions.
 
 ### 🎯 URL Structure
 - `/` or `/landing.html` - Public marketing page
-- `/register` - Model registration page (create new account)
-- `/dashboard` or `/dashboard.html` - Model dashboard (secure login with JWT)
-- `/room/:modelname` - Model's private room with access code gate
+- `/room/:modelname` - Model's default (main) room with access code gate
+- `/room/:modelname/:roomslug` - Specific room by slug (e.g., `/room/testmodel/vip`)
+- `/dashboard` or `/dashboard.html` - Model dashboard (password protected)
 - `/app` or `/app.html` - Legacy bridge interface (original single-user mode)
 - `/api/*` - RESTful API endpoints for authentication and room management
 
@@ -159,14 +172,35 @@ DEEPGRAM_KEY=your-deepgram-key
 
 ### Multi-Tenant Configuration
 
-1. **Configure Active Rooms**: Edit `config.json` to manage subscriptions:
+1. **Configure Models and Rooms**: Edit `config.json` to manage models and their rooms:
    ```json
    {
-     "activeRooms": ["testmodel", "demo", "saltprophet"],
      "dailyDomainPrefix": "cambridge",
      "subscriptionPrice": 30,
      "maxSessionDuration": 7200,
-     "sessionWarningTime": 6600
+     "sessionWarningTime": 6600,
+     "maxRoomsPerModel": 8,
+     "models": {
+       "testmodel": {
+         "active": true,
+         "rooms": {
+           "main": {
+             "name": "Main Room",
+             "type": "public",
+             "slug": "main",
+             "active": true,
+             "createdAt": "2024-01-01T00:00:00Z"
+           },
+           "vip": {
+             "name": "VIP Lounge",
+             "type": "private",
+             "slug": "vip",
+             "active": true,
+             "createdAt": "2024-01-01T00:00:00Z"
+           }
+         }
+       }
+     }
    }
    ```
 
@@ -176,9 +210,16 @@ DEEPGRAM_KEY=your-deepgram-key
    ```
    *Note: In production, use server-side authentication with a proper backend.*
 
-3. **Daily.co Domain**: The platform generates room URLs as `https://{dailyDomainPrefix}.daily.co/{modelname}-private`
+3. **Daily.co Domain**: The platform generates room URLs as:
+   - Public rooms: `https://{dailyDomainPrefix}.daily.co/{modelname}-{roomslug}-public`
+   - Private rooms: `https://{dailyDomainPrefix}.daily.co/{modelname}-{roomslug}-private`
 
-4. **Session Limits**: 
+4. **Room Configuration**:
+   - `maxRoomsPerModel`: Maximum rooms per model (default: 8)
+   - `type`: Either "public" or "private"
+   - Each room has a unique slug and access code
+
+5. **Session Limits**: 
    - `maxSessionDuration`: Maximum session length in seconds (default: 7200 = 2 hours)
    - `sessionWarningTime`: When to show warning in seconds (default: 6600 = 1:50)
 
@@ -227,7 +268,8 @@ vercel --prod
 ```
 
 The routing configuration handles:
-- `/room/:modelname` → Serves room.html with model name extraction
+- `/room/:modelname/:roomslug` → Serves room.html with model and room slug extraction
+- `/room/:modelname` → Serves room.html, defaults to 'main' room
 - `/dashboard` → Serves dashboard.html
 - `/app` → Serves legacy bridge (app.html)
 - `/` → Serves landing page
@@ -263,35 +305,56 @@ Not recommended for multi-tenant mode due to lack of URL rewriting support. Use 
 
 ### Multi-Tenant Platform Usage
 
-#### For Models (NEW Authentication Flow):
-1. **Create Account**: Go to `/register` and create an account with:
-   - Unique username (lowercase, alphanumeric, hyphens, underscores)
-   - Valid email address
-   - Secure password (8+ chars, uppercase, lowercase, number)
-2. **Login to Dashboard**: Go to `/dashboard` and login with your credentials
-3. **JWT Token**: Receive a secure JWT token (7-day expiration, stored locally)
-4. **Manage Your Room**:
-   - View your unique room URL
-   - Generate/change access codes via API
-   - Update profile (display name, bio, avatar)
-   - View subscription status
-5. **Share with Clients**: Give clients your room URL and current access code
+#### For Models:
+1. **Access Dashboard**: Go to `/dashboard` and login with:
+   - Model Name: Your assigned model name (e.g., "testmodel")
+   - Password: The dashboard password (default: "modelpass")
+
+2. **Manage Your Rooms**:
+   - **View All Rooms**: See list of all your rooms with type indicators (🌐 Public / 🔒 Private Ultra)
+   - **Create New Room**: 
+     - Click "Create Room" button
+     - Enter room name (e.g., "VIP Lounge")
+     - Auto-generated slug or customize it (e.g., "vip-lounge")
+     - Select room type: Public or Private Ultra
+     - System generates unique access code automatically
+   - **Manage Existing Rooms**:
+     - Copy room URL to share with clients
+     - Change access code anytime
+     - Enter room directly for testing
+     - Delete rooms you no longer need
+   - **Room Limits**: Create up to 8 rooms (or as configured)
+
+3. **Room Types**:
+   - **🌐 Public Rooms**: Standard rooms requiring login with access code. Perfect for general sessions.
+   - **🔒 Private Ultra Rooms**: Premium, exclusive rooms with enhanced security. Ideal for VIP clients.
+
+4. **Share with Clients**: 
+   - Give clients your room URL (e.g., `cambridge.app/room/testmodel/vip`)
+   - Provide the current access code for that specific room
+   - Each room has its own unique access code
 
 #### For Clients:
-1. **Enter Room**: Use the model's unique URL (e.g., `cambridge.app/room/testmodel`)
-2. **Enter Access Code**: Input the code provided by the model
-3. **Establish Link**: Click to join the private video session
-4. **Video Features**: 
-   - Full-screen P2P video with watermark protection
+1. **Enter Room**: Use the model's room URL (e.g., `cambridge.app/room/testmodel/vip`)
+2. **View Room Info**: See room name and type (Public or Private Ultra) displayed prominently
+3. **Enter Access Code**: Input the code provided by the model for this specific room
+4. **Establish Link**: Click to join the private video session
+5. **Video Features**: 
+   - Full-screen P2P video with watermark protection showing room name
    - Send tips directly to model (100% goes to them)
    - Optional chat and transcription features
-5. **Session Time**: 2-hour maximum with 10-minute warning
+6. **Session Time**: 2-hour maximum with 10-minute warning
 
 #### For Platform Operators:
-1. **Add Models**: Edit `config.json` → `activeRooms` array
-2. **Monitor Subscriptions**: Remove models from `activeRooms` when subscription expires
-3. **Configure Settings**: Adjust session duration, pricing, Daily.co domain
-4. **Collect Payment**: $30/month per active room (outside of platform)
+1. **Add Models**: Edit `config.json` → Add model entry under `models` object
+2. **Configure Rooms**: Add room entries under model's `rooms` object with type (public/private)
+3. **Monitor Subscriptions**: Set model's `active` status to false when subscription expires
+4. **Configure Settings**: Adjust session duration, pricing, Daily.co domain, max rooms per model
+5. **Collect Payment**: $30/month per active model (outside of platform)
+
+### Backward Compatibility:
+- Old URL format `/room/modelname` automatically redirects to model's "main" room
+- If "main" room doesn't exist, system will show appropriate error message
 
 ### Legacy Single-User Bridge Usage
 
@@ -405,19 +468,26 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - **Database Integration**: Postgres with parameterized queries (SQL injection prevention)
 
 ### Multi-Tenant Security
-- **Access Codes**: Database-backed validation per room
-- **Room Validation**: Active subscription check before allowing entry
-- **Watermark Protection**: Timestamps and model name overlay to deter recording
+- **Per-Room Access Codes**: Each room has unique access code stored in browser localStorage
+- **Room Type Enforcement**: Public and Private Ultra rooms use separate Daily.co URLs
+- **Model Validation**: Active subscription check before allowing room entry
+- **Room-Specific Access**: Different rooms require different access codes for enhanced security
+- **Watermark Protection**: Timestamps and room name overlay to deter recording
 - **Session Limits**: Auto-disconnect after 2 hours to prevent abuse
-- **User Isolation**: Each model's data is isolated by user_id foreign keys
+- **Ghost Protocol**: No session data, no user data, no logs on server
+- **Room Isolation**: Each room gets unique Daily.co URL preventing cross-room access
+
+### Room Type Security Differences
+- **Public Rooms**: Access code required, suitable for standard sessions
+- **Private Ultra Rooms**: Enhanced security with separate Daily.co namespace, ideal for exclusive VIP sessions
 
 ### General Security
 - Change the dashboard password before deployment (`dashboard.html`)
-- Add model names to `activeRooms` in config.json for subscription control
+- Configure models and rooms in `config.json` for subscription control
 - Use HTTPS in production (required for camera/microphone access)
 - Keep Daily.co API credentials secure
 - Add your Deepgram API key if using transcription (optional)
-- Room names act as identifiers - models should keep access codes private
+- Access codes are unique per room - models should share codes securely
 - No data is stored or logged anywhere (Ghost Protocol)
 - Transcriptions are client-side only and not recorded
 - Tips and chat messages are P2P only (not stored on any server)
@@ -426,11 +496,13 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - Watermarks use current timestamp to prove authenticity if needed
 
 ### Recommended Practices
-- Rotate access codes regularly via dashboard
+- Rotate room access codes regularly via dashboard
 - Use server-side authentication in production (not client-side password check)
+- Create separate rooms for different client tiers (public vs private ultra)
+- Monitor active models list for subscription status
 - Implement Stripe or crypto payments for automated subscription management
 - Consider age verification system for compliance
-- Monitor active rooms list for subscription status
+- Limit room creation to prevent abuse (default: 8 rooms per model)
 
 ## Troubleshooting
 
