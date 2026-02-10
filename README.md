@@ -1,10 +1,31 @@
 # CamBridge
-Multi-Tenant Private Video Room Platform - Ghost Protocol Security
+Multi-Tenant Private Video Room Platform - Secure Model Authentication System
 
 ## Overview
 CamBridge is a multi-tenant "room rental" platform where models can rent private video spaces and keep 100% of their tips. Built with the REAPER design language and optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
 
-**Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and Ghost Protocol security (no database, no tracking, no logs).
+**Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and secure database-backed authentication with password hashing and JWT tokens.
+
+## 🔐 NEW: Secure Authentication System
+
+CamBridge now includes a production-ready authentication system:
+
+### For Models (Performers)
+- **Create Account**: Register at `/register` with username, email, and secure password
+- **Secure Login**: JWT token-based authentication with 7-day sessions
+- **Password Security**: Bcrypt hashing with 12 salt rounds
+- **Profile Management**: Update display name, bio, and avatar
+- **Room Management**: Create and manage multiple private rooms
+- **Access Control**: Generate and change room access codes via dashboard
+
+### For Developers
+- **Database Integration**: Postgres-backed user accounts, rooms, and sessions
+- **API Endpoints**: RESTful API for auth, profile, and room management
+- **Rate Limiting**: Protection against brute force attacks
+- **Input Validation**: Comprehensive sanitization and validation
+- **Session Management**: Secure token storage and expiration
+
+See [AUTH_SETUP.md](AUTH_SETUP.md) for complete setup instructions.
 
 ## New Multi-Tenant Features
 
@@ -30,9 +51,11 @@ CamBridge is a multi-tenant "room rental" platform where models can rent private
 
 ### 🎯 URL Structure
 - `/` or `/landing.html` - Public marketing page
+- `/register` - Model registration page (create new account)
+- `/dashboard` or `/dashboard.html` - Model dashboard (secure login with JWT)
 - `/room/:modelname` - Model's private room with access code gate
-- `/dashboard` or `/dashboard.html` - Model dashboard (password protected)
 - `/app` or `/app.html` - Legacy bridge interface (original single-user mode)
+- `/api/*` - RESTful API endpoints for authentication and room management
 
 ## Features
 
@@ -106,8 +129,33 @@ CamBridge is a multi-tenant "room rental" platform where models can rent private
 ### Prerequisites
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - Daily.co account (for room creation)
-- Deepgram API key (for speech-to-text feature)
+- Deepgram API key (for speech-to-text feature, optional)
+- **NEW**: Postgres database (Vercel Postgres or Neon)
 - Hosting with URL rewriting support (Vercel, Netlify, etc.)
+
+### Database & Authentication Setup
+
+**For complete setup instructions, see [AUTH_SETUP.md](AUTH_SETUP.md)**
+
+Quick start:
+1. Set up Postgres database (Vercel Postgres or Neon)
+2. Configure environment variables (see `.env.example`)
+3. Initialize database tables via `/api/init-db`
+4. Models can register at `/register`
+5. Models login at `/dashboard`
+
+### Environment Variables
+
+```bash
+# Database (Required for authentication)
+POSTGRES_URL=postgresql://...
+JWT_SECRET=your-super-secret-jwt-key
+DB_INIT_SECRET=your-db-init-secret
+
+# Optional
+DAILY_API_KEY=your-daily-api-key
+DEEPGRAM_KEY=your-deepgram-key
+```
 
 ### Multi-Tenant Configuration
 
@@ -215,16 +263,19 @@ Not recommended for multi-tenant mode due to lack of URL rewriting support. Use 
 
 ### Multi-Tenant Platform Usage
 
-#### For Models:
-1. **Get a Room**: Contact platform operator to add your model name to `activeRooms` in config.json
-2. **Access Dashboard**: Go to `/dashboard` and login with:
-   - Model Name: Your assigned room name (e.g., "testmodel")
-   - Password: The dashboard password (default: "modelpass")
-3. **Manage Your Room**:
-   - Copy your unique room URL to share with clients
-   - View/change your access code anytime
-   - Check subscription status (Active/Expired)
-4. **Share with Clients**: Give clients your room URL and current access code
+#### For Models (NEW Authentication Flow):
+1. **Create Account**: Go to `/register` and create an account with:
+   - Unique username (lowercase, alphanumeric, hyphens, underscores)
+   - Valid email address
+   - Secure password (8+ chars, uppercase, lowercase, number)
+2. **Login to Dashboard**: Go to `/dashboard` and login with your credentials
+3. **JWT Token**: Receive a secure JWT token (7-day expiration, stored locally)
+4. **Manage Your Room**:
+   - View your unique room URL
+   - Generate/change access codes via API
+   - Update profile (display name, bio, avatar)
+   - View subscription status
+5. **Share with Clients**: Give clients your room URL and current access code
 
 #### For Clients:
 1. **Enter Room**: Use the model's unique URL (e.g., `cambridge.app/room/testmodel`)
@@ -344,12 +395,21 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 
 ## Security Notes
 
+### Authentication Security (NEW)
+- **Password Hashing**: Bcrypt with 12 salt rounds - industry standard
+- **JWT Tokens**: 7-day expiration with secure signing
+- **Rate Limiting**: Protection against brute force (5 registrations/hour, 10 logins/15min)
+- **Input Validation**: Comprehensive sanitization and validation
+- **Session Management**: Database-backed session tracking
+- **HTTPS Required**: Secure communication for all API calls
+- **Database Integration**: Postgres with parameterized queries (SQL injection prevention)
+
 ### Multi-Tenant Security
-- **Access Codes**: Stored in browser localStorage per model (client-side only)
+- **Access Codes**: Database-backed validation per room
 - **Room Validation**: Active subscription check before allowing entry
 - **Watermark Protection**: Timestamps and model name overlay to deter recording
 - **Session Limits**: Auto-disconnect after 2 hours to prevent abuse
-- **Ghost Protocol**: No session data, no user data, no logs on server
+- **User Isolation**: Each model's data is isolated by user_id foreign keys
 
 ### General Security
 - Change the dashboard password before deployment (`dashboard.html`)

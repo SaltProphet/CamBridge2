@@ -301,7 +301,7 @@ function initializeAccessKeyValidation() {
 }
 
 // Validate and join
-function validateAndJoin() {
+async function validateAndJoin() {
     const enteredKey = accessKeyInput.value.trim().toUpperCase();
     
     if (!enteredKey) {
@@ -309,19 +309,75 @@ function validateAndJoin() {
         return;
     }
     
-    // Check against stored access code
+    // Disable button while validating
+    unlockBtn.disabled = true;
+    unlockBtn.textContent = 'VALIDATING...';
+    
+    try {
+        // Try API validation first (database-backed)
+        const response = await fetch('/api/rooms/verify-access', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                roomName: roomName,
+                accessCode: enteredKey
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Access granted via API
+            unlockBtn.textContent = 'ACCESS GRANTED';
+            setTimeout(() => {
+                // Hide gatekeeper
+                gatekeeper.classList.remove('active');
+                gatekeeper.classList.add('hidden');
+                
+                // Show video container
+                videoContainer.classList.remove('hidden');
+                
+                // Start the call
+                startCall();
+            }, 500);
+            return;
+        } else if (response.status === 404) {
+            // Room not in database, fall back to localStorage
+            console.log('Room not in database, using localStorage fallback');
+        } else {
+            // API validation failed
+            errorMessage.textContent = data.error || 'Invalid access code';
+            unlockBtn.disabled = false;
+            unlockBtn.textContent = 'ESTABLISH_LINK';
+            accessKeyInput.value = '';
+            accessKeyInput.focus();
+            return;
+        }
+    } catch (error) {
+        // API not available, fall back to localStorage
+        console.log('API not available, using localStorage fallback:', error);
+    }
+    
+    // Fallback: Check against stored access code in localStorage (legacy)
     if (roomAccessCode && enteredKey === roomAccessCode) {
-        // Hide gatekeeper
-        gatekeeper.classList.remove('active');
-        gatekeeper.classList.add('hidden');
-        
-        // Show video container
-        videoContainer.classList.remove('hidden');
-        
-        // Start the call
-        startCall();
+        unlockBtn.textContent = 'ACCESS GRANTED';
+        setTimeout(() => {
+            // Hide gatekeeper
+            gatekeeper.classList.remove('active');
+            gatekeeper.classList.add('hidden');
+            
+            // Show video container
+            videoContainer.classList.remove('hidden');
+            
+            // Start the call
+            startCall();
+        }, 500);
     } else {
         errorMessage.textContent = 'Invalid access code. Please try again.';
+        unlockBtn.disabled = false;
+        unlockBtn.textContent = 'ESTABLISH_LINK';
         accessKeyInput.value = '';
         accessKeyInput.focus();
     }
