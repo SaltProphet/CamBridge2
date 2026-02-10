@@ -50,6 +50,10 @@ export default async function handler(req, res) {
       });
     }
     
+    if (!secret) {
+      return res.status(400).json({ error: 'Secret key is required' });
+    }
+    
     if (secret !== INIT_SECRET) {
       return res.status(403).json({ error: 'Invalid secret key' });
     }

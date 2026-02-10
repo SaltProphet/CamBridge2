@@ -370,7 +370,7 @@
                 if (data.ready) {
                     showAlreadyInitialized();
                 } else if (!data.configured) {
-                    showWarning('DB_INIT_SECRET is not configured in environment variables. Please add it before initializing.');
+                    showWarning('DB_INIT_SECRET is not configured in environment variables. Please add it to your Vercel project environment variables and redeploy before initializing.');
                     document.getElementById('init-form').classList.add('show');
                 } else {
                     document.getElementById('init-form').classList.add('show');

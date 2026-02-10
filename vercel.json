@@ -29,10 +29,6 @@
       "dest": "/register.html"
     },
     {
-      "src": "/setup.html",
-      "dest": "/setup.html"
-    },
-    {
       "src": "/app.html",
       "dest": "/app.html"
     },
