@@ -822,22 +822,26 @@
                 const typeClass = room.type === 'private' ? 'room-type-private' : 'room-type-public';
                 const typeIcon = room.type === 'private' ? '🔒' : '🌐';
                 const typeName = room.type === 'private' ? 'PRIVATE ULTRA' : 'PUBLIC';
+                
+                // Escape HTML to prevent XSS
+                const safeName = escapeHTML(room.name);
+                const safeSlug = escapeHTML(slug);
 
                 return `
                     <div class="room-card">
                         <div class="room-card-header">
                             <div class="room-card-title">
-                                <h3 style="color: var(--accent); margin: 0; font-size: 1.1rem;">${sanitizeHTML(room.name)}</h3>
+                                <h3 style="color: var(--accent); margin: 0; font-size: 1.1rem;">${safeName}</h3>
                                 <span class="room-type-badge ${typeClass}">${typeIcon} ${typeName}</span>
                             </div>
                             <div class="room-card-actions">
-                                <button class="btn-icon" onclick="copyRoomUrl('${roomUrl}')" title="Copy URL">
+                                <button class="btn-icon room-action-copy" data-url="${escapeHTML(roomUrl)}" title="Copy URL">
                                     <i class="fas fa-copy"></i>
                                 </button>
-                                <button class="btn-icon" onclick="enterRoom('${currentModelName}', '${slug}')" title="Enter Room">
+                                <button class="btn-icon room-action-enter" data-model="${escapeHTML(currentModelName)}" data-slug="${safeSlug}" title="Enter Room">
                                     <i class="fas fa-door-open"></i>
                                 </button>
-                                <button class="btn-icon" onclick="deleteRoom('${slug}')" title="Delete Room" style="color: var(--error); border-color: var(--error);">
+                                <button class="btn-icon room-action-delete" data-slug="${safeSlug}" title="Delete Room" style="color: var(--error); border-color: var(--error);">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -845,20 +849,20 @@
                         <div class="room-card-body">
                             <div class="room-info-item">
                                 <span class="room-info-label">Room URL</span>
-                                <span class="room-url-text">${roomUrl}</span>
+                                <span class="room-url-text">${escapeHTML(roomUrl)}</span>
                             </div>
                             <div class="room-info-item">
                                 <span class="room-info-label">Access Code</span>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span class="access-code" style="font-size: 1rem;">${accessCode}</span>
-                                    <button class="btn-icon" onclick="changeAccessCode('${currentModelName}', '${slug}')" title="Change Code" style="padding: 0.25rem; font-size: 0.8rem;">
+                                    <span class="access-code" style="font-size: 1rem;">${escapeHTML(accessCode)}</span>
+                                    <button class="btn-icon room-action-change-code" data-model="${escapeHTML(currentModelName)}" data-slug="${safeSlug}" title="Change Code" style="padding: 0.25rem; font-size: 0.8rem;">
                                         <i class="fas fa-sync"></i>
                                     </button>
                                 </div>
                             </div>
                             <div class="room-info-item">
                                 <span class="room-info-label">Slug</span>
-                                <span class="room-info-value">${slug}</span>
+                                <span class="room-info-value">${safeSlug}</span>
                             </div>
                             <div class="room-info-item">
                                 <span class="room-info-label">Status</span>
@@ -870,6 +874,23 @@
                     </div>
                 `;
             }).join('');
+
+            // Attach event listeners to room action buttons
+            document.querySelectorAll('.room-action-copy').forEach(btn => {
+                btn.addEventListener('click', () => copyRoomUrl(btn.dataset.url));
+            });
+
+            document.querySelectorAll('.room-action-enter').forEach(btn => {
+                btn.addEventListener('click', () => enterRoom(btn.dataset.model, btn.dataset.slug));
+            });
+
+            document.querySelectorAll('.room-action-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteRoom(btn.dataset.slug));
+            });
+
+            document.querySelectorAll('.room-action-change-code').forEach(btn => {
+                btn.addEventListener('click', () => changeAccessCode(btn.dataset.model, btn.dataset.slug));
+            });
         }
 
         // Modal handlers
@@ -958,24 +979,24 @@
         });
 
         // Room action functions
-        window.copyRoomUrl = function(url) {
+        function copyRoomUrl(url) {
             navigator.clipboard.writeText(url).then(() => {
                 alert('✓ Room URL copied to clipboard!');
             });
-        };
+        }
 
-        window.enterRoom = function(modelName, roomSlug) {
-            window.location.href = `/room/${modelName}/${roomSlug}`;
-        };
+        function enterRoom(modelName, roomSlug) {
+            window.location.href = `/room/${encodeURIComponent(modelName)}/${encodeURIComponent(roomSlug)}`;
+        }
 
-        window.changeAccessCode = function(modelName, roomSlug) {
+        function changeAccessCode(modelName, roomSlug) {
             const newCode = generateAccessCode();
             localStorage.setItem(`accessCode-${modelName}-${roomSlug}`, newCode);
             alert(`✓ Access code changed to: ${newCode}`);
             loadRooms();
-        };
+        }
 
-        window.deleteRoom = function(roomSlug) {
+        function deleteRoom(roomSlug) {
             if (!confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
                 return;
             }
@@ -986,7 +1007,15 @@
             alert('⚠️ DEMO MODE: Room deleted from memory only. In production, this would delete from the server.\n\nTo persist this change, manually remove it from config.json on your server.');
 
             loadRooms();
-        };
+        }
+
+        // Helper functions
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
 
         // Helper functions
         function getAccessCode(modelName, roomSlug) {
@@ -1005,12 +1034,6 @@
                 code += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             return code;
-        }
-
-        function sanitizeHTML(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
         }
 
         // Logout
