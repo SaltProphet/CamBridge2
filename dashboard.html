@@ -638,8 +638,14 @@
                 });
 
                 const profileData = await profileResponse.json();
-                if (!profileData.success || !profileData.rooms || profileData.rooms.length === 0) {
-                    copySuccess.textContent = 'Error: No room found';
+                if (!profileData.success) {
+                    copySuccess.textContent = 'Error: Failed to load profile';
+                    return;
+                }
+                
+                // Check if user has any rooms
+                if (!profileData.rooms || profileData.rooms.length === 0) {
+                    copySuccess.textContent = 'Error: No room found. Please contact support.';
                     return;
                 }
 
@@ -692,9 +698,13 @@
                 });
 
                 const data = await response.json();
-                if (data.success && data.rooms && data.rooms.length > 0) {
-                    const roomName = data.rooms[0].roomName;
-                    window.location.href = `/room/${roomName}`;
+                if (data.success) {
+                    if (data.rooms && data.rooms.length > 0) {
+                        const roomName = data.rooms[0].roomName;
+                        window.location.href = `/room/${roomName}`;
+                    } else {
+                        alert('No room found. Please create a room first.');
+                    }
                 }
             } catch (error) {
                 console.error('Enter room error:', error);

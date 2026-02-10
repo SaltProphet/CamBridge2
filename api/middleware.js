@@ -2,7 +2,12 @@
 import jwt from 'jsonwebtoken';
 import { getSessionByToken } from './db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate that JWT_SECRET is set
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required but not set. Please configure it in your environment.');
+}
 
 // Rate limiting storage (in-memory, will reset on cold starts)
 const rateLimitStore = new Map();

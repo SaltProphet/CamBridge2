@@ -7,7 +7,8 @@ import {
 } from '../db.js';
 import { authenticate, validateUsername, sanitizeInput } from '../middleware.js';
 
-// Generate random access code
+// Generate random access code (8 uppercase alphanumeric characters)
+// Format defined by ACCESS_CODE_REGEX in db.js
 function generateAccessCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -100,12 +101,6 @@ export default async function handler(req, res) {
       const updates = {};
       
       if (accessCode !== undefined) {
-        // Validate access code format (8 chars, alphanumeric)
-        if (!/^[A-Z0-9]{8}$/.test(accessCode)) {
-          return res.status(400).json({ 
-            error: 'Access code must be 8 uppercase alphanumeric characters' 
-          });
-        }
         updates.access_code = accessCode;
       }
 
@@ -126,11 +121,11 @@ export default async function handler(req, res) {
         updates.max_session_duration = duration;
       }
 
-      // Update room (verifies ownership)
+      // Update room (verifies ownership and validates access code format)
       const result = await updateRoom(roomId, userId, updates);
       if (!result.success || !result.room) {
         return res.status(404).json({ 
-          error: 'Room not found or you do not have permission' 
+          error: result.error || 'Room not found or you do not have permission' 
         });
       }
 

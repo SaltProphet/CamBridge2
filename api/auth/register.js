@@ -9,7 +9,8 @@ import {
   rateLimit
 } from '../middleware.js';
 
-// Generate random access code
+// Generate random access code (8 uppercase alphanumeric characters)
+// Format defined by ACCESS_CODE_REGEX in db.js
 function generateAccessCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';

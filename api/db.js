@@ -116,16 +116,45 @@ export async function getUserById(userId) {
 export async function updateUser(userId, updates) {
   try {
     const { display_name, bio, avatar_url } = updates;
-    const result = await sql`
+    
+    // Build dynamic SET clause only for provided fields
+    const setClauses = [];
+    const values = [userId];
+    let paramIndex = 2;
+    
+    if (display_name !== undefined) {
+      setClauses.push(`display_name = $${paramIndex}`);
+      values.push(display_name);
+      paramIndex++;
+    }
+    
+    if (bio !== undefined) {
+      setClauses.push(`bio = $${paramIndex}`);
+      values.push(bio);
+      paramIndex++;
+    }
+    
+    if (avatar_url !== undefined) {
+      setClauses.push(`avatar_url = $${paramIndex}`);
+      values.push(avatar_url);
+      paramIndex++;
+    }
+    
+    if (setClauses.length === 0) {
+      // No fields to update
+      return getUserById(userId).then(user => ({ success: true, user }));
+    }
+    
+    setClauses.push('updated_at = CURRENT_TIMESTAMP');
+    
+    const query = `
       UPDATE users
-      SET 
-        display_name = COALESCE(${display_name}, display_name),
-        bio = COALESCE(${bio}, bio),
-        avatar_url = COALESCE(${avatar_url}, avatar_url),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${userId}
+      SET ${setClauses.join(', ')}
+      WHERE id = $1
       RETURNING id, username, email, display_name, bio, avatar_url, updated_at
     `;
+    
+    const result = await sql.query(query, values);
     return { success: true, user: result.rows[0] };
   } catch (error) {
     console.error('Update user error:', error);
@@ -173,19 +202,63 @@ export async function getRoomByName(roomName) {
   }
 }
 
+// Access code format constant
+const ACCESS_CODE_REGEX = /^[A-Z0-9]{8}$/;
+
 export async function updateRoom(roomId, userId, updates) {
   try {
     const { access_code, is_active, max_session_duration } = updates;
-    const result = await sql`
+
+    // Build dynamic SET clause only for provided fields
+    const setClauses = [];
+    const values = [roomId, userId];
+    let paramIndex = 3;
+
+    if (access_code !== undefined) {
+      // Validate access code format
+      if (!ACCESS_CODE_REGEX.test(access_code)) {
+        return { 
+          success: false, 
+          error: 'Access code must be 8 uppercase alphanumeric characters' 
+        };
+      }
+      setClauses.push(`access_code = $${paramIndex}`);
+      values.push(access_code);
+      paramIndex++;
+    }
+
+    if (is_active !== undefined) {
+      setClauses.push(`is_active = $${paramIndex}`);
+      values.push(is_active);
+      paramIndex++;
+    }
+
+    if (max_session_duration !== undefined) {
+      setClauses.push(`max_session_duration = $${paramIndex}`);
+      values.push(max_session_duration);
+      paramIndex++;
+    }
+
+    if (setClauses.length === 0) {
+      // No fields to update
+      return { success: false, error: 'No fields to update' };
+    }
+
+    setClauses.push('updated_at = CURRENT_TIMESTAMP');
+
+    const query = `
       UPDATE rooms
-      SET 
-        access_code = COALESCE(${access_code}, access_code),
-        is_active = COALESCE(${is_active}, is_active),
-        max_session_duration = COALESCE(${max_session_duration}, max_session_duration),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${roomId} AND user_id = ${userId}
+      SET ${setClauses.join(', ')}
+      WHERE id = $1 AND user_id = $2
       RETURNING *
     `;
+
+    const result = await sql.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return { success: false, error: 'Room not found or unauthorized' };
+    }
+    
     return { success: true, room: result.rows[0] };
   } catch (error) {
     console.error('Update room error:', error);

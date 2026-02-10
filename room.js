@@ -350,7 +350,7 @@ async function validateAndJoin() {
             // API validation failed
             errorMessage.textContent = data.error || 'Invalid access code';
             unlockBtn.disabled = false;
-            unlockBtn.textContent = 'ESTABLISH_LINK';
+            unlockBtn.textContent = 'ESTABLISH LINK';
             accessKeyInput.value = '';
             accessKeyInput.focus();
             return;

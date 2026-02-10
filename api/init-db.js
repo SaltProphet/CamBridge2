@@ -10,7 +10,13 @@ export default async function handler(req, res) {
 
   // Simple security check - require secret key
   const { secret } = req.body;
-  const INIT_SECRET = process.env.DB_INIT_SECRET || 'change-me-in-production';
+  const INIT_SECRET = process.env.DB_INIT_SECRET;
+  
+  if (!INIT_SECRET) {
+    return res.status(500).json({ 
+      error: 'DB_INIT_SECRET environment variable is not configured' 
+    });
+  }
   
   if (secret !== INIT_SECRET) {
     return res.status(403).json({ error: 'Forbidden' });
