@@ -1,8 +1,4 @@
-const ALLOWED_ROOMS = {
-    'Ounla': 'Room1234',
-    'OunlaPrivate': 'Room1234',
-    'OunlaUltra': 'Room1234'
-};
+const MASTER_PASSWORD = 'Room1234';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -18,13 +14,13 @@ export default async function handler(req, res) {
 
     const { roomName, password } = req.body || {};
     
-    if (!roomName || !ALLOWED_ROOMS[roomName]) {
-        res.status(400).json({ error: 'Invalid room name' });
+    if (!roomName) {
+        res.status(400).json({ error: 'Room name required' });
         return;
     }
 
-    if (!password || password !== ALLOWED_ROOMS[roomName]) {
-        res.status(401).json({ error: 'Invalid room password' });
+    if (!password || password !== MASTER_PASSWORD) {
+        res.status(401).json({ error: 'Invalid password' });
         return;
     }
 
