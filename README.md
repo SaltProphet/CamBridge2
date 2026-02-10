@@ -1,8 +1,74 @@
 # CamBridge
-Private 1-on-1 P2P Video Bridge - Optimized for High-Latency Trans-Atlantic Connections
+Multi-Tenant Private Video Room Platform - Secure Model Authentication System
 
 ## Overview
-CamBridge is a secure, peer-to-peer video communication system designed with the REAPER design language. It features a minimalist, industrial interface optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
+CamBridge is a multi-tenant "room rental" platform where models can rent private video spaces and keep 100% of their tips. Built with the REAPER design language and optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
+
+**Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and secure database-backed authentication with password hashing and JWT tokens.
+
+## 🔐 NEW: Secure Authentication System
+
+CamBridge now includes a production-ready authentication system:
+
+### For Models (Performers)
+- **Create Account**: Register at `/register` with username, email, and secure password
+- **Secure Login**: JWT token-based authentication with 7-day sessions
+- **Password Security**: Bcrypt hashing with 12 salt rounds
+- **Profile Management**: Update display name, bio, and avatar
+- **Room Management**: Create and manage multiple private rooms
+- **Access Control**: Generate and change room access codes via dashboard
+
+### For Developers
+- **Database Integration**: Postgres-backed user accounts, rooms, and sessions
+- **API Endpoints**: RESTful API for auth, profile, and room management
+- **Rate Limiting**: Protection against brute force attacks
+- **Input Validation**: Comprehensive sanitization and validation
+- **Session Management**: Secure token storage and expiration
+
+See [AUTH_SETUP.md](AUTH_SETUP.md) for complete setup instructions.
+
+## New Multi-Tenant Features
+
+### 🏢 Multi-Room Management System
+- **Multiple Rooms Per Model**: Each model can create up to 8 rooms (configurable)
+- **Room Types**:
+  - **🌐 Public Rooms**: Require login with access code - suitable for general sessions
+  - **🔒 Private Ultra Rooms**: Exclusive, premium sessions with enhanced security
+- **Unique Room URLs**: Each room gets `cambridge.app/room/modelname/roomslug`
+- **Backward Compatible**: Simple `/room/modelname` URL defaults to 'main' room
+- **Access Code System**: Unique access codes per room, models can change anytime
+- **Room Management Dashboard**: Create, edit, delete rooms with visual type indicators
+
+### 🎛️ Enhanced Dashboard Features
+- **Room Limit Display**: Shows X/8 rooms used
+- **Room Creation Modal**: Easy form to create new public or private rooms
+- **Per-Room Management**: Each room has:
+  - Unique access code
+  - Copy URL button
+  - Direct entry button
+  - Delete option
+- **Visual Type Badges**: Clear indicators for public vs private rooms
+
+### 🔐 Video Watermark Protection
+- **Semi-transparent overlay** with room name + timestamp
+- **Auto-updating**: Refreshes every 30 seconds
+- **Recording deterrent**: Visible if screen recorded, hard to crop out
+- **Center positioned**: Doesn't block view but clearly marks ownership
+
+### ⏱️ Session Management
+- **2-hour max duration**: Auto-disconnect at time limit
+- **Warning system**: Alert at 1:50 remaining (10 minutes before end)
+- **Reconnect button**: Easy rejoin after session ends
+- **Session ended screen**: Clear indication instead of blank screen
+- **Connection monitoring**: Detect and handle drops gracefully
+
+### 🎯 URL Structure
+- `/` or `/landing.html` - Public marketing page
+- `/room/:modelname` - Model's default (main) room with access code gate
+- `/room/:modelname/:roomslug` - Specific room by slug (e.g., `/room/testmodel/vip`)
+- `/dashboard` or `/dashboard.html` - Model dashboard (password protected)
+- `/app` or `/app.html` - Legacy bridge interface (original single-user mode)
+- `/api/*` - RESTful API endpoints for authentication and room management
 
 ## Features
 
@@ -11,6 +77,34 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - No database, no tracking, no logs
 - No recording features
 - Private P2P connections only
+
+### 💰 After Hours: Model-First Economy
+- **Tip System**: Real-time tip processing with visual and audio alerts
+- **Ledger Widget**: Transaction history with timestamps and balance tracking
+- **Visual Alerts**: Animate.css powered notifications for incoming tips
+- **Audio Engine**: Customizable sound alerts with global mute/unmute toggle
+- **P2P Transactions**: Tips transmitted via Daily.co app messages
+
+### 🎛️ After Hours: Modular Widget System
+- **Chat Widget**: P2P messaging with Daily.co integration
+- **Tip Ledger Widget**: Balance display, transaction history, and send controls
+- **Controls Widget**: Room switcher, audio toggle, theme customization
+- **Draggable Interface**: Click and drag widgets to custom positions
+- **Persistent Layout**: Widget positions saved to localStorage per-user
+- **Widget Menu**: Bottom toolbar for quick show/hide toggles
+
+### 🚪 After Hours: Dual-Station Privacy
+- **Room Router**: Switch between Public and Private Daily.co rooms
+- **Public Room**: Default open room for general sessions
+- **Private Room**: Secured room requiring separate access validation
+- **Seamless Switching**: Live room transitions without page reload
+
+### 🎨 After Hours: Dynamic Theming
+- **Color Customization**: Change accent color via color picker
+- **Glass Opacity**: Adjust widget transparency (50-95%)
+- **CSS Variables**: Real-time theme updates using `--accent` and `--glass-opacity`
+- **Profile Persistence**: Theme preferences saved to localStorage
+- **REAPER Base**: Built on existing industrial design language
 
 ### 🌐 Multi-Language Support
 - **English (EN)**: Access Key, Establish Link, Data Save (Low BW), Cut Link
@@ -21,7 +115,7 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - **Shadow Intel Mode**: Minimalist HUD with thin borders and real-time latency readout
 - **Nexus Architect Mode**: Clean, borderless view for high-focus interaction
 - High-contrast industrial theme (#121212, #2c2c2c)
-- Monospaced fonts (JetBrains Mono)
+- Monospaced fonts (JetBrains Mono, Inter, Roboto Mono)
 
 ### 📹 Video Features
 - Full-screen remote video display
@@ -41,15 +135,95 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 - Touch-responsive interface
 - Fits standard mobile viewports without scrolling
 - Draggable PIP on mobile devices
+- Responsive widget positioning for mobile screens
 
 ## Setup
 
 ### Prerequisites
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - Daily.co account (for room creation)
-- Deepgram API key (for speech-to-text feature)
+- Deepgram API key (for speech-to-text feature, optional)
+- **NEW**: Postgres database (Vercel Postgres or Neon)
+- Hosting with URL rewriting support (Vercel, Netlify, etc.)
 
-### Configuration
+### Database & Authentication Setup
+
+**For complete setup instructions, see [AUTH_SETUP.md](AUTH_SETUP.md)**
+
+Quick start:
+1. Set up Postgres database (Vercel Postgres or Neon)
+2. Configure environment variables (see `.env.example`)
+3. Initialize database tables via `/api/init-db`
+4. Models can register at `/register`
+5. Models login at `/dashboard`
+
+### Environment Variables
+
+```bash
+# Database (Required for authentication)
+POSTGRES_URL=postgresql://...
+JWT_SECRET=your-super-secret-jwt-key
+DB_INIT_SECRET=your-db-init-secret
+
+# Optional
+DAILY_API_KEY=your-daily-api-key
+DEEPGRAM_KEY=your-deepgram-key
+```
+
+### Multi-Tenant Configuration
+
+1. **Configure Models and Rooms**: Edit `config.json` to manage models and their rooms:
+   ```json
+   {
+     "dailyDomainPrefix": "cambridge",
+     "subscriptionPrice": 30,
+     "maxSessionDuration": 7200,
+     "sessionWarningTime": 6600,
+     "maxRoomsPerModel": 8,
+     "models": {
+       "testmodel": {
+         "active": true,
+         "rooms": {
+           "main": {
+             "name": "Main Room",
+             "type": "public",
+             "slug": "main",
+             "active": true,
+             "createdAt": "2024-01-01T00:00:00Z"
+           },
+           "vip": {
+             "name": "VIP Lounge",
+             "type": "private",
+             "slug": "vip",
+             "active": true,
+             "createdAt": "2024-01-01T00:00:00Z"
+           }
+         }
+       }
+     }
+   }
+   ```
+
+2. **Model Dashboard Password**: Edit `dashboard.html` and change the demo password:
+   ```javascript
+   const DEMO_PASSWORD = 'your-secure-password-here';
+   ```
+   *Note: In production, use server-side authentication with a proper backend.*
+
+3. **Daily.co Domain**: The platform generates room URLs as:
+   - Public rooms: `https://{dailyDomainPrefix}.daily.co/{modelname}-{roomslug}-public`
+   - Private rooms: `https://{dailyDomainPrefix}.daily.co/{modelname}-{roomslug}-private`
+
+4. **Room Configuration**:
+   - `maxRoomsPerModel`: Maximum rooms per model (default: 8)
+   - `type`: Either "public" or "private"
+   - Each room has a unique slug and access code
+
+5. **Session Limits**: 
+   - `maxSessionDuration`: Maximum session length in seconds (default: 7200 = 2 hours)
+   - `sessionWarningTime`: When to show warning in seconds (default: 6600 = 1:50)
+
+### Legacy Single-User Configuration
 
 1. **Set Access Key**: Edit `app.js` and replace `[INSERT_YOUR_PASSWORD_HERE]` with your chosen password:
    ```javascript
@@ -64,12 +238,53 @@ CamBridge is a secure, peer-to-peer video communication system designed with the
 
 3. **Configure Daily.co Domain** (Optional): By default, the app uses `saltprophet.daily.co`. To use your own Daily.co domain, edit `app.js`:
    ```javascript
-   const roomUrl = `https://your-domain.daily.co/${roomName}`;
+   const DAILY_URL = 'https://your-domain.daily.co/YourRoom';
    ```
+
+4. **Configure Private Room** (Optional, for After Hours dual-station): Set a separate private room URL in `app.js`:
+   ```javascript
+   const PRIVATE_ROOM_URL = 'https://your-domain.daily.co/YourPrivateRoom';
+   ```
+
+5. **Add Tip Sound** (Optional, for After Hours audio alerts): Add a `tip.mp3` file to `/assets/sounds/` for audio notifications when tips are received.
+
+### After Hours Environment Variables (Vercel/Production)
+When deploying to Vercel or other platforms, set these environment variables:
+- `ACCESS_KEY`: Your access password
+- `DAILY_URL`: Your public Daily.co room URL
+- `PRIVATE_ROOM_URL`: Your private Daily.co room URL (optional)
+- `DEEPGRAM_KEY`: Your Deepgram API key (optional)
 
 ### Deployment
 
-#### Option 1: Local Server
+#### Option 1: Vercel (Recommended for Multi-Tenant)
+The included `vercel.json` handles URL routing automatically:
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel --prod
+```
+
+The routing configuration handles:
+- `/room/:modelname/:roomslug` → Serves room.html with model and room slug extraction
+- `/room/:modelname` → Serves room.html, defaults to 'main' room
+- `/dashboard` → Serves dashboard.html
+- `/app` → Serves legacy bridge (app.html)
+- `/` → Serves landing page
+
+#### Option 2: Netlify
+Create a `_redirects` file:
+```
+/room/*  /room.html  200
+/dashboard  /dashboard.html  200
+/app  /app.html  200
+/  /landing.html  200
+```
+
+#### Option 3: Local Server
+For development and testing:
 ```bash
 # Using Python
 python -m http.server 8000
@@ -78,24 +293,72 @@ python -m http.server 8000
 npx http-server -p 8000
 ```
 
-Then open `http://localhost:8000` in your browser.
+*Note: Local servers won't handle URL routing properly. Access pages directly:*
+- `http://localhost:8000/landing.html`
+- `http://localhost:8000/dashboard.html`
+- `http://localhost:8000/app.html`
 
-#### Option 2: GitHub Pages
-1. Push the code to a GitHub repository
-2. Go to Settings → Pages
-3. Select the main branch as source
-4. Access your site at `https://username.github.io/repository-name/`
-
-#### Option 3: Any Static Host
-Deploy the files to any static hosting service:
-- Netlify
-- Vercel
-- Cloudflare Pages
-- AWS S3 + CloudFront
+#### Option 4: GitHub Pages
+Not recommended for multi-tenant mode due to lack of URL rewriting support. Use for legacy bridge only.
 
 ## Usage
 
-### Step 1: Access Authentication
+### Multi-Tenant Platform Usage
+
+#### For Models:
+1. **Access Dashboard**: Go to `/dashboard` and login with:
+   - Model Name: Your assigned model name (e.g., "testmodel")
+   - Password: The dashboard password (default: "modelpass")
+
+2. **Manage Your Rooms**:
+   - **View All Rooms**: See list of all your rooms with type indicators (🌐 Public / 🔒 Private Ultra)
+   - **Create New Room**: 
+     - Click "Create Room" button
+     - Enter room name (e.g., "VIP Lounge")
+     - Auto-generated slug or customize it (e.g., "vip-lounge")
+     - Select room type: Public or Private Ultra
+     - System generates unique access code automatically
+   - **Manage Existing Rooms**:
+     - Copy room URL to share with clients
+     - Change access code anytime
+     - Enter room directly for testing
+     - Delete rooms you no longer need
+   - **Room Limits**: Create up to 8 rooms (or as configured)
+
+3. **Room Types**:
+   - **🌐 Public Rooms**: Standard rooms requiring login with access code. Perfect for general sessions.
+   - **🔒 Private Ultra Rooms**: Premium, exclusive rooms with enhanced security. Ideal for VIP clients.
+
+4. **Share with Clients**: 
+   - Give clients your room URL (e.g., `cambridge.app/room/testmodel/vip`)
+   - Provide the current access code for that specific room
+   - Each room has its own unique access code
+
+#### For Clients:
+1. **Enter Room**: Use the model's room URL (e.g., `cambridge.app/room/testmodel/vip`)
+2. **View Room Info**: See room name and type (Public or Private Ultra) displayed prominently
+3. **Enter Access Code**: Input the code provided by the model for this specific room
+4. **Establish Link**: Click to join the private video session
+5. **Video Features**: 
+   - Full-screen P2P video with watermark protection showing room name
+   - Send tips directly to model (100% goes to them)
+   - Optional chat and transcription features
+6. **Session Time**: 2-hour maximum with 10-minute warning
+
+#### For Platform Operators:
+1. **Add Models**: Edit `config.json` → Add model entry under `models` object
+2. **Configure Rooms**: Add room entries under model's `rooms` object with type (public/private)
+3. **Monitor Subscriptions**: Set model's `active` status to false when subscription expires
+4. **Configure Settings**: Adjust session duration, pricing, Daily.co domain, max rooms per model
+5. **Collect Payment**: $30/month per active model (outside of platform)
+
+### Backward Compatibility:
+- Old URL format `/room/modelname` automatically redirects to model's "main" room
+- If "main" room doesn't exist, system will show appropriate error message
+
+### Legacy Single-User Bridge Usage
+
+#### Step 1: Access Authentication
 1. Open the application in your browser
 2. Enter the hardcoded access key
 3. The "Establish Link" button appears when the correct key is entered
@@ -121,6 +384,44 @@ Deploy the files to any static hosting service:
 - **Transcription Feed**: Scrolling display at bottom showing live transcriptions with [YOU] and [REMOTE] labels
 - **Cut Link**: Disconnect from the current session
 
+### After Hours Widget Controls
+Once connected, access the After Hours features via the widget menu at the bottom center:
+
+#### Widget Menu (Bottom Center)
+- **Chat Icon**: Toggle chat widget for P2P messaging
+- **Dollar Icon**: Toggle tip ledger widget for economy features
+- **Gear Icon**: Toggle controls widget for settings
+
+#### Chat Widget
+- Send instant messages to your peer via P2P
+- Messages are ephemeral (not logged or saved)
+- Input sanitized for security
+- Auto-scroll to latest messages
+
+#### Tip Ledger Widget
+- View current balance at the top
+- See transaction history with timestamps
+- Send tips using the amount input field
+- Tips trigger visual and audio alerts on both sides
+
+#### Controls Widget
+- **Room Mode**: Switch between Public and Private rooms
+- **Audio Alerts**: Toggle tip sound effects on/off
+- **Theme Color**: Pick custom accent color (saved to localStorage)
+- **Glass Opacity**: Adjust widget transparency (50-95%)
+
+#### Widget Dragging
+- Click and hold any widget header to drag
+- Position widgets anywhere on screen
+- Positions auto-save to localStorage
+- Reload page to restore saved layouts
+
+#### Tip Alerts
+- Large centered notification appears when tips are received
+- Shows tipper name and amount
+- 3-second display with fade in/out animation
+- Optional audio notification (toggle in Controls)
+
 ## Technical Details
 
 ### P2P Configuration
@@ -140,6 +441,15 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - **Standard**: 1280x720 @ 30fps
 - **Low Bandwidth**: 640x480 @ 15fps
 
+### After Hours Architecture
+- **AfterHours Class**: Central controller managing tips, widgets, room routing, and themes
+- **Draggable Engine**: Mouse-based drag with position persistence via localStorage
+- **Tip Manager**: Balance tracking, transaction history, visual/audio alerts
+- **Room Router**: Seamless switching between public and private Daily.co rooms
+- **Theme Engine**: Dynamic CSS variable updates for real-time customization
+- **P2P Messaging**: Uses Daily.co `sendAppMessage` API for chat and tips
+- **Widget Lifecycle**: Independent show/hide state with localStorage persistence
+
 ### Browser Compatibility
 - Chrome/Edge: Full support
 - Firefox: Full support
@@ -147,12 +457,52 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - Mobile browsers: Optimized for touch
 
 ## Security Notes
-- Change the default access key before deployment
-- Add your Deepgram API key if using transcription
+
+### Authentication Security (NEW)
+- **Password Hashing**: Bcrypt with 12 salt rounds - industry standard
+- **JWT Tokens**: 7-day expiration with secure signing
+- **Rate Limiting**: Protection against brute force (5 registrations/hour, 10 logins/15min)
+- **Input Validation**: Comprehensive sanitization and validation
+- **Session Management**: Database-backed session tracking
+- **HTTPS Required**: Secure communication for all API calls
+- **Database Integration**: Postgres with parameterized queries (SQL injection prevention)
+
+### Multi-Tenant Security
+- **Per-Room Access Codes**: Each room has unique access code stored in browser localStorage
+- **Room Type Enforcement**: Public and Private Ultra rooms use separate Daily.co URLs
+- **Model Validation**: Active subscription check before allowing room entry
+- **Room-Specific Access**: Different rooms require different access codes for enhanced security
+- **Watermark Protection**: Timestamps and room name overlay to deter recording
+- **Session Limits**: Auto-disconnect after 2 hours to prevent abuse
+- **Ghost Protocol**: No session data, no user data, no logs on server
+- **Room Isolation**: Each room gets unique Daily.co URL preventing cross-room access
+
+### Room Type Security Differences
+- **Public Rooms**: Access code required, suitable for standard sessions
+- **Private Ultra Rooms**: Enhanced security with separate Daily.co namespace, ideal for exclusive VIP sessions
+
+### General Security
+- Change the dashboard password before deployment (`dashboard.html`)
+- Configure models and rooms in `config.json` for subscription control
 - Use HTTPS in production (required for camera/microphone access)
-- Room names act as the only identifier - keep them private
-- No data is stored or logged anywhere
+- Keep Daily.co API credentials secure
+- Add your Deepgram API key if using transcription (optional)
+- Access codes are unique per room - models should share codes securely
+- No data is stored or logged anywhere (Ghost Protocol)
 - Transcriptions are client-side only and not recorded
+- Tips and chat messages are P2P only (not stored on any server)
+- All user input is sanitized to prevent XSS attacks
+- Widget positions and theme preferences stored in browser localStorage only
+- Watermarks use current timestamp to prove authenticity if needed
+
+### Recommended Practices
+- Rotate room access codes regularly via dashboard
+- Use server-side authentication in production (not client-side password check)
+- Create separate rooms for different client tiers (public vs private ultra)
+- Monitor active models list for subscription status
+- Implement Stripe or crypto payments for automated subscription management
+- Consider age verification system for compliance
+- Limit room creation to prevent abuse (default: 8 rooms per model)
 
 ## Troubleshooting
 

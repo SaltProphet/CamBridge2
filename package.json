@@ -3,6 +3,22 @@
     "build": "echo 'Static site - no build needed'"
   },
   "dependencies": {
-    "@vercel/analytics": "^1.6.1"
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/postgres": "^0.10.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "framer-motion": "^10.16.4",
+    "jsonwebtoken": "^9.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.5",
+    "vite": "^5.0.0",
+    "vite-plugin-static-copy": "^3.2.0"
   }
 }

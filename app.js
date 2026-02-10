@@ -188,6 +188,130 @@ const transcriptFeed = document.getElementById('transcript-feed');
 const transcriptContent = document.getElementById('transcript-content');
 const clearTranscriptBtn = document.getElementById('clear-transcript');
 
+// ===== AFTER HOURS CORE ENGINE =====
+class AfterHours {
+    constructor() {
+        this.activeUser = null;
+        this.tips = { balance: 0, audio: true };
+        this.audioElement = new Audio('/assets/sounds/tip.mp3');
+        this.widgets = new Map();
+    }
+
+    // --- TIP & ALERT SYSTEM ---
+    processTip(user, amount) {
+        this.tips.balance += amount;
+        document.getElementById('balance-val').innerText = `$${this.tips.balance}`;
+        
+        // Add to ledger history
+        this.addLedgerEntry(user, amount);
+        
+        // Play audio if enabled
+        if (this.tips.audio) {
+            this.audioElement.play().catch(e => console.log('Audio playback failed:', e));
+        }
+        
+        // Trigger visual alert
+        this.triggerVisualAlert(user, amount);
+    }
+
+    triggerVisualAlert(user, amount) {
+        const alert = document.getElementById('tip-alert');
+        alert.innerHTML = `<h1>${this.sanitizeHTML(user)} tipped $${amount}</h1>`;
+        alert.className = 'tip-alert animate__animated animate__fadeInDown';
+        alert.style.display = 'block';
+        
+        setTimeout(() => {
+            alert.className = 'tip-alert animate__animated animate__fadeOutUp';
+            setTimeout(() => alert.style.display = 'none', 1000);
+        }, 3000);
+    }
+
+    addLedgerEntry(user, amount) {
+        const ledgerHistory = document.getElementById('ledger-history');
+        const entry = document.createElement('div');
+        entry.className = 'ledger-entry';
+        
+        const timestamp = new Date().toLocaleTimeString();
+        entry.innerHTML = `
+            <span class="user">${this.sanitizeHTML(user)}</span>
+            <span class="amount">+$${amount}</span>
+            <span class="time">${timestamp}</span>
+        `;
+        
+        ledgerHistory.insertBefore(entry, ledgerHistory.firstChild);
+    }
+
+    // --- MODULAR UI ENGINE ---
+    makeDraggable(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        const header = el.querySelector('.widget-header');
+        
+        if (header) {
+            header.style.cursor = 'move';
+            header.onmousedown = dragMouseDown;
+        } else {
+            el.onmousedown = dragMouseDown;
+        }
+
+        function dragMouseDown(e) {
+            // Don't drag if clicking close button
+            if (e.target.closest('.widget-close')) return;
+            
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            el.style.top = (el.offsetTop - pos2) + "px";
+            el.style.left = (el.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+            Portal.saveLayout(id, el.style.top, el.style.left);
+        }
+    }
+
+    saveLayout(id, top, left) {
+        const layout = { top, left };
+        localStorage.setItem(`pos-${id}`, JSON.stringify(layout));
+    }
+
+    loadLayout(id) {
+        const saved = localStorage.getItem(`pos-${id}`);
+        if (saved) {
+            const pos = JSON.parse(saved);
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.top = pos.top;
+                el.style.left = pos.left;
+            }
+        }
+    }
+
+    // --- UTILITY ---
+    sanitizeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+}
+
+// Initialize After Hours Portal
+const Portal = new AfterHours();
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedSession();
@@ -657,6 +781,9 @@ async function startCall(token) {
                 initializeSTTControls();
                 updateTranscriptLanguage();
             }
+            
+            // Initialize After Hours features
+            initializeAfterHours();
         })
         .catch(error => {
             console.error('Failed to join room:', error);
@@ -934,4 +1061,85 @@ function enableEditMode(textSpan) {
     });
     
     input.addEventListener('blur', saveEdit);
+}
+
+// ===== AFTER HOURS INITIALIZATION =====
+function initializeAfterHours() {
+    // Make widgets draggable
+    Portal.makeDraggable('ledger-widget');
+    
+    // Load saved positions
+    Portal.loadLayout('ledger-widget');
+    
+    // Widget toggle button
+    document.getElementById('toggle-ledger').addEventListener('click', () => {
+        toggleWidget('ledger-widget', 'toggle-ledger');
+    });
+    
+    // Widget close button
+    document.querySelectorAll('.widget-close').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const widgetId = e.currentTarget.dataset.widget;
+            const widget = document.getElementById(widgetId);
+            const toggleBtn = document.getElementById('toggle-' + widgetId.replace('-widget', ''));
+            widget.classList.add('hidden');
+            if (toggleBtn) toggleBtn.classList.remove('active');
+        });
+    });
+    
+    // Tip/Ledger functionality
+    initializeTipSystem();
+    
+    // Setup Daily.co app message listener for tips
+    if (dailyCall) {
+        dailyCall.on('app-message', handleAppMessage);
+    }
+}
+
+function toggleWidget(widgetId, buttonId) {
+    const widget = document.getElementById(widgetId);
+    const button = document.getElementById(buttonId);
+    
+    if (widget.classList.contains('hidden')) {
+        widget.classList.remove('hidden');
+        button.classList.add('active');
+    } else {
+        widget.classList.add('hidden');
+        button.classList.remove('active');
+    }
+}
+
+function initializeTipSystem() {
+    const sendTipBtn = document.getElementById('send-tip');
+    const tipAmountInput = document.getElementById('tip-amount');
+    
+    sendTipBtn.addEventListener('click', () => {
+        const amount = parseInt(tipAmountInput.value);
+        if (amount && amount > 0 && dailyCall) {
+            // Send tip notification via Daily.co
+            dailyCall.sendAppMessage({
+                type: 'tip',
+                amount: amount,
+                sender: 'You'
+            }, '*');
+            
+            tipAmountInput.value = '';
+        }
+    });
+    
+    tipAmountInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendTipBtn.click();
+        }
+    });
+}
+
+function handleAppMessage(event) {
+    if (!event.data) return;
+    
+    const { type, amount, sender = 'Remote' } = event.data;
+    
+    if (type === 'tip') {
+        Portal.processTip(sender, amount);
+    }
 }

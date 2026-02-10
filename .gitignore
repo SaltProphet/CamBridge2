@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # Build outputs
@@ -28,3 +27,7 @@ temp/
 .env
 .env.local
 .env.production
+
+# After Hours Assets
+/assets/sounds/*.mp3
+.vercel
