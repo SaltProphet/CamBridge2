@@ -42,8 +42,8 @@
             <!-- Login Form -->
             <form id="login-form" class="form-section active">
                 <div class="form-group">
-                    <label data-i18n="label_access_code">ACCESS CODE</label>
-                    <input type="password" id="login-code" placeholder="••••••••" autocomplete="off">
+                    <label data-i18n="label_email">EMAIL</label>
+                    <input type="email" id="login-code" placeholder="user@example.com" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label data-i18n="label_password">PASSWORD</label>
@@ -58,6 +58,11 @@
                 <div class="form-group">
                     <label data-i18n="label_email">EMAIL</label>
                     <input type="email" id="create-email" placeholder="user@example.com" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="label_room_name">ROOM NAME</label>
+                    <input type="text" id="room-name" placeholder="ounla" autocomplete="off">
+                    <p class="room-warning" data-i18n="room_name_warning">ROOM NAME CANNOT BE CHANGED LATER</p>
                 </div>
                 <div class="form-group">
                     <label data-i18n="label_password">PASSWORD</label>
@@ -83,7 +88,44 @@
                         <button id="copy-btn" class="copy-btn" data-i18n="btn_copy">COPY</button>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label data-i18n="label_room_password">ROOM PASSWORD</label>
+                    <input type="password" id="room-password" placeholder="••••••••" autocomplete="off">
+                </div>
+                <div id="room-password-error" class="error-message"></div>
+                <div class="room-actions">
+                    <button id="change-password-btn" class="btn-secondary" data-i18n="btn_change_password">CHANGE PASSWORD</button>
+                </div>
                 <button id="enter-btn" class="btn-primary" data-i18n="btn_enter_call">ENTER VIDEO CALL</button>
+            </div>
+
+            <!-- Change Password Modal -->
+            <div id="change-password-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 data-i18n="change_password_title">CHANGE PASSWORD</h3>
+                        <button id="close-password-modal" class="close-btn">✕</button>
+                    </div>
+                    <form id="change-password-form" class="form-section">
+                        <div class="form-group">
+                            <label data-i18n="label_current_password">CURRENT PASSWORD</label>
+                            <input type="password" id="current-password" placeholder="••••••••" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="label_new_password">NEW PASSWORD</label>
+                            <input type="password" id="new-password" placeholder="••••••••" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="label_confirm_new_password">CONFIRM NEW PASSWORD</label>
+                            <input type="password" id="confirm-new-password" placeholder="••••••••" autocomplete="off">
+                        </div>
+                        <div id="password-change-error" class="error-message"></div>
+                        <div class="modal-actions">
+                            <button type="button" id="cancel-password-btn" class="btn-secondary" data-i18n="btn_cancel">CANCEL</button>
+                            <button type="button" id="save-password-btn" class="btn-primary" data-i18n="btn_save">SAVE</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

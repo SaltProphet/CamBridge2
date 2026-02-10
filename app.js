@@ -7,61 +7,98 @@ const API_KEYS = {
     DEEPGRAM_KEY: '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f'
 };
 
-// Pre-created Daily.co room URL for Ounla
-const OUNLA_ROOM_URL = 'https://cambridge.daily.co/Ounla';
+const DAILY_URL_BASE = 'https://cambridge.daily.co/';
 
 // Multi-language support - EN, ES, RU
 const LANGUAGE_STRINGS = {
     en: {
         tab_login: 'LOGIN',
         tab_create: 'CREATE ACCOUNT',
-        label_access_code: 'ACCESS CODE',
         label_password: 'PASSWORD',
         label_email: 'EMAIL',
         label_confirm_password: 'CONFIRM PASSWORD',
+        label_room_name: 'ROOM NAME',
+        room_name_warning: 'ROOM NAME CANNOT BE CHANGED LATER',
+        label_room_password: 'ROOM PASSWORD',
+        label_current_password: 'CURRENT PASSWORD',
+        label_new_password: 'NEW PASSWORD',
+        label_confirm_new_password: 'CONFIRM NEW PASSWORD',
         btn_enter: 'ENTER PRIVATE PORTAL',
         btn_create: 'CREATE ACCOUNT',
+        btn_change_password: 'CHANGE PASSWORD',
+        btn_cancel: 'CANCEL',
+        btn_save: 'SAVE',
         btn_copy: 'COPY',
         btn_enter_call: 'ENTER VIDEO CALL',
         room_ready: 'YOUR ROOM IS READY',
         room_description: 'Share this link with your peer:',
-        error_empty_code: 'ENTER ACCESS CODE',
+        change_password_title: 'CHANGE PASSWORD',
+        error_empty_email: 'ENTER EMAIL',
         error_empty_password: 'ENTER PASSWORD',
         error_invalid_credentials: 'INVALID CREDENTIALS - TRY AGAIN',
-        error_empty_email: 'ENTER EMAIL',
         error_invalid_email: 'INVALID EMAIL FORMAT',
+        error_empty_room_password: 'ENTER ROOM PASSWORD',
+        error_invalid_room_password: 'INCORRECT ROOM PASSWORD',
+        error_empty_room_name: 'ENTER ROOM NAME',
+        error_invalid_room_name: 'ROOM NAME MUST BE A-Z, 0-9, OR -',
+        error_room_taken: 'ROOM NAME ALREADY TAKEN',
         error_empty_account_password: 'ENTER PASSWORD',
+        error_empty_current_password: 'ENTER CURRENT PASSWORD',
+        error_invalid_current_password: 'CURRENT PASSWORD IS INCORRECT',
+        error_empty_new_password: 'ENTER NEW PASSWORD',
+        error_new_passwords_mismatch: 'NEW PASSWORDS DO NOT MATCH',
         error_passwords_mismatch: 'PASSWORDS DO NOT MATCH',
         error_account_exists: 'ACCOUNT ALREADY EXISTS',
         error_creation_failed: 'ACCOUNT CREATION FAILED',
+        error_password_change_failed: 'PASSWORD CHANGE FAILED',
+        success_password_changed: 'PASSWORD CHANGED SUCCESSFULLY',
         copy_success: 'COPIED!',
         transcription: 'TRANSCRIPTION',
         clear: 'CLEAR'
     },
     es: {
-        tab_login: 'INICIAR SESIÓN',
+        tab_login: 'INICIAR SESION',
         tab_create: 'CREAR CUENTA',
-        label_access_code: 'CÓDIGO DE ACCESO',
-        label_password: 'CONTRASEÑA',
-        label_email: 'CORREO ELECTRÓNICO',
-        label_confirm_password: 'CONFIRMAR CONTRASEÑA',
+        label_password: 'CONTRASENA',
+        label_email: 'CORREO ELECTRONICO',
+        label_confirm_password: 'CONFIRMAR CONTRASENA',
+        label_room_name: 'NOMBRE DE SALA',
+        room_name_warning: 'EL NOMBRE NO SE PUEDE CAMBIAR DESPUES',
+        label_room_password: 'CONTRASENA DE SALA',
+        label_current_password: 'CONTRASENA ACTUAL',
+        label_new_password: 'NUEVA CONTRASENA',
+        label_confirm_new_password: 'CONFIRMAR NUEVA CONTRASENA',
         btn_enter: 'ENTRAR AL PORTAL PRIVADO',
         btn_create: 'CREAR CUENTA',
+        btn_change_password: 'CAMBIAR CONTRASENA',
+        btn_cancel: 'CANCELAR',
+        btn_save: 'GUARDAR',
         btn_copy: 'COPIAR',
         btn_enter_call: 'ENTRAR A VIDEOLLAMADA',
-        room_ready: 'TU SALA ESTÁ LISTA',
-        room_description: 'Comparte este enlace con tu compañero:',
-        error_empty_code: 'INGRESA CÓDIGO DE ACCESO',
-        error_empty_password: 'INGRESA CONTRASEÑA',
-        error_invalid_credentials: 'CREDENCIALES INVÁLIDAS - INTENTA DE NUEVO',
-        error_empty_email: 'INGRESA CORREO ELECTRÓNICO',
-        error_invalid_email: 'FORMATO DE CORREO INVÁLIDO',
-        error_empty_account_password: 'INGRESA CONTRASEÑA',
-        error_passwords_mismatch: 'LAS CONTRASEÑAS NO COINCIDEN',
+        room_ready: 'TU SALA ESTA LISTA',
+        room_description: 'Comparte este enlace con tu companero:',
+        change_password_title: 'CAMBIAR CONTRASENA',
+        error_empty_email: 'INGRESA CORREO ELECTRONICO',
+        error_empty_password: 'INGRESA CONTRASENA',
+        error_invalid_credentials: 'CREDENCIALES INVALIDAS - INTENTA DE NUEVO',
+        error_invalid_email: 'FORMATO DE CORREO INVALIDO',
+        error_empty_room_password: 'INGRESA CONTRASENA DE SALA',
+        error_invalid_room_password: 'CONTRASENA DE SALA INCORRECTA',
+        error_empty_room_name: 'INGRESA NOMBRE DE SALA',
+        error_invalid_room_name: 'EL NOMBRE SOLO A-Z, 0-9 O -',
+        error_room_taken: 'NOMBRE DE SALA YA USADO',
+        error_empty_account_password: 'INGRESA CONTRASENA',
+        error_empty_current_password: 'INGRESA CONTRASENA ACTUAL',
+        error_invalid_current_password: 'LA CONTRASENA ACTUAL ES INCORRECTA',
+        error_empty_new_password: 'INGRESA NUEVA CONTRASENA',
+        error_new_passwords_mismatch: 'LAS NUEVAS CONTRASENAS NO COINCIDEN',
+        error_passwords_mismatch: 'LAS CONTRASENAS NO COINCIDEN',
         error_account_exists: 'LA CUENTA YA EXISTE',
         error_creation_failed: 'ERROR AL CREAR CUENTA',
-        copy_success: '¡COPIADO!',
-        transcription: 'TRANSCRIPCIÓN',
+        error_password_change_failed: 'ERROR AL CAMBIAR CONTRASENA',
+        success_password_changed: 'CONTRASENA CAMBIADA EXITOSAMENTE',
+        copy_success: 'COPIADO!',
+        transcription: 'TRANSCRIPCION',
         clear: 'LIMPIAR'
     },
     ru: {
@@ -71,21 +108,40 @@ const LANGUAGE_STRINGS = {
         label_password: 'ПАРОЛЬ',
         label_email: 'ЭЛЕКТРОННАЯ ПОЧТА',
         label_confirm_password: 'ПОДТВЕРДИТЬ ПАРОЛЬ',
+        label_room_name: 'НАЗВАНИЕ КОМНАТЫ',
+        room_name_warning: 'НАЗВАНИЕ НЕЛЬЗЯ ИЗМЕНИТЬ ПОЗЖЕ',
+        label_room_password: 'ПАРОЛЬ КОМНАТЫ',
+        label_current_password: 'ТЕКУЩИЙ ПАРОЛЬ',
+        label_new_password: 'НОВЫЙ ПАРОЛЬ',
+        label_confirm_new_password: 'ПОДТВЕРДИТЬ НОВЫЙ ПАРОЛЬ',
         btn_enter: 'ВОЙТИ В ПРИВАТНЫЙ ПОРТАЛ',
         btn_create: 'СОЗДАТЬ АККАУНТ',
+        btn_change_password: 'ИЗМЕНИТЬ ПАРОЛЬ',
+        btn_cancel: 'ОТМЕНА',
+        btn_save: 'СОХРАНИТЬ',
         btn_copy: 'КОПИРОВАТЬ',
         btn_enter_call: 'ВОЙТИ В ВИДЕОЗВОНОК',
         room_ready: 'ВАШ КАБИНЕТ ГОТОВ',
         room_description: 'Поделитесь этой ссылкой со своим партнером:',
-        error_empty_code: 'ВВЕДИТЕ КОД ДОСТУПА',
-        error_empty_password: 'ВВЕДИТЕ ПАРОЛЬ',
-        error_invalid_credentials: 'НЕВЕРНЫЕ УЧЕТНЫЕ ДАННЫЕ - ПОВТОРИТЕ ПОПЫТКУ',
+        change_password_title: 'ИЗМЕНИТЬ ПАРОЛЬ',
         error_empty_email: 'ВВЕДИТЕ ЭЛЕКТРОННУЮ ПОЧТУ',
+        error_invalid_credentials: 'НЕВЕРНЫЕ УЧЕТНЫЕ ДАННЫЕ - ПОВТОРИТЕ ПОПЫТКУ',
         error_invalid_email: 'НЕВЕРНЫЙ ФОРМАТ ЭЛЕКТРОННОЙ ПОЧТЫ',
+        error_empty_room_password: 'ВВЕДИТЕ ПАРОЛЬ КОМНАТЫ',
+        error_invalid_room_password: 'НЕВЕРНЫЙ ПАРОЛЬ КОМНАТЫ',
+        error_empty_room_name: 'ВВЕДИТЕ НАЗВАНИЕ КОМНАТЫ',
+        error_invalid_room_name: 'ТОЛЬКО A-Z, 0-9 ИЛИ -',
+        error_room_taken: 'НАЗВАНИЕ КОМНАТЫ УЖЕ ЗАНЯТО',
         error_empty_account_password: 'ВВЕДИТЕ ПАРОЛЬ',
+        error_empty_current_password: 'ВВЕДИТЕ ТЕКУЩИЙ ПАРОЛЬ',
+        error_invalid_current_password: 'ТЕКУЩИЙ ПАРОЛЬ НЕВЕРНЫЙ',
+        error_empty_new_password: 'ВВЕДИТЕ НОВЫЙ ПАРОЛЬ',
+        error_new_passwords_mismatch: 'НОВЫЕ ПАРОЛИ НЕ СОВПАДАЮТ',
         error_passwords_mismatch: 'ПАРОЛИ НЕ СОВПАДАЮТ',
         error_account_exists: 'АККАУНТ УЖЕ СУЩЕСТВУЕТ',
         error_creation_failed: 'ОШИБКА ПРИ СОЗДАНИИ АККАУНТА',
+        error_password_change_failed: 'ОШИБКА ПРИ ИЗМЕНЕНИИ ПАРОЛЯ',
+        success_password_changed: 'ПАРОЛЬ УСПЕШНО ИЗМЕНЕН',
         copy_success: 'СКОПИРОВАНО!',
         transcription: 'ТРАНСКРИПЦИЯ',
         clear: 'ОЧИСТИТЬ'
@@ -112,8 +168,18 @@ const copyBtn = document.getElementById('copy-btn');
 const roomUrlInput = document.getElementById('room-url');
 const loginError = document.getElementById('login-error');
 const createError = document.getElementById('create-error');
+const roomPasswordError = document.getElementById('room-password-error');
 const langBtns = document.querySelectorAll('.lang-btn');
 const tabBtns = document.querySelectorAll('.tab-btn');
+
+// DOM Elements - Password Change Modal
+const changePasswordBtn = document.getElementById('change-password-btn');
+const changePasswordModal = document.getElementById('change-password-modal');
+const closePasswordModalBtn = document.getElementById('close-password-modal');
+const changePasswordForm = document.getElementById('change-password-form');
+const savePasswordBtn = document.getElementById('save-password-btn');
+const cancelPasswordBtn = document.getElementById('cancel-password-btn');
+const passwordChangeError = document.getElementById('password-change-error');
 
 // DOM Elements - Video Call
 const videoContainer = document.getElementById('video-container');
@@ -189,6 +255,17 @@ function initializeFormTabs() {
 
 // Show form tab
 function showTab(tabName) {
+    // Clear all forms and errors when switching tabs
+    clearErrors();
+    document.getElementById('login-code').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('create-email').value = '';
+    document.getElementById('room-name').value = '';
+    document.getElementById('create-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    const roomPasswordInput = document.getElementById('room-password');
+    if (roomPasswordInput) roomPasswordInput.value = '';
+    
     const forms = document.querySelectorAll('.form-section');
     forms.forEach(form => form.classList.remove('active'));
     
@@ -210,6 +287,12 @@ function initializeLandingPage() {
     enterBtn.addEventListener('click', enterVideoCall);
     copyBtn.addEventListener('click', copyRoomLink);
     
+    // Password change modal listeners
+    changePasswordBtn.addEventListener('click', openPasswordChangeModal);
+    closePasswordModalBtn.addEventListener('click', closePasswordChangeModal);
+    cancelPasswordBtn.addEventListener('click', closePasswordChangeModal);
+    savePasswordBtn.addEventListener('click', handlePasswordChange);
+    
     // Enter key to submit
     document.getElementById('login-code').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleLogin();
@@ -220,19 +303,36 @@ function initializeLandingPage() {
     document.getElementById('create-email').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleAccountCreation();
     });
+    document.getElementById('room-name').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAccountCreation();
+    });
     document.getElementById('confirm-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleAccountCreation();
+    });
+    document.getElementById('room-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') enterVideoCall();
+    });
+    
+    // Password change form Enter key
+    document.getElementById('current-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handlePasswordChange();
+    });
+    document.getElementById('new-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handlePasswordChange();
+    });
+    document.getElementById('confirm-new-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handlePasswordChange();
     });
 }
 
 // Handle login
 function handleLogin() {
     clearErrors();
-    const code = document.getElementById('login-code').value.trim();
+    const email = document.getElementById('login-code').value.trim();
     const password = document.getElementById('login-password').value.trim();
     
-    if (!code) {
-        loginError.textContent = getTranslation('error_empty_code');
+    if (!email) {
+        loginError.textContent = getTranslation('error_empty_email');
         return;
     }
     if (!password) {
@@ -240,12 +340,15 @@ function handleLogin() {
         return;
     }
     
-    // Hardcoded credentials for MVP (replace with backend in production)
-    const validCode = 'C2C';
-    const validPassword = 'bridge';
+    // Check against stored accounts in localStorage
+    const accounts = JSON.parse(localStorage.getItem('cambridge_accounts') || '{}');
     
-    if (code === validCode && password === validPassword) {
-        createSession(code, password);
+    if (accounts[email] && atob(accounts[email].password) === password) {
+        // Clear form on successful login
+        document.getElementById('login-code').value = '';
+        document.getElementById('login-password').value = '';
+        
+        createSession(email, accounts[email].roomUrl, accounts[email].roomName);
         showRoomDisplay();
     } else {
         loginError.textContent = getTranslation('error_invalid_credentials');
@@ -258,6 +361,7 @@ function handleLogin() {
 function handleAccountCreation() {
     clearErrors();
     const email = document.getElementById('create-email').value.trim();
+    const roomNameInput = document.getElementById('room-name').value.trim();
     const password = document.getElementById('create-password').value.trim();
     const confirmPassword = document.getElementById('confirm-password').value.trim();
     
@@ -267,6 +371,15 @@ function handleAccountCreation() {
     }
     if (!email.includes('@')) {
         createError.textContent = getTranslation('error_invalid_email');
+        return;
+    }
+    if (!roomNameInput) {
+        createError.textContent = getTranslation('error_empty_room_name');
+        return;
+    }
+    const roomName = roomNameInput.toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(roomName)) {
+        createError.textContent = getTranslation('error_invalid_room_name');
         return;
     }
     if (!password) {
@@ -284,25 +397,43 @@ function handleAccountCreation() {
         createError.textContent = getTranslation('error_account_exists');
         return;
     }
+
+    const roomUrl = `${DAILY_URL_BASE}${roomName}`;
+    const roomTaken = Object.values(accounts).some((account) => {
+        return account.roomUrl === roomUrl || account.roomName === roomName;
+    });
+    if (roomTaken) {
+        createError.textContent = getTranslation('error_room_taken');
+        return;
+    }
     
     // Create account
     accounts[email] = {
         email: email,
         password: btoa(password),
+        roomName: roomName,
+        roomUrl: roomUrl,
         created: new Date().toISOString()
     };
     localStorage.setItem('cambridge_accounts', JSON.stringify(accounts));
     
+    // Clear form fields
+    document.getElementById('create-email').value = '';
+    document.getElementById('room-name').value = '';
+    document.getElementById('create-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    
     // Auto-login after creation
-    createSession(email, password);
+    createSession(email, roomUrl, roomName);
     showRoomDisplay();
 }
 
 // Create user session
-function createSession(identifier, password) {
+function createSession(identifier, roomUrl, roomName) {
     currentUser = {
         identifier: identifier,
-        roomUrl: OUNLA_ROOM_URL,
+        roomName: roomName,
+        roomUrl: roomUrl,
         createdAt: new Date().toISOString()
     };
     
@@ -337,16 +468,116 @@ function copyRoomLink() {
     }, 2000);
 }
 
-// Enter video call
-function enterVideoCall() {
-    if (!currentUser) return;
+// Open password change modal
+function openPasswordChangeModal() {
+    passwordChangeError.textContent = '';
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-new-password').value = '';
     
+    changePasswordModal.classList.remove('hidden');
+    changePasswordModal.classList.add('active');
+}
+
+// Close password change modal
+function closePasswordChangeModal() {
+    changePasswordModal.classList.remove('active');
+    changePasswordModal.classList.add('hidden');
+    passwordChangeError.textContent = '';
+}
+
+// Handle password change
+function handlePasswordChange() {
+    passwordChangeError.textContent = '';
+    
+    const currentPassword = document.getElementById('current-password').value.trim();
+    const newPassword = document.getElementById('new-password').value.trim();
+    const confirmNewPassword = document.getElementById('confirm-new-password').value.trim();
+    
+    if (!currentPassword) {
+        passwordChangeError.textContent = getTranslation('error_empty_current_password');
+        return;
+    }
+    
+    if (!newPassword) {
+        passwordChangeError.textContent = getTranslation('error_empty_new_password');
+        return;
+    }
+    
+    if (newPassword !== confirmNewPassword) {
+        passwordChangeError.textContent = getTranslation('error_new_passwords_mismatch');
+        return;
+    }
+    
+    // Verify current password
+    if (!currentUser || !currentUser.identifier) {
+        passwordChangeError.textContent = getTranslation('error_password_change_failed');
+        return;
+    }
+    
+    const accounts = JSON.parse(localStorage.getItem('cambridge_accounts') || '{}');
+    
+    // Check if account exists
+    if (!accounts[currentUser.identifier]) {
+        passwordChangeError.textContent = getTranslation('error_password_change_failed');
+        return;
+    }
+    
+    // Verify current password matches
+    if (atob(accounts[currentUser.identifier].password) !== currentPassword) {
+        passwordChangeError.textContent = getTranslation('error_invalid_current_password');
+        return;
+    }
+    
+    // Update password
+    accounts[currentUser.identifier].password = btoa(newPassword);
+    localStorage.setItem('cambridge_accounts', JSON.stringify(accounts));
+    
+    // Close modal and show success message
+    closePasswordChangeModal();
+    
+    // Show brief success notification
+    const originalText = changePasswordBtn.textContent;
+    changePasswordBtn.textContent = getTranslation('success_password_changed');
+    changePasswordBtn.style.opacity = '0.7';
+    changePasswordBtn.style.color = 'var(--accent)';
+    
+    setTimeout(() => {
+        changePasswordBtn.textContent = originalText;
+        changePasswordBtn.style.opacity = '1';
+        changePasswordBtn.style.color = 'var(--text)';
+    }, 2500);
+}
+
+// Enter video call
+async function enterVideoCall() {
+    if (!currentUser) return;
+
+    const roomPasswordInput = document.getElementById('room-password');
+    const roomPassword = roomPasswordInput.value.trim();
+    roomPasswordError.textContent = '';
+
+    if (!roomPassword) {
+        roomPasswordError.textContent = getTranslation('error_empty_room_password');
+        return;
+    }
+
+    const roomName = currentUser.roomName || getRoomNameFromUrl(currentUser.roomUrl);
+    const token = await fetchRoomToken(roomName, roomPassword);
+
+    if (!token) {
+        roomPasswordError.textContent = getTranslation('error_invalid_room_password');
+        return;
+    }
+
     landingPage.classList.remove('active');
     landingPage.classList.add('hidden');
-    
+
     videoContainer.classList.remove('hidden');
-    
-    startCall();
+
+    roomPasswordInput.value = '';
+
+    startCall(token);
 }
 
 // Get translation
@@ -360,17 +591,47 @@ function clearErrors() {
     createError.textContent = '';
 }
 
+function getRoomNameFromUrl(roomUrl) {
+    try {
+        const url = new URL(roomUrl);
+        return url.pathname.replace('/', '').trim();
+    } catch (error) {
+        return '';
+    }
+}
+
+async function fetchRoomToken(roomName, password) {
+    if (!roomName || !password) return null;
+
+    try {
+        const response = await fetch('/api/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomName, password })
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json();
+        return data && data.token ? data.token : null;
+    } catch (error) {
+        return null;
+    }
+}
+
 // ============================================================
 // VIDEO CALL & TRANSCRIPTION SECTION
 // ============================================================
 
 // Start Daily.co call with iframe
-function startCall() {
+async function startCall(token) {
     if (!currentUser || !currentUser.roomUrl) {
         console.error('No valid room URL');
         return;
     }
-    
+
     // Create Daily.co iframe
     dailyCall = window.DailyIframe.createFrame(videoContainer, {
         showLeaveButton: true,
@@ -384,9 +645,11 @@ function startCall() {
             border: '0'
         }
     });
-    
+
+    const joinOptions = token ? { url: currentUser.roomUrl, token } : { url: currentUser.roomUrl };
+
     // Join the room
-    dailyCall.join({ url: currentUser.roomUrl })
+    dailyCall.join(joinOptions)
         .then(() => {
             // Show STT controls if Deepgram key is configured
             if (API_KEYS.DEEPGRAM_KEY) {
