@@ -5,10 +5,16 @@
     { "source": "/room/:modelname/:roomslug", "destination": "/room.html" },
     { "source": "/room/:modelname", "destination": "/room.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/register", "destination": "/register.html" },
     { "source": "/app", "destination": "/app.html" },
-    { "source": "/landing.html", "destination": "/landing.html" }
+    { "source": "/landing.html", "destination": "/landing.html" },
+    { "source": "/api/:path*", "destination": "/api/:path*" }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
     {
       "src": "/room.html",
       "dest": "/room.html"
@@ -16,6 +22,10 @@
     {
       "src": "/dashboard.html",
       "dest": "/dashboard.html"
+    },
+    {
+      "src": "/register.html",
+      "dest": "/register.html"
     },
     {
       "src": "/app.html",

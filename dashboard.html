@@ -540,17 +540,20 @@
             <div class="auth-box">
                 <h2>Model Login</h2>
                 <div class="input-group">
-                    <label for="model-name">Model Name</label>
-                    <input type="text" id="model-name" placeholder="e.g., testmodel" autocomplete="off">
+                    <label for="model-name">Username</label>
+                    <input type="text" id="model-name" placeholder="e.g., testmodel" autocomplete="username">
                 </div>
                 <div class="input-group">
-                    <label for="access-password">Access Password</label>
-                    <input type="password" id="access-password" placeholder="••••••••••••" autocomplete="off">
+                    <label for="access-password">Password</label>
+                    <input type="password" id="access-password" placeholder="••••••••••••" autocomplete="current-password">
                 </div>
                 <div class="error-message" id="auth-error"></div>
                 <button class="btn btn-primary" id="login-btn" style="width: 100%; justify-content: center;">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </button>
+                <div style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem;">
+                    Don't have an account? <a href="/register" style="color: var(--accent); text-decoration: none;">Register here</a>
+                </div>
             </div>
         </div>
 
@@ -675,11 +678,7 @@
     </div>
 
     <script>
-        // Simple authentication system (DEMO ONLY - for production use server-side auth)
-        // WARNING: This password check is visible in client code and should be replaced
-        // with proper server-side authentication for production deployments
-        const DEMO_PASSWORD = 'modelpass'; // In production, use server-side validation
-
+        // API-based authentication system with JWT tokens
         // DOM Elements
         const authGate = document.getElementById('auth-gate');
         const dashboard = document.getElementById('dashboard');
@@ -737,12 +736,12 @@
             }
         });
 
-        function handleLogin() {
-            const modelName = modelNameInput.value.trim().toLowerCase();
+        async function handleLogin() {
+            const username = modelNameInput.value.trim().toLowerCase();
             const password = accessPasswordInput.value;
 
-            if (!modelName) {
-                authError.textContent = 'Please enter your model name';
+            if (!username) {
+                authError.textContent = 'Please enter your username';
                 return;
             }
 
@@ -751,23 +750,69 @@
                 return;
             }
 
-            // Sanitize model name
-            const sanitizedName = modelName.replace(/[^a-z0-9-_]/g, '');
-            
-            if (sanitizedName !== modelName) {
-                authError.textContent = 'Invalid model name. Use only letters, numbers, hyphens, and underscores.';
+            // Disable login button
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Store token
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                    
+                    // Load profile
+                    await loadProfile();
+                } else {
+                    authError.textContent = data.error || 'Login failed';
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                authError.textContent = 'Network error. Please try again.';
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+            }
+        }
+
+        async function loadProfile() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
                 return;
             }
 
-            // Simple password check (in production, this would be server-side)
-            if (password !== DEMO_PASSWORD) {
-                authError.textContent = 'Invalid password';
-                return;
-            }
+            try {
+                const response = await fetch('/api/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
 
-            // Save to session
-            sessionStorage.setItem('modelName', sanitizedName);
-            showDashboard(sanitizedName);
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showDashboard(data.user, data.rooms);
+                } else {
+                    // Token invalid, clear and show login
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('userData');
+                    authError.textContent = 'Session expired. Please login again.';
+                }
+            } catch (error) {
+                console.error('Profile load error:', error);
+                authError.textContent = 'Failed to load profile. Please login again.';
+            }
         }
 
         function showDashboard(modelName) {
@@ -784,7 +829,12 @@
                 subscriptionStatus.textContent = 'Active';
                 subscriptionStatus.className = 'status-badge status-active';
             } else {
-                subscriptionStatus.textContent = 'Expired';
+                // No rooms yet
+                const baseUrl = window.location.origin;
+                const roomUrl = `${baseUrl}/room/${user.username}`;
+                displayRoomUrl.textContent = roomUrl;
+                displayAccessCode.textContent = 'No room created';
+                subscriptionStatus.textContent = 'No Room';
                 subscriptionStatus.className = 'status-badge status-expired';
             }
 
