@@ -13,6 +13,7 @@ export default defineConfig({
         { src: 'app.html', dest: '.' },
         { src: 'landing.html', dest: '.' },
         { src: 'register.html', dest: '.' },
+        { src: 'setup.html', dest: '.' },
         // JavaScript and CSS
         { src: 'room.js', dest: '.' },
         { src: 'app.js', dest: '.' },
