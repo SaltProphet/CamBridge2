@@ -5,8 +5,7 @@
     { "source": "/room/:modelname", "destination": "/room.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/app", "destination": "/app.html" },
-    { "source": "/landing.html", "destination": "/landing.html" },
-    { "source": "/afterhours", "destination": "/index-afterhours.html" }
+    { "source": "/landing.html", "destination": "/landing.html" }
   ],
   "routes": [
     {
@@ -24,10 +23,6 @@
     {
       "src": "/landing.html",
       "dest": "/landing.html"
-    },
-    {
-      "src": "/index-afterhours.html",
-      "dest": "/index-afterhours.html"
     },
     {
       "src": "/(.*)",

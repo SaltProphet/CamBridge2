@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 
 export const GlassContainer = ({ children, className = '', ...props }) => {
@@ -118,6 +119,3 @@ export const BetaGate = ({ children }) => {
     </GlassContainer>
   );
 };
-
-// Need React import for useState
-import React from 'react';
