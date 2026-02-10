@@ -6,6 +6,7 @@
     { "source": "/room/:modelname", "destination": "/room.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/register", "destination": "/register.html" },
+    { "source": "/setup", "destination": "/setup.html" },
     { "source": "/app", "destination": "/app.html" },
     { "source": "/landing.html", "destination": "/landing.html" },
     { "source": "/api/:path*", "destination": "/api/:path*" }
