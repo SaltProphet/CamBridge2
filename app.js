@@ -4,9 +4,11 @@
 // API Keys - MOVE TO ENVIRONMENT VARIABLES IN PRODUCTION
 // Security Warning: These should NOT be hardcoded in source code
 const API_KEYS = {
-    DEEPGRAM_KEY: '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f',
-    DAILY_URL_BASE: 'https://cambridge.daily.co/'
+    DEEPGRAM_KEY: '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f'
 };
+
+// Pre-created Daily.co room URL for Ounla
+const OUNLA_ROOM_URL = 'https://cambridge.daily.co/Ounla';
 
 // Multi-language support - EN, ES, RU
 const LANGUAGE_STRINGS = {
@@ -298,24 +300,13 @@ function handleAccountCreation() {
 
 // Create user session
 function createSession(identifier, password) {
-    const roomId = generateRoomId();
-    const roomUrl = `${API_KEYS.DAILY_URL_BASE}${roomId}`;
-    
     currentUser = {
         identifier: identifier,
-        roomId: roomId,
-        roomUrl: roomUrl,
+        roomUrl: OUNLA_ROOM_URL,
         createdAt: new Date().toISOString()
     };
     
     localStorage.setItem('cambridge_user', JSON.stringify(currentUser));
-}
-
-// Generate unique room ID
-function generateRoomId() {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substr(2, 9);
-    return `room_${timestamp}_${random}`.toLowerCase();
 }
 
 // Show room display
