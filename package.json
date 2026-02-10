@@ -1,4 +1,10 @@
 {
+  "name": "cambridge",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.x"
+  },
   "scripts": {
     "build": "echo 'Static site - no build needed'"
   },
