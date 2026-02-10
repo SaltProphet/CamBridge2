@@ -1,94 +1,382 @@
-// CamBridge - Secure P2P Video Bridge - Clean Picture (Nexus Architect)
+// CamBridge - Secure P2P Video Bridge - Phase 1 UI
+// Multi-language landing page + account creation + room management
 
-// Environment variables - Replace these at build time with actual values
-// In Vercel Browser Editor, set these as environment variables:
-// - ACCESS_KEY: Your password for accessing the bridge
-// - DAILY_URL: Your Daily.co room URL
-// - DEEPGRAM_KEY: Your Deepgram API key for transcription
-const ACCESS_KEY = typeof process !== 'undefined' && process.env && process.env.ACCESS_KEY 
-    ? process.env.ACCESS_KEY 
-    : 'C2C';
-const DAILY_URL = typeof process !== 'undefined' && process.env && process.env.DAILY_URL 
-    ? process.env.DAILY_URL 
-    : 'https://cambridge.daily.co/Cambridge';
-const DEEPGRAM_KEY = typeof process !== 'undefined' && process.env && process.env.DEEPGRAM_KEY 
-    ? process.env.DEEPGRAM_KEY 
-    : '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f';
+// API Keys - MOVE TO ENVIRONMENT VARIABLES IN PRODUCTION
+// Security Warning: These should NOT be hardcoded in source code
+const API_KEYS = {
+    DEEPGRAM_KEY: '2745a03e47aacaa64e5d48e4f4154ee1405c3e8f',
+    DAILY_URL_BASE: 'https://cambridge.daily.co/'
+};
+
+// Multi-language support - EN, ES, RU
+const LANGUAGE_STRINGS = {
+    en: {
+        tab_login: 'LOGIN',
+        tab_create: 'CREATE ACCOUNT',
+        label_access_code: 'ACCESS CODE',
+        label_password: 'PASSWORD',
+        label_email: 'EMAIL',
+        label_confirm_password: 'CONFIRM PASSWORD',
+        btn_enter: 'ENTER PRIVATE PORTAL',
+        btn_create: 'CREATE ACCOUNT',
+        btn_copy: 'COPY',
+        btn_enter_call: 'ENTER VIDEO CALL',
+        room_ready: 'YOUR ROOM IS READY',
+        room_description: 'Share this link with your peer:',
+        error_empty_code: 'ENTER ACCESS CODE',
+        error_empty_password: 'ENTER PASSWORD',
+        error_invalid_credentials: 'INVALID CREDENTIALS - TRY AGAIN',
+        error_empty_email: 'ENTER EMAIL',
+        error_invalid_email: 'INVALID EMAIL FORMAT',
+        error_empty_account_password: 'ENTER PASSWORD',
+        error_passwords_mismatch: 'PASSWORDS DO NOT MATCH',
+        error_account_exists: 'ACCOUNT ALREADY EXISTS',
+        error_creation_failed: 'ACCOUNT CREATION FAILED',
+        copy_success: 'COPIED!',
+        transcription: 'TRANSCRIPTION',
+        clear: 'CLEAR'
+    },
+    es: {
+        tab_login: 'INICIAR SESIÓN',
+        tab_create: 'CREAR CUENTA',
+        label_access_code: 'CÓDIGO DE ACCESO',
+        label_password: 'CONTRASEÑA',
+        label_email: 'CORREO ELECTRÓNICO',
+        label_confirm_password: 'CONFIRMAR CONTRASEÑA',
+        btn_enter: 'ENTRAR AL PORTAL PRIVADO',
+        btn_create: 'CREAR CUENTA',
+        btn_copy: 'COPIAR',
+        btn_enter_call: 'ENTRAR A VIDEOLLAMADA',
+        room_ready: 'TU SALA ESTÁ LISTA',
+        room_description: 'Comparte este enlace con tu compañero:',
+        error_empty_code: 'INGRESA CÓDIGO DE ACCESO',
+        error_empty_password: 'INGRESA CONTRASEÑA',
+        error_invalid_credentials: 'CREDENCIALES INVÁLIDAS - INTENTA DE NUEVO',
+        error_empty_email: 'INGRESA CORREO ELECTRÓNICO',
+        error_invalid_email: 'FORMATO DE CORREO INVÁLIDO',
+        error_empty_account_password: 'INGRESA CONTRASEÑA',
+        error_passwords_mismatch: 'LAS CONTRASEÑAS NO COINCIDEN',
+        error_account_exists: 'LA CUENTA YA EXISTE',
+        error_creation_failed: 'ERROR AL CREAR CUENTA',
+        copy_success: '¡COPIADO!',
+        transcription: 'TRANSCRIPCIÓN',
+        clear: 'LIMPIAR'
+    },
+    ru: {
+        tab_login: 'ВХОД',
+        tab_create: 'СОЗДАТЬ АККАУНТ',
+        label_access_code: 'КОД ДОСТУПА',
+        label_password: 'ПАРОЛЬ',
+        label_email: 'ЭЛЕКТРОННАЯ ПОЧТА',
+        label_confirm_password: 'ПОДТВЕРДИТЬ ПАРОЛЬ',
+        btn_enter: 'ВОЙТИ В ПРИВАТНЫЙ ПОРТАЛ',
+        btn_create: 'СОЗДАТЬ АККАУНТ',
+        btn_copy: 'КОПИРОВАТЬ',
+        btn_enter_call: 'ВОЙТИ В ВИДЕОЗВОНОК',
+        room_ready: 'ВАШ КАБИНЕТ ГОТОВ',
+        room_description: 'Поделитесь этой ссылкой со своим партнером:',
+        error_empty_code: 'ВВЕДИТЕ КОД ДОСТУПА',
+        error_empty_password: 'ВВЕДИТЕ ПАРОЛЬ',
+        error_invalid_credentials: 'НЕВЕРНЫЕ УЧЕТНЫЕ ДАННЫЕ - ПОВТОРИТЕ ПОПЫТКУ',
+        error_empty_email: 'ВВЕДИТЕ ЭЛЕКТРОННУЮ ПОЧТУ',
+        error_invalid_email: 'НЕВЕРНЫЙ ФОРМАТ ЭЛЕКТРОННОЙ ПОЧТЫ',
+        error_empty_account_password: 'ВВЕДИТЕ ПАРОЛЬ',
+        error_passwords_mismatch: 'ПАРОЛИ НЕ СОВПАДАЮТ',
+        error_account_exists: 'АККАУНТ УЖЕ СУЩЕСТВУЕТ',
+        error_creation_failed: 'ОШИБКА ПРИ СОЗДАНИИ АККАУНТА',
+        copy_success: 'СКОПИРОВАНО!',
+        transcription: 'ТРАНСКРИПЦИЯ',
+        clear: 'ОЧИСТИТЬ'
+    }
+};
 
 // Application state
+let currentLanguage = 'en';
+let currentUser = null;
 let dailyCall = null;
 let deepgramSocket = null;
 let mediaRecorder = null;
 let isTranscriptionActive = false;
 
-// DOM Elements
-const gatekeeper = document.getElementById('gatekeeper');
+// DOM Elements - Landing Page
+const landingPage = document.getElementById('landing-page');
+const loginForm = document.getElementById('login-form');
+const createForm = document.getElementById('create-form');
+const roomDisplay = document.getElementById('room-display');
+const loginBtn = document.getElementById('login-btn');
+const createBtn = document.getElementById('create-btn');
+const enterBtn = document.getElementById('enter-btn');
+const copyBtn = document.getElementById('copy-btn');
+const roomUrlInput = document.getElementById('room-url');
+const loginError = document.getElementById('login-error');
+const createError = document.getElementById('create-error');
+const langBtns = document.querySelectorAll('.lang-btn');
+const tabBtns = document.querySelectorAll('.tab-btn');
+
+// DOM Elements - Video Call
 const videoContainer = document.getElementById('video-container');
-const accessKeyInput = document.getElementById('access-key');
-const unlockBtn = document.getElementById('unlock-btn');
-const errorMessage = document.getElementById('error-message');
 const sttToggle = document.getElementById('stt-toggle');
-const sttIcon = document.getElementById('stt-icon');
 const transcriptFeed = document.getElementById('transcript-feed');
 const transcriptContent = document.getElementById('transcript-content');
 const clearTranscriptBtn = document.getElementById('clear-transcript');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    initializeAccessKeyValidation();
+    loadSavedSession();
+    initializeLanguageSystem();
+    initializeLandingPage();
+    initializeFormTabs();
 });
 
-// Access key validation
-function initializeAccessKeyValidation() {
-    // Always show the button
-    unlockBtn.classList.remove('hidden');
-    
-    // Clear error on input
-    accessKeyInput.addEventListener('input', () => {
-        errorMessage.textContent = '';
-    });
-    
-    // Enter key to submit
-    accessKeyInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            validateAndJoin();
+// Load saved session from localStorage
+function loadSavedSession() {
+    const savedUser = localStorage.getItem('cambridge_user');
+    if (savedUser) {
+        try {
+            currentUser = JSON.parse(savedUser);
+            currentLanguage = localStorage.getItem('cambridge_language') || 'en';
+            showRoomDisplay();
+        } catch (error) {
+            console.error('Failed to load session:', error);
+            localStorage.removeItem('cambridge_user');
         }
-    });
-    
-    unlockBtn.addEventListener('click', validateAndJoin);
+    }
 }
 
-// Validate and join
-function validateAndJoin() {
-    const enteredKey = accessKeyInput.value.trim();
+// Language system initialization
+function initializeLanguageSystem() {
+    langBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lang = btn.getAttribute('data-lang');
+            setLanguage(lang);
+        });
+    });
+    setLanguage(currentLanguage);
+}
+
+// Set language
+function setLanguage(lang) {
+    if (!LANGUAGE_STRINGS[lang]) return;
     
-    if (!enteredKey) {
-        errorMessage.textContent = 'ENTER_ACCESS_KEY';
+    currentLanguage = lang;
+    localStorage.setItem('cambridge_language', lang);
+    
+    // Update active language button
+    langBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+    });
+    
+    // Update all i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (LANGUAGE_STRINGS[lang][key]) {
+            el.textContent = LANGUAGE_STRINGS[lang][key];
+        }
+    });
+}
+
+// Initialize form tabs
+function initializeFormTabs() {
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.getAttribute('data-tab');
+            showTab(tabName);
+        });
+    });
+}
+
+// Show form tab
+function showTab(tabName) {
+    const forms = document.querySelectorAll('.form-section');
+    forms.forEach(form => form.classList.remove('active'));
+    
+    if (tabName === 'login') {
+        loginForm.classList.add('active');
+        document.getElementById('tab-login').classList.add('active');
+        document.getElementById('tab-create').classList.remove('active');
+    } else {
+        createForm.classList.add('active');
+        document.getElementById('tab-create').classList.add('active');
+        document.getElementById('tab-login').classList.remove('active');
+    }
+}
+
+// Initialize landing page
+function initializeLandingPage() {
+    loginBtn.addEventListener('click', handleLogin);
+    createBtn.addEventListener('click', handleAccountCreation);
+    enterBtn.addEventListener('click', enterVideoCall);
+    copyBtn.addEventListener('click', copyRoomLink);
+    
+    // Enter key to submit
+    document.getElementById('login-code').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+    });
+    document.getElementById('login-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+    });
+    document.getElementById('create-email').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAccountCreation();
+    });
+    document.getElementById('confirm-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAccountCreation();
+    });
+}
+
+// Handle login
+function handleLogin() {
+    clearErrors();
+    const code = document.getElementById('login-code').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    
+    if (!code) {
+        loginError.textContent = getTranslation('error_empty_code');
+        return;
+    }
+    if (!password) {
+        loginError.textContent = getTranslation('error_empty_password');
         return;
     }
     
-    if (enteredKey === ACCESS_KEY) {
-        // Hide gatekeeper
-        gatekeeper.classList.remove('active');
-        gatekeeper.classList.add('hidden');
-        
-        // Show video container
-        videoContainer.classList.remove('hidden');
-        
-        // Start the call
-        startCall();
+    // Hardcoded credentials for MVP (replace with backend in production)
+    const validCode = 'C2C';
+    const validPassword = 'bridge';
+    
+    if (code === validCode && password === validPassword) {
+        createSession(code, password);
+        showRoomDisplay();
     } else {
-        errorMessage.textContent = 'INVALID_ACCESS_KEY - TRY AGAIN';
-        accessKeyInput.value = '';
-        accessKeyInput.focus();
+        loginError.textContent = getTranslation('error_invalid_credentials');
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-code').value = '';
     }
 }
 
+// Handle account creation
+function handleAccountCreation() {
+    clearErrors();
+    const email = document.getElementById('create-email').value.trim();
+    const password = document.getElementById('create-password').value.trim();
+    const confirmPassword = document.getElementById('confirm-password').value.trim();
+    
+    if (!email) {
+        createError.textContent = getTranslation('error_empty_email');
+        return;
+    }
+    if (!email.includes('@')) {
+        createError.textContent = getTranslation('error_invalid_email');
+        return;
+    }
+    if (!password) {
+        createError.textContent = getTranslation('error_empty_account_password');
+        return;
+    }
+    if (password !== confirmPassword) {
+        createError.textContent = getTranslation('error_passwords_mismatch');
+        return;
+    }
+    
+    // Check if account already exists (localStorage check for MVP)
+    const accounts = JSON.parse(localStorage.getItem('cambridge_accounts') || '{}');
+    if (accounts[email]) {
+        createError.textContent = getTranslation('error_account_exists');
+        return;
+    }
+    
+    // Create account
+    accounts[email] = {
+        email: email,
+        password: btoa(password),
+        created: new Date().toISOString()
+    };
+    localStorage.setItem('cambridge_accounts', JSON.stringify(accounts));
+    
+    // Auto-login after creation
+    createSession(email, password);
+    showRoomDisplay();
+}
+
+// Create user session
+function createSession(identifier, password) {
+    const roomId = generateRoomId();
+    const roomUrl = `${API_KEYS.DAILY_URL_BASE}${roomId}`;
+    
+    currentUser = {
+        identifier: identifier,
+        roomId: roomId,
+        roomUrl: roomUrl,
+        createdAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem('cambridge_user', JSON.stringify(currentUser));
+}
+
+// Generate unique room ID
+function generateRoomId() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substr(2, 9);
+    return `room_${timestamp}_${random}`.toLowerCase();
+}
+
+// Show room display
+function showRoomDisplay() {
+    if (!currentUser) return;
+    
+    loginForm.classList.remove('active');
+    createForm.classList.remove('active');
+    roomDisplay.classList.remove('hidden');
+    
+    roomUrlInput.value = currentUser.roomUrl;
+    
+    copyBtn.style.display = 'inline-block';
+}
+
+// Copy room link
+function copyRoomLink() {
+    roomUrlInput.select();
+    document.execCommand('copy');
+    
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = getTranslation('copy_success');
+    copyBtn.style.opacity = '0.7';
+    
+    setTimeout(() => {
+        copyBtn.textContent = originalText;
+        copyBtn.style.opacity = '1';
+    }, 2000);
+}
+
+// Enter video call
+function enterVideoCall() {
+    if (!currentUser) return;
+    
+    landingPage.classList.remove('active');
+    landingPage.classList.add('hidden');
+    
+    videoContainer.classList.remove('hidden');
+    
+    startCall();
+}
+
+// Get translation
+function getTranslation(key) {
+    return LANGUAGE_STRINGS[currentLanguage][key] || key;
+}
+
+// Clear form errors
+function clearErrors() {
+    loginError.textContent = '';
+    createError.textContent = '';
+}
+
+// ============================================================
+// VIDEO CALL & TRANSCRIPTION SECTION
+// ============================================================
+
 // Start Daily.co call with iframe
 function startCall() {
-    if (!DAILY_URL) {
-        console.error('DAILY_URL not configured');
-        errorMessage.textContent = 'Configuration error';
+    if (!currentUser || !currentUser.roomUrl) {
+        console.error('No valid room URL');
         return;
     }
     
@@ -107,17 +395,17 @@ function startCall() {
     });
     
     // Join the room
-    dailyCall.join({ url: DAILY_URL })
+    dailyCall.join({ url: currentUser.roomUrl })
         .then(() => {
             // Show STT controls if Deepgram key is configured
-            if (DEEPGRAM_KEY) {
+            if (API_KEYS.DEEPGRAM_KEY) {
                 sttToggle.classList.remove('hidden');
                 initializeSTTControls();
+                updateTranscriptLanguage();
             }
         })
         .catch(error => {
             console.error('Failed to join room:', error);
-            errorMessage.textContent = 'Failed to join video room';
         });
 }
 
@@ -126,6 +414,14 @@ function initializeSTTControls() {
     sttToggle.addEventListener('click', toggleTranscription);
     clearTranscriptBtn.addEventListener('click', clearTranscript);
     makeDraggable(transcriptFeed);
+}
+
+// Update transcript language label based on current language
+function updateTranscriptLanguage() {
+    const transcriptHeader = document.querySelector('.transcript-header span');
+    if (transcriptHeader) {
+        transcriptHeader.textContent = getTranslation('transcription');
+    }
 }
 
 // Toggle transcription on/off
@@ -139,7 +435,7 @@ async function toggleTranscription() {
 
 // Start Deepgram transcription
 async function startTranscription() {
-    if (!DEEPGRAM_KEY) {
+    if (!API_KEYS.DEEPGRAM_KEY) {
         console.error('Deepgram API key not configured');
         return;
     }
@@ -148,15 +444,19 @@ async function startTranscription() {
         // Get audio stream from user's microphone
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // Connect to Deepgram WebSocket
-        const wsUrl = `wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&language=en`;
-        deepgramSocket = new WebSocket(wsUrl, ['token', DEEPGRAM_KEY]);
+        // Get language code for Deepgram (EN for English, ES for Spanish, RU for Russian)
+        const languageCode = currentLanguage === 'es' ? 'es' : (currentLanguage === 'ru' ? 'ru' : 'en');
+        
+        // Connect to Deepgram WebSocket with language support
+        const wsUrl = `wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&language=${languageCode}`;
+        deepgramSocket = new WebSocket(wsUrl, ['token', API_KEYS.DEEPGRAM_KEY]);
 
         deepgramSocket.onopen = () => {
             console.log('Deepgram connection opened');
             isTranscriptionActive = true;
             sttToggle.classList.add('active');
             transcriptFeed.classList.remove('hidden');
+            updateTranscriptLanguage();
 
             // Start recording audio
             mediaRecorder = new MediaRecorder(stream, {

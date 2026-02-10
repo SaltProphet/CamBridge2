@@ -12,16 +12,79 @@
     <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
 </head>
 <body>
-    <!-- Access Key Landing Page -->
-    <div id="gatekeeper" class="active">
-        <div class="access-container">
-            <h1 class="app-title">CAMBRIDGE</h1>
-            <div class="input-group">
-                <label id="access-label" for="access-key">ACCESS_KEY</label>
-                <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">
-                <div id="error-message" class="error-message"></div>
+    <!-- Landing Page with Login/Account Creation -->
+    <div id="landing-page" class="active">
+        <!-- Language Toggle -->
+        <div class="lang-toggle">
+            <button class="lang-btn lang-en active" data-lang="en">EN</button>
+            <button class="lang-btn lang-es" data-lang="es">ES</button>
+            <button class="lang-btn lang-ru" data-lang="ru">RU</button>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar"></div>
+
+        <!-- Main Content -->
+        <div class="landing-container">
+            <!-- Shield Logo -->
+            <div class="shield-logo">⬡</div>
+
+            <!-- Form Tabs -->
+            <div class="form-tabs">
+                <button id="tab-login" class="tab-btn active" data-tab="login">
+                    <span data-i18n="tab_login">LOGIN</span>
+                </button>
+                <button id="tab-create" class="tab-btn" data-tab="create">
+                    <span data-i18n="tab_create">CREATE ACCOUNT</span>
+                </button>
             </div>
-            <button id="unlock-btn" class="btn-primary">ESTABLISH_LINK</button>
+
+            <!-- Login Form -->
+            <form id="login-form" class="form-section active">
+                <div class="form-group">
+                    <label data-i18n="label_access_code">ACCESS CODE</label>
+                    <input type="password" id="login-code" placeholder="••••••••" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="label_password">PASSWORD</label>
+                    <input type="password" id="login-password" placeholder="••••••••" autocomplete="off">
+                </div>
+                <div id="login-error" class="error-message"></div>
+                <button type="button" id="login-btn" class="btn-primary" data-i18n="btn_enter">ENTER PRIVATE PORTAL</button>
+            </form>
+
+            <!-- Create Account Form -->
+            <form id="create-form" class="form-section">
+                <div class="form-group">
+                    <label data-i18n="label_email">EMAIL</label>
+                    <input type="email" id="create-email" placeholder="user@example.com" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="label_password">PASSWORD</label>
+                    <input type="password" id="create-password" placeholder="••••••••" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="label_confirm_password">CONFIRM PASSWORD</label>
+                    <input type="password" id="confirm-password" placeholder="••••••••" autocomplete="off">
+                </div>
+                <div id="create-error" class="error-message"></div>
+                <button type="button" id="create-btn" class="btn-primary" data-i18n="btn_create">CREATE ACCOUNT</button>
+            </form>
+
+            <!-- Room Display (After Login) -->
+            <div id="room-display" class="room-display hidden">
+                <div class="room-header">
+                    <h2 data-i18n="room_ready">YOUR ROOM IS READY</h2>
+                </div>
+                <div class="room-link-container">
+                    <p data-i18n="room_description">Share this link with your peer:</p>
+                    <div class="room-link-box">
+                        <input type="text" id="room-url" readonly>
+                        <button id="copy-btn" class="copy-btn" data-i18n="btn_copy">COPY</button>
+                    </div>
+                </div>
+                <button id="enter-btn" class="btn-primary" data-i18n="btn_enter_call">ENTER VIDEO CALL</button>
+            </div>
         </div>
     </div>
 

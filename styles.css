@@ -1,9 +1,11 @@
-/* CLEAN PICTURE - NEXUS ARCHITECT - Zero Clutter Design */
+/* CLEAN PICTURE - NEXUS ARCHITECT - Phase 1: Landing Page + Multi-Language */
 :root {
     --bg-dark: #000000;
+    --bg-dark-accent: #0a0a0a;
     --text: #555555;
     --text-light: #ffffff;
-    --accent: #00ff88;
+    --accent: #d4af37;
+    --accent-light: #e8c547;
     --error: #ff4444;
 }
 
@@ -31,67 +33,180 @@ body {
     display: flex !important;
 }
 
-/* Landing Page */
-#gatekeeper {
+/* ============================================================
+   LANDING PAGE STYLES
+   ============================================================ */
+
+#landing-page {
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100vh;
     width: 100vw;
-    background-color: var(--bg-dark);
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-dark-accent) 100%);
+    position: relative;
+    overflow: hidden;
 }
 
-.access-container {
-    text-align: center;
-    padding: 2rem;
-    max-width: 400px;
-    width: 90%;
+#landing-page.active {
+    display: flex;
 }
 
-.app-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    letter-spacing: 0.5rem;
-    margin-bottom: 3rem;
+/* Status Bar (Gold accent bar) */
+.status-bar {
+    position: absolute;
+    top: 50%;
+    left: -100px;
+    right: -100px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    transform: translateY(-50%);
+}
+
+/* Language Toggle */
+.lang-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+}
+
+.lang-btn {
+    padding: 6px 12px;
+    background-color: transparent;
+    border: 1px solid var(--text);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.lang-btn:hover {
+    border-color: var(--accent);
     color: var(--accent);
 }
 
-.input-group {
-    margin-bottom: 2rem;
+.lang-btn.active {
+    background-color: var(--accent);
+    color: var(--bg-dark);
+    border-color: var(--accent);
 }
 
-.input-group label {
+/* Landing Container */
+.landing-container {
+    text-align: center;
+    padding: 2rem;
+    max-width: 450px;
+    width: 90%;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 4px;
+    z-index: 10;
+}
+
+/* Shield Logo */
+.shield-logo {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    color: var(--accent);
+    opacity: 0.8;
+}
+
+/* Form Tabs */
+.form-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--text);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background-color: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    color: var(--accent);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* Form Sections */
+.form-section {
+    display: none;
+}
+
+.form-section.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
     display: block;
     text-align: left;
     margin-bottom: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.1rem;
     color: var(--text);
 }
 
 input[type="text"],
+input[type="email"],
 input[type="password"] {
     width: 100%;
     padding: 0.75rem;
-    background-color: transparent;
+    background-color: rgba(255, 255, 255, 0.05);
     border: none;
     border-bottom: 1px solid var(--text);
     color: var(--text-light);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
+    font-size: 0.95rem;
     outline: none;
+    transition: all 0.3s ease;
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
 input[type="password"]:focus {
+    background-color: rgba(212, 175, 55, 0.05);
     border-bottom-color: var(--accent);
+}
+
+input[type="text"]::-webkit-autofill,
+input[type="email"]::-webkit-autofill,
+input[type="password"]::-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset;
+    -webkit-text-fill-color: var(--text-light);
 }
 
 .error-message {
     color: var(--error);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     margin-top: 0.5rem;
     min-height: 1.2rem;
     text-align: left;
@@ -100,34 +215,110 @@ input[type="password"]:focus {
 .btn-primary,
 .btn-danger {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.85rem;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.1rem;
-    border: none;
+    letter-spacing: 0.15rem;
+    border: 1px solid var(--text);
     background-color: transparent;
     color: var(--text);
     cursor: pointer;
-    border-bottom: 1px solid var(--text);
+    transition: all 0.3s ease;
+    display: block;
 }
 
 .btn-primary:hover {
     color: var(--text-light);
-    border-bottom-color: var(--accent);
+    border-color: var(--accent);
+    background-color: rgba(212, 175, 55, 0.1);
 }
 
 .btn-danger {
     color: var(--error);
-    border-bottom-color: var(--error);
+    border-color: var(--error);
 }
 
 .btn-danger:hover {
     color: var(--text-light);
+    background-color: rgba(255, 68, 68, 0.1);
 }
 
-/* Video Container - Full Screen */
+/* Room Display */
+.room-display {
+    margin-top: 1rem;
+}
+
+.room-display.hidden {
+    display: none;
+}
+
+.room-header {
+    margin-bottom: 1.5rem;
+}
+
+.room-header h2 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
+}
+
+.room-link-container {
+    margin-bottom: 1.5rem;
+}
+
+.room-link-container p {
+    font-size: 0.8rem;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05rem;
+}
+
+.room-link-box {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+#room-url {
+    flex: 1;
+    padding: 0.75rem;
+    background-color: rgba(212, 175, 55, 0.05);
+    border: 1px solid var(--accent);
+    color: var(--text-light);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    border-radius: 2px;
+    outline: none;
+    word-break: break-all;
+}
+
+.copy-btn {
+    padding: 0.75rem 1rem;
+    background-color: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.copy-btn:hover {
+    background-color: var(--accent);
+    color: var(--bg-dark);
+}
+
+/* ============================================================
+   VIDEO CONTAINER & CALL STYLES
+   ============================================================ */
+
 #video-container {
     position: fixed;
     top: 0;
@@ -135,6 +326,10 @@ input[type="password"]:focus {
     width: 100vw;
     height: 100vh;
     background-color: #000000;
+}
+
+#video-container.hidden {
+    display: none;
 }
 
 /* Speech-to-Text Controls */
@@ -155,12 +350,12 @@ input[type="password"]:focus {
 
 .stt-toggle:hover {
     border-color: var(--accent);
-    background-color: rgba(0, 255, 136, 0.1);
+    background-color: rgba(212, 175, 55, 0.1);
 }
 
 .stt-toggle.active {
     border-color: var(--accent);
-    background-color: rgba(0, 255, 136, 0.2);
+    background-color: rgba(212, 175, 55, 0.2);
 }
 
 /* Transcription Feed */
@@ -186,7 +381,8 @@ input[type="password"]:focus {
     border-bottom: 1px solid var(--text);
     font-size: 0.75rem;
     letter-spacing: 0.1rem;
-    color: var(--accent);
+    color: var(--accent-light);
+    text-transform: uppercase;
 }
 
 .clear-btn {
@@ -199,6 +395,7 @@ input[type="password"]:focus {
     letter-spacing: 0.1rem;
     padding: 2px 8px;
     border: 1px solid transparent;
+    text-transform: uppercase;
 }
 
 .clear-btn:hover {
@@ -224,7 +421,7 @@ input[type="password"]:focus {
 }
 
 .transcript-line .speaker {
-    color: var(--accent);
+    color: var(--accent-light);
     font-weight: 500;
     flex-shrink: 0;
 }
@@ -255,13 +452,13 @@ input[type="password"]:focus {
 }
 
 .transcript-line .edit-btn:hover {
-    color: var(--accent);
+    color: var(--accent-light);
 }
 
 .transcript-line .edit-input {
     flex: 1;
     background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--accent);
+    border: 1px solid var(--accent-light);
     color: var(--text-light);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
@@ -277,11 +474,51 @@ input[type="password"]:focus {
     color: #ff8800;
 }
 
-/* Mobile Optimizations */
+/* ============================================================
+   RESPONSIVE DESIGN
+   ============================================================ */
+
 @media (max-width: 768px) {
-    .app-title {
-        font-size: 2rem;
-        letter-spacing: 0.3rem;
+    .lang-toggle {
+        top: 10px;
+        right: 10px;
+        gap: 4px;
+    }
+    
+    .lang-btn {
+        padding: 4px 8px;
+        font-size: 0.6rem;
+    }
+    
+    .landing-container {
+        max-width: 95%;
+        padding: 1.5rem 1rem;
+    }
+    
+    .shield-logo {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        font-size: 0.65rem;
+    }
+    
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.7rem;
+    }
+    
+    .btn-primary,
+    .btn-danger {
+        padding: 0.75rem;
+        font-size: 0.75rem;
     }
     
     .stt-toggle {
@@ -308,6 +545,7 @@ input[type="password"]:focus {
 /* Touch Optimizations */
 @media (hover: none) and (pointer: coarse) {
     input[type="text"],
+    input[type="email"],
     input[type="password"] {
         font-size: 16px; /* Prevents zoom on iOS */
     }
