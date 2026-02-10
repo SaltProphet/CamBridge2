@@ -1,44 +1,4 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/room/:modelname/:roomslug", "destination": "/room.html" },
-    { "source": "/room/:modelname", "destination": "/room.html" },
-    { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/register", "destination": "/register.html" },
-    { "source": "/setup", "destination": "/setup.html" },
-    { "source": "/app", "destination": "/app.html" },
-    { "source": "/landing.html", "destination": "/landing.html" },
-    { "source": "/api/:path*", "destination": "/api/:path*" }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/room.html",
-      "dest": "/room.html"
-    },
-    {
-      "src": "/dashboard.html",
-      "dest": "/dashboard.html"
-    },
-    {
-      "src": "/register.html",
-      "dest": "/register.html"
-    },
-    {
-      "src": "/app.html",
-      "dest": "/app.html"
-    },
-    {
-      "src": "/landing.html",
-      "dest": "/landing.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ]
+  "version": 2,
+  "outputDirectory": "."
 }
