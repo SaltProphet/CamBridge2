@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAMBRIDGE - Redirecting...</title>
+    <script>
+        // Simple router - redirect to landing page
+        window.location.href = '/landing.html';
+    </script>
+</head>
+<body>
+    <p style="text-align: center; margin-top: 50px; font-family: monospace; color: #555;">Redirecting to CAMBRIDGE...</p>
+</body>
+</html>
+            <div class="input-group">
+                <label id="access-label" for="access-key">ACCESS_KEY</label>
+                <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">
+                <div id="error-message" class="error-message"></div>
+            </div>
+            <button id="unlock-btn" class="btn-primary">ESTABLISH_LINK</button>
+        </div>
+    </div>
+
+    <!-- Full-Screen Video Container -->
+    <div id="video-container" class="hidden">
+        <!-- Tip Alert Overlay -->
+        <div id="tip-alert" class="tip-alert" style="display: none;"></div>
+
+        <!-- Transcription Toggle Button -->
+        <button id="stt-toggle" class="stt-toggle hidden" title="Toggle Speech-to-Text">
+            <span id="stt-icon">📝</span>
+        </button>
+        
+        <!-- Transcription Feed -->
+        <div id="transcript-feed" class="transcript-feed hidden">
+            <div class="transcript-header">
+                <span>TRANSCRIPTION</span>
+                <button id="clear-transcript" class="clear-btn">CLEAR</button>
+            </div>
+            <div id="transcript-content" class="transcript-content"></div>
+        </div>
+
+        <!-- Ledger Widget -->
+        <div id="ledger-widget" class="widget ledger-widget hidden">
+            <div class="widget-header">
+                <i class="fas fa-dollar-sign"></i>
+                <span>TIP LEDGER</span>
+                <button class="widget-close" data-widget="ledger-widget"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="widget-content">
+                <div class="ledger-balance">
+                    <span>Balance:</span>
+                    <span id="balance-val" class="balance-value">$0</span>
+                </div>
+                <div id="ledger-history" class="ledger-history"></div>
+                <div class="tip-controls">
+                    <input type="number" id="tip-amount" placeholder="Amount" min="1" step="1" />
+                    <button id="send-tip" class="btn-tip">Send Tip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget Toggle Menu -->
+        <div id="widget-menu" class="widget-menu">
+            <button id="toggle-ledger" title="Toggle Tip Ledger"><i class="fas fa-dollar-sign"></i></button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
