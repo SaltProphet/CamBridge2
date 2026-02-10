@@ -1,8 +1,32 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
     { "source": "/room/:modelname", "destination": "/room.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/app", "destination": "/app.html" }
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/landing.html", "destination": "/landing.html" }
+  ],
+  "routes": [
+    {
+      "src": "/room.html",
+      "dest": "/room.html"
+    },
+    {
+      "src": "/dashboard.html",
+      "dest": "/dashboard.html"
+    },
+    {
+      "src": "/app.html",
+      "dest": "/app.html"
+    },
+    {
+      "src": "/landing.html",
+      "dest": "/landing.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }
