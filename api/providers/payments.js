@@ -1,5 +1,7 @@
 // Phase 0: Payments Provider Abstraction
-// Allows swapping payment providers (Manual, CCBill, Segpay, Stripe, etc.) via configuration
+// Allows swapping payment providers (Manual, CCBill, Stripe, etc.) via configuration
+
+import crypto from 'crypto';
 
 /**
  * PaymentsProvider Interface
@@ -9,7 +11,7 @@ export class PaymentsProvider {
   /**
    * Get creator subscription status
    * @param {string} creatorId - Creator identifier
-   * @returns {Promise<{success: boolean, status?: string, plan?: string, expiresAt?: Date, error?: string}>}
+   * @returns {Promise<{success: boolean, status?: string, plan?: string, expiresAt?: Date|null, error?: string}>}
    */
   async getSubscriptionStatus(creatorId) {
     throw new Error('getSubscriptionStatus() must be implemented by provider');
@@ -35,13 +37,31 @@ export class PaymentsProvider {
 
   /**
    * Handle webhook from payment provider
-   * @param {Object} payload - Webhook payload
+   * @param {Object|string} payload - Webhook payload
    * @param {Object} headers - Request headers
    * @returns {Promise<{success: boolean, event?: string, error?: string}>}
    */
   async handleWebhook(payload, headers) {
     throw new Error('handleWebhook() must be implemented by provider');
   }
+}
+
+function normalizeDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeHeaders(headers = {}) {
+  const normalized = {};
+  for (const [key, value] of Object.entries(headers || {})) {
+    normalized[key.toLowerCase()] = value;
+  }
+
+  return normalized;
 }
 
 /**
@@ -56,7 +76,7 @@ export class ManualPaymentsProvider extends PaymentsProvider {
       success: true,
       status: 'active',
       plan: 'manual',
-      expiresAt: null // No expiration for manual
+      expiresAt: null
     };
   }
 
@@ -85,7 +105,6 @@ export class DatabasePaymentsProvider extends PaymentsProvider {
 
   async getSubscriptionStatus(creatorId) {
     try {
-      // Get creator from database with subscription info
       const creator = await this.db.getCreatorById(creatorId);
       if (!creator) {
         return { success: false, error: 'Creator not found' };
@@ -109,10 +128,9 @@ export class DatabasePaymentsProvider extends PaymentsProvider {
         return { success: false, error: result.error };
       }
 
-      // Check if status is active and not expired
-      const active = result.status === 'active' && 
-                    (!result.expiresAt || new Date(result.expiresAt) > new Date());
-      
+      const active = result.status === 'active' &&
+        (!result.expiresAt || new Date(result.expiresAt) > new Date());
+
       return { success: true, active };
     } catch (error) {
       return { success: false, error: error.message };
@@ -120,7 +138,6 @@ export class DatabasePaymentsProvider extends PaymentsProvider {
   }
 
   async getInvoices(creatorId) {
-    // For database provider, invoices would be stored in a separate table
     return { success: true, invoices: [] };
   }
 
@@ -203,58 +220,360 @@ export class DatabasePaymentsProvider extends PaymentsProvider {
 }
 
 /**
- * CCBill Payments Provider (placeholder for future implementation)
+ * CCBill Payments Provider
  */
 export class CCBillPaymentsProvider extends PaymentsProvider {
-  constructor(clientId, clientSecret) {
+  constructor({ accountId, subAccountId, flexFormsId, salt, fetchImpl = fetch }) {
     super();
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
+    this.accountId = accountId;
+    this.subAccountId = subAccountId;
+    this.flexFormsId = flexFormsId;
+    this.salt = salt;
+    this.fetchImpl = fetchImpl;
+    this.apiBaseUrl = process.env.CCBILL_API_BASE_URL || 'https://api.ccbill.com';
+  }
+
+  async request(pathname, { method = 'GET', body } = {}) {
+    if (!this.accountId || !this.subAccountId || !this.flexFormsId || !this.salt) {
+      return { success: false, error: 'CCBill provider is not configured' };
+    }
+
+    try {
+      const url = new URL(pathname, this.apiBaseUrl);
+      const requestBody = body ? JSON.stringify(body) : undefined;
+      const response = await this.fetchImpl(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CCBill-Account-Id': this.accountId,
+          'X-CCBill-Subaccount-Id': this.subAccountId,
+          'X-CCBill-FlexForms-Id': this.flexFormsId,
+          'X-CCBill-Signature': crypto
+            .createHash('sha256')
+            .update(`${method}:${url.pathname}:${this.salt}`)
+            .digest('hex')
+        },
+        body: requestBody
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data?.error || `CCBill API request failed with status ${response.status}`
+        };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 
   async getSubscriptionStatus(creatorId) {
-    // TODO: Implement CCBill API integration
-    return { success: false, error: 'CCBill provider not yet implemented' };
+    if (!creatorId) {
+      return { success: false, error: 'creatorId is required' };
+    }
+
+    const result = await this.request(`/v1/subscriptions/${encodeURIComponent(creatorId)}`);
+    if (!result.success) {
+      return result;
+    }
+
+    const subscription = result.data?.subscription;
+    return {
+      success: true,
+      status: subscription?.status || 'inactive',
+      plan: subscription?.plan || 'unknown',
+      expiresAt: normalizeDate(subscription?.expiresAt)
+    };
   }
 
   async isSubscriptionActive(creatorId) {
-    return { success: false, error: 'CCBill provider not yet implemented' };
+    const result = await this.getSubscriptionStatus(creatorId);
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const active = result.status === 'active' &&
+      (!result.expiresAt || new Date(result.expiresAt) > new Date());
+
+    return { success: true, active };
   }
 
   async getInvoices(creatorId) {
-    return { success: false, error: 'CCBill provider not yet implemented' };
+    if (!creatorId) {
+      return { success: false, error: 'creatorId is required' };
+    }
+
+    const result = await this.request(`/v1/subscriptions/${encodeURIComponent(creatorId)}/invoices`);
+    if (!result.success) {
+      return result;
+    }
+
+    return { success: true, invoices: result.data?.invoices || [] };
   }
 
   async handleWebhook(payload, headers) {
-    return { success: false, error: 'CCBill provider not yet implemented' };
+    try {
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        return { success: false, error: 'Invalid webhook payload' };
+      }
+
+      const normalizedHeaders = normalizeHeaders(headers);
+      const incomingSignature = normalizedHeaders['x-ccbill-signature'];
+      if (!incomingSignature) {
+        return { success: false, error: 'Missing CCBill webhook signature' };
+      }
+
+      if (!this.salt) {
+        return { success: false, error: 'CCBill webhook secret is not configured' };
+      }
+
+      const subscriptionId = payload.subscriptionId;
+      const eventType = payload.eventType;
+      if (!subscriptionId || !eventType) {
+        return { success: false, error: 'Malformed CCBill webhook payload' };
+      }
+
+      const expectedSignature = crypto
+        .createHash('sha256')
+        .update(`${subscriptionId}:${eventType}:${this.salt}`)
+        .digest('hex');
+
+      if (incomingSignature !== expectedSignature) {
+        return { success: false, error: 'Invalid CCBill webhook signature' };
+      }
+
+      return {
+        success: true,
+        event: eventType,
+        creatorId: payload.creatorId || subscriptionId
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 }
 
 /**
- * Segpay Payments Provider (placeholder for future implementation)
+ * Stripe Payments Provider
  */
-export class SegpayPaymentsProvider extends PaymentsProvider {
-  constructor(clientId, clientSecret) {
+export class StripePaymentsProvider extends PaymentsProvider {
+  constructor({ secretKey, webhookSecret, fetchImpl = fetch }) {
     super();
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
+    this.secretKey = secretKey;
+    this.webhookSecret = webhookSecret;
+    this.fetchImpl = fetchImpl;
+    this.apiBaseUrl = 'https://api.stripe.com';
+  }
+
+  async request(pathname, params = {}) {
+    if (!this.secretKey) {
+      return { success: false, error: 'Stripe provider is not configured' };
+    }
+
+    try {
+      const body = new URLSearchParams(params);
+      const response = await this.fetchImpl(`${this.apiBaseUrl}${pathname}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.secretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data?.error?.message || `Stripe API request failed with status ${response.status}`
+        };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getCustomerByCreatorId(creatorId) {
+    const customerSearch = await this.request('/v1/customers/search', {
+      query: `metadata['creator_id']:'${creatorId}'`,
+      limit: '1'
+    });
+
+    if (!customerSearch.success) {
+      return customerSearch;
+    }
+
+    const customer = customerSearch.data?.data?.[0];
+    if (!customer) {
+      return { success: true, customer: null };
+    }
+
+    return { success: true, customer };
   }
 
   async getSubscriptionStatus(creatorId) {
-    // TODO: Implement Segpay API integration
-    return { success: false, error: 'Segpay provider not yet implemented' };
+    if (!creatorId) {
+      return { success: false, error: 'creatorId is required' };
+    }
+
+    const customerResult = await this.getCustomerByCreatorId(creatorId);
+    if (!customerResult.success) {
+      return { success: false, error: customerResult.error };
+    }
+
+    if (!customerResult.customer) {
+      return { success: true, status: 'inactive', plan: null, expiresAt: null };
+    }
+
+    const subscriptionsResult = await this.request('/v1/subscriptions', {
+      customer: customerResult.customer.id,
+      status: 'all',
+      limit: '1'
+    });
+
+    if (!subscriptionsResult.success) {
+      return { success: false, error: subscriptionsResult.error };
+    }
+
+    const subscription = subscriptionsResult.data?.data?.[0];
+    if (!subscription) {
+      return { success: true, status: 'inactive', plan: null, expiresAt: null };
+    }
+
+    return {
+      success: true,
+      status: subscription.status || 'inactive',
+      plan: subscription.items?.data?.[0]?.price?.nickname || subscription.items?.data?.[0]?.price?.id || null,
+      expiresAt: normalizeDate(subscription.current_period_end ? subscription.current_period_end * 1000 : null)
+    };
   }
 
   async isSubscriptionActive(creatorId) {
-    return { success: false, error: 'Segpay provider not yet implemented' };
+    const result = await this.getSubscriptionStatus(creatorId);
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const activeStatuses = new Set(['active', 'trialing']);
+    const active = activeStatuses.has(result.status) &&
+      (!result.expiresAt || new Date(result.expiresAt) > new Date());
+
+    return { success: true, active };
   }
 
   async getInvoices(creatorId) {
-    return { success: false, error: 'Segpay provider not yet implemented' };
+    if (!creatorId) {
+      return { success: false, error: 'creatorId is required' };
+    }
+
+    const customerResult = await this.getCustomerByCreatorId(creatorId);
+    if (!customerResult.success) {
+      return { success: false, error: customerResult.error };
+    }
+
+    if (!customerResult.customer) {
+      return { success: true, invoices: [] };
+    }
+
+    const invoicesResult = await this.request('/v1/invoices', {
+      customer: customerResult.customer.id,
+      limit: '20'
+    });
+
+    if (!invoicesResult.success) {
+      return { success: false, error: invoicesResult.error };
+    }
+
+    const invoices = (invoicesResult.data?.data || []).map((invoice) => ({
+      id: invoice.id,
+      amountPaid: invoice.amount_paid,
+      currency: invoice.currency,
+      status: invoice.status,
+      createdAt: normalizeDate(invoice.created ? invoice.created * 1000 : null)
+    }));
+
+    return { success: true, invoices };
   }
 
   async handleWebhook(payload, headers) {
-    return { success: false, error: 'Segpay provider not yet implemented' };
+    try {
+      const normalizedHeaders = normalizeHeaders(headers);
+      const signatureHeader = normalizedHeaders['stripe-signature'];
+      if (!signatureHeader) {
+        return { success: false, error: 'Missing Stripe webhook signature' };
+      }
+
+      if (!this.webhookSecret) {
+        return { success: false, error: 'Stripe webhook secret is not configured' };
+      }
+
+      const rawPayload =
+        typeof payload === 'string'
+          ? payload
+          : typeof payload?.rawBody === 'string'
+            ? payload.rawBody
+            : JSON.stringify(payload);
+
+      if (!rawPayload || rawPayload === 'undefined') {
+        return { success: false, error: 'Invalid webhook payload' };
+      }
+
+      const parsedSignature = signatureHeader
+        .split(',')
+        .map((part) => part.trim())
+        .reduce((acc, part) => {
+          const [key, value] = part.split('=');
+          acc[key] = value;
+          return acc;
+        }, {});
+
+      if (!parsedSignature.t || !parsedSignature.v1) {
+        return { success: false, error: 'Malformed Stripe webhook signature' };
+      }
+
+      const signedPayload = `${parsedSignature.t}.${rawPayload}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', this.webhookSecret)
+        .update(signedPayload, 'utf8')
+        .digest('hex');
+
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(parsedSignature.v1, 'hex'),
+        Buffer.from(expectedSignature, 'hex')
+      );
+
+      if (!isValid) {
+        return { success: false, error: 'Invalid Stripe webhook signature' };
+      }
+
+      let event;
+      try {
+        event = typeof payload === 'string'
+          ? JSON.parse(payload)
+          : payload && typeof payload === 'object' && typeof payload.rawBody === 'string'
+            ? JSON.parse(payload.rawBody)
+            : payload;
+      } catch (error) {
+        return { success: false, error: 'Malformed Stripe webhook payload' };
+      }
+
+      if (!event || typeof event !== 'object' || !event.type) {
+        return { success: false, error: 'Malformed Stripe webhook payload' };
+      }
+
+      return {
+        success: true,
+        event: event.type,
+        eventId: event.id || null
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 }
 
@@ -262,27 +581,25 @@ export class SegpayPaymentsProvider extends PaymentsProvider {
  * Factory function to get the configured payments provider
  */
 export function getPaymentsProvider(db = null) {
-  const provider = process.env.PAYMENTS_PROVIDER || 'manual';
-  const mode = process.env.PAYMENTS_MODE || 'offplatform_flat';
+  const provider = (process.env.PAYMENTS_PROVIDER || 'manual').toLowerCase();
 
-  switch (provider.toLowerCase()) {
+  switch (provider) {
     case 'manual':
       return new ManualPaymentsProvider();
     case 'database':
       return new DatabasePaymentsProvider(db);
     case 'ccbill':
-      return new CCBillPaymentsProvider(
-        process.env.CCBILL_CLIENT_ID,
-        process.env.CCBILL_CLIENT_SECRET
-      );
-    case 'segpay':
-      return new SegpayPaymentsProvider(
-        process.env.SEGPAY_CLIENT_ID,
-        process.env.SEGPAY_CLIENT_SECRET
-      );
-    // Add more providers here as needed:
-    // case 'stripe':
-    //   return new StripePaymentsProvider(process.env.STRIPE_API_KEY);
+      return new CCBillPaymentsProvider({
+        accountId: process.env.CCBILL_ACCOUNT_ID,
+        subAccountId: process.env.CCBILL_SUBACCOUNT_ID,
+        flexFormsId: process.env.CCBILL_FLEXFORMS_ID,
+        salt: process.env.CCBILL_SALT
+      });
+    case 'stripe':
+      return new StripePaymentsProvider({
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET
+      });
     default:
       console.warn(`Unknown PAYMENTS_PROVIDER: ${provider}, defaulting to Manual`);
       return new ManualPaymentsProvider();
