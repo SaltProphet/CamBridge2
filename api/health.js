@@ -1,6 +1,6 @@
 // Health check endpoint for database status
 // This endpoint is public and doesn't require authentication
-import { sql } from '@vercel/postgres';
+import { sql } from './db.js';
 
 export default async function handler(req, res) {
   // Allow GET requests only
