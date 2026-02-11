@@ -1,0 +1,146 @@
+/* Shared styles for creator pages */
+/* REAPER design language - minimal, industrial aesthetic */
+
+:root {
+    --bg-dark: #000000;
+    --text: #555555;
+    --text-light: #ffffff;
+    --accent: #00ff88;
+    --error: #ff4444;
+    --border: #222222;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg-dark);
+    color: var(--text-light);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* Common button styles */
+button, .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.05rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+}
+
+button:disabled, .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary button */
+.btn-primary {
+    padding: 15px 30px;
+    background: var(--accent);
+    color: var(--bg-dark);
+    font-weight: 700;
+    border: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+/* Error button */
+.btn-error {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--error);
+    color: var(--error);
+}
+
+.btn-error:hover {
+    background: var(--error);
+    color: var(--bg-dark);
+}
+
+/* Form elements */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Messages */
+.error-message {
+    color: var(--error);
+    font-size: 0.8rem;
+    margin-top: 8px;
+}
+
+.success-message {
+    color: var(--accent);
+    font-size: 0.8rem;
+    margin-top: 8px;
+}
+
+/* Loading states */
+.loading-msg {
+    display: none;
+    color: var(--text);
+    margin-top: 15px;
+}
+
+.loading-msg.show {
+    display: block;
+}
+
+/* Links */
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    opacity: 0.8;
+}
+
+/* Dividers */
+.divider-line {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+}
