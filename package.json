@@ -6,7 +6,8 @@
     "node": ">=20.x"
   },
   "scripts": {
-    "dev": "npx http-server -p 3000 -g",
+    "dev": "node server.js",
+    "dev:static": "npx http-server -p 3000 -g",
     "build": "npm run css:build",
     "css:build": "npx tailwindcss -i ./styles/input.css -o ./public/styles.css --minify --config ./styles/tailwind.config.js",
     "css:watch": "npx tailwindcss -i ./styles/input.css -o ./public/styles.css --watch --config ./styles/tailwind.config.js",
