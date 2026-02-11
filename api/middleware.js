@@ -32,9 +32,14 @@ async function getSessionByToken(token) {
   return null;
 }
 
+let rateLimitTableReady = false;
+
 async function ensureRateLimitTable() {
-  if (!rateLimitTableReady) {
-    rateLimitTableReady = sql`
+  if (rateLimitTableReady) return;
+  
+  try {
+    const sql = await getSqlApi();
+    await sql`
       CREATE TABLE IF NOT EXISTS rate_limits (
         key TEXT PRIMARY KEY,
         count INTEGER NOT NULL,
@@ -42,9 +47,12 @@ async function ensureRateLimitTable() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
+    rateLimitTableReady = true;
+  } catch (e) {
+    // Mock DB doesn't need table creation, just mark as ready
+    console.warn('⚠️  Rate limit table could not be created:', e.message);
+    rateLimitTableReady = true;
   }
-
-  return rateLimitTableReady;
 }
 
 function getRequestIp(req) {
@@ -63,6 +71,7 @@ export function buildRateLimitKey(endpoint, actor) {
 export async function consumeRateLimit({ key, maxRequests = 10, windowMs = 60000 }) {
   try {
     await ensureRateLimitTable();
+    const sql = await getSqlApi();
 
     const result = await sql`
       INSERT INTO rate_limits (key, count, expires_at, updated_at)
