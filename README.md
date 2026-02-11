@@ -1,140 +1,127 @@
 # CamBridge
 
-A minimalist video room platform. Create your room, share the link, control who joins.
+A minimal, privacy-first video conferencing platform built for Vercel.
 
-## Features
+## 🚀 Quick Start
 
-- **Clean & Simple**: Black and white minimalist design
-- **Private Rooms**: Each creator gets their own custom URL
-- **Age Verified**: 18+ only platform
-- **Privacy First**: Peer-to-peer video, no recording
-
-## Setup
-
-### Environment Variables
-
-Create a `.env` file or set these in your Vercel project:
-
-```bash
-# Required for production
-POSTGRES_URL=your_postgres_connection_string
-POSTGRES_PRISMA_URL=your_postgres_pooled_connection_string
-JWT_SECRET=your_jwt_secret_key_here
-
-# Optional - for local dev
-NODE_ENV=development
-
-# BETA MODE - Set to 'true' to enable registration
-BETA_MODE=true
-```
+### Prerequisites
+- Node.js 18+ (for local development)
+- A Vercel account (for deployment)
 
 ### Local Development
 
+1. Clone the repository:
 ```bash
-# Install dependencies
+git clone https://github.com/SaltProphet/CamBridge2.git
+cd CamBridge2
+```
+
+2. Install dependencies (optional, only needed for dev server):
+```bash
 npm install
+```
 
-# Run locally (mock database if no Postgres configured)
+3. Run the development server:
+```bash
 npm run dev
-
-# The app will use in-memory mock database if POSTGRES_URL is not set
 ```
 
-### Database Schema
+4. Open http://localhost:3000 in your browser
 
-The application code will attempt to auto-create tables on first use when using the mock database or when tables don't exist. For production deployments with Postgres, you can optionally create the required tables manually:
+## 📦 Deployment
 
-> **Note:** The `gen_random_uuid()` default values require the `pgcrypto` extension or PostgreSQL 13+. On PostgreSQL versions before 13, run:
->
-> ```sql
-> CREATE EXTENSION IF NOT EXISTS pgcrypto;
-> ```
->
-> If your deployment uses a migration system or ORM to manage the database, prefer that mechanism over running the DDL below directly.
+### Deploy to Vercel
 
-```sql
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username VARCHAR(255),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255),
-  display_name VARCHAR(255),
-  is_active BOOLEAN DEFAULT true,
-  role VARCHAR(50),
-  age_attested_at TIMESTAMPTZ,
-  tos_accepted_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Creators table
-CREATE TABLE IF NOT EXISTS creators (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  slug VARCHAR(100) UNIQUE NOT NULL,
-  display_name VARCHAR(255),
-  plan_status VARCHAR(50),
-  status VARCHAR(50),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Rooms table  
-CREATE TABLE IF NOT EXISTS rooms (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  creator_id UUID REFERENCES creators(id),
-  room_slug VARCHAR(100),
-  room_name VARCHAR(255),
-  room_type VARCHAR(50),
-  enabled BOOLEAN DEFAULT true,
-  join_mode VARCHAR(50),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Sessions table (optional)
-CREATE TABLE IF NOT EXISTS sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  token TEXT,
-  expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+1. **Install Vercel CLI** (if not already installed):
+```bash
+npm install -g vercel
 ```
 
-## Deployment
+2. **Deploy**:
+```bash
+npm run build && vercel deploy
+```
 
-### Vercel (Recommended)
+3. **Production Deployment**:
+```bash
+vercel deploy --prod
+```
 
-1. Push to GitHub
-2. Import project in Vercel
-3. Set environment variables
-4. Deploy
+### Deploy via Vercel Dashboard
 
-### Other Platforms
+1. Go to [vercel.com](https://vercel.com)
+2. Click "New Project"
+3. Import your GitHub repository
+4. Click "Deploy"
 
-CamBridge is a standard Node.js app and can be deployed to any platform that supports:
-- Node.js 18+
-- PostgreSQL database
-- Serverless functions
+That's it! No environment variables or configuration needed for the basic setup.
 
-## API Endpoints
-
-- `POST /api/auth/password-register` - Create account
-- `POST /api/auth/password-login` - Login
-- `GET /api/creator/info` - Get creator profile (auth required)
-- `POST /api/auth/logout` - Logout
-
-## Pages
+## 📄 Pages
 
 - `/` - Landing page
-- `/register` - Create account
-- `/login` - Login
-- `/dashboard` - User dashboard (shows room link)
+- `/register` - Create account (placeholder)
+- `/login` - Login page (placeholder)
+- `/dashboard` - User dashboard
+- `/room/:slug` - Video room (placeholder)
 - `/terms` - Terms of Service
 - `/privacy` - Privacy Policy
-- `/:slug` - Creator's video room (TODO)
 
-## License
+## 🔌 API Endpoints
 
-MIT
+- `GET /api/health` - Health check endpoint
+
+## 🛠️ Project Structure
+
+```
+CamBridge2/
+├── api/
+│   └── health.js          # Health check endpoint
+├── index.html             # Landing page
+├── login.html             # Login page
+├── register.html          # Registration page
+├── dashboard.html         # User dashboard
+├── room.html              # Video room placeholder
+├── terms.html             # Terms of Service
+├── privacy.html           # Privacy Policy
+├── styles.css             # Global styles
+├── vercel.json            # Vercel configuration
+├── package.json           # Project configuration
+└── README.md              # This file
+```
+
+## 🎯 Extending the Application
+
+This is a minimal starter that can be extended with:
+
+1. **Real Authentication**: Add API endpoints for user registration/login
+2. **Database**: Connect PostgreSQL or another database
+3. **Video Integration**: Integrate WebRTC, Daily.co, or similar services
+4. **User Management**: Add user profiles and room management
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for more detailed deployment instructions.
+
+## 📝 Development Notes
+
+- **No build step required**: This is a static site with minimal JavaScript
+- **No database required**: Base application runs without any backend
+- **No dependencies**: Core functionality works with zero npm packages
+- **Extensible**: Built to easily add real APIs and features later
+
+## 🔒 Privacy
+
+CamBridge is designed with privacy in mind:
+- No tracking or analytics by default
+- No data collection in base version
+- Can be extended with privacy-preserving features
+
+## 📜 License
+
+MIT License - see LICENSE file for details
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📞 Support
+
+For issues and questions, please open an issue on GitHub.
