@@ -12,15 +12,23 @@ export default async function handler(req,res){
   if(!user) return res.status(401).end();
 
   const { slug } = req.body;
-  if(!slug) return res.status(400).end();
+  if(!slug) return res.status(400).json({ ok:false, error:"slug_required" });
+  
+  // Validate slug format (alphanumeric and dashes only)
+  if (!/^[a-z0-9-]+$/i.test(slug))
+    return res.status(400).json({ ok:false, error:"invalid_slug" });
 
   try {
     await pool.query(
       "insert into rooms (owner_id,slug) values ($1,$2)",
       [user.id, slug.toLowerCase()]
     );
-  } catch {
-    return res.status(400).json({ ok:false });
+  } catch (err) {
+    // Check if it's a duplicate slug error
+    if (err.code === '23505') {
+      return res.status(400).json({ ok:false, error:"slug_taken" });
+    }
+    return res.status(500).json({ ok:false, error:"database_error" });
   }
 
   res.json({ ok:true });

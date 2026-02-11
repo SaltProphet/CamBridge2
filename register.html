@@ -122,7 +122,16 @@
                 if (data.ok) {
                     window.location.href = '/login';
                 } else {
-                    error.textContent = data.error || 'Registration failed';
+                    // Show user-friendly error messages
+                    if (data.error === 'email_exists') {
+                        error.textContent = 'This email is already registered';
+                    } else if (data.error === 'invalid_email') {
+                        error.textContent = 'Please enter a valid email address';
+                    } else if (data.error === 'password_too_short') {
+                        error.textContent = 'Password must be at least 8 characters';
+                    } else {
+                        error.textContent = 'Registration failed';
+                    }
                 }
             } catch (err) {
                 error.textContent = 'Registration failed';

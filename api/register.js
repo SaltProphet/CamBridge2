@@ -6,8 +6,18 @@ export default async function handler(req, res) {
 
   const { email, password, ageConfirmed } = req.body;
 
-  if (!email || !password || !ageConfirmed)
+  // Validate input
+  if (!email || !password || ageConfirmed !== true)
     return res.status(400).json({ ok:false, error:"invalid_input" });
+  
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email))
+    return res.status(400).json({ ok:false, error:"invalid_email" });
+  
+  // Validate password length
+  if (password.length < 8)
+    return res.status(400).json({ ok:false, error:"password_too_short" });
 
   const hash = await bcrypt.hash(password, 12);
 

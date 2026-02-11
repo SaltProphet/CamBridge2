@@ -114,9 +114,12 @@
             try {
                 const res = await fetch('/api/me');
                 if (!res.ok) {
+                    console.warn('Authentication failed, redirecting to login');
                     window.location.href = '/login';
                 }
             } catch (err) {
+                console.error('Auth check failed:', err);
+                alert('Unable to verify authentication. Redirecting to login.');
                 window.location.href = '/login';
             }
         }
@@ -165,7 +168,14 @@
                     document.getElementById('slug').value = '';
                     loadRooms();
                 } else {
-                    error.textContent = 'Failed to create room (slug may be taken)';
+                    // Show specific error message
+                    if (data.error === 'slug_taken') {
+                        error.textContent = 'This slug is already taken';
+                    } else if (data.error === 'invalid_slug') {
+                        error.textContent = 'Slug can only contain letters, numbers, and dashes';
+                    } else {
+                        error.textContent = 'Failed to create room';
+                    }
                 }
             } catch (err) {
                 error.textContent = 'Failed to create room';
