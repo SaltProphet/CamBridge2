@@ -2,5 +2,12 @@
   "buildCommand": "echo 'No build required'",
   "outputDirectory": ".",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/creator/register", "destination": "/public/pages/creator-signup.html" },
+    { "source": "/creator/login", "destination": "/public/pages/creator-login.html" },
+    { "source": "/creator/dashboard", "destination": "/public/pages/creator-dashboard.html" },
+    { "source": "/r/:creatorSlug", "destination": "/room.html" },
+    { "source": "/r/:creatorSlug/:roomSlug", "destination": "/room.html" }
+  ]
 }

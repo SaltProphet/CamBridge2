@@ -2,11 +2,25 @@
 // Handles dynamic routing, watermark, session management
 
 // Extract room name and room slug from URL path
+// Support both /room/:modelname/:roomslug and /r/:creatorSlug/:roomSlug patterns
 const urlPath = window.location.pathname;
-// Support both /room/:modelname and /room/:modelname/:roomslug
-const roomMatch = urlPath.match(/\/room\/([a-z0-9-_]+)(?:\/([a-z0-9-_]+))?/);
-const modelName = roomMatch ? roomMatch[1] : null;
-const roomSlug = roomMatch && roomMatch[2] ? roomMatch[2] : 'main'; // Default to 'main' if not specified
+let modelName = null;
+let roomSlug = 'main';
+
+// Try /r/:creatorSlug/:roomSlug pattern first (new convention)
+const rMatch = urlPath.match(/\/r\/([a-z0-9_-]+)(?:\/([a-z0-9_-]+))?/i);
+if (rMatch) {
+  modelName = rMatch[1];
+  roomSlug = rMatch[2] || 'main';
+} else {
+  // Fall back to /room/:modelname/:roomslug pattern (legacy)
+  const roomMatch = urlPath.match(/\/room\/([a-z0-9_-]+)(?:\/([a-z0-9_-]+))?/i);
+  if (roomMatch) {
+    modelName = roomMatch[1];
+    roomSlug = roomMatch[2] || 'main';
+  }
+}
+
 const roomName = modelName; // For backward compatibility
 
 // Configuration
