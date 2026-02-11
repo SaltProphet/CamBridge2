@@ -530,13 +530,13 @@ export async function createUserByEmail(email, displayName = null) {
 
 export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
   try {
-    // Build update query dynamically
     if (!ageAttested && !tosAccepted) {
       return { success: false, error: 'No acceptance flags provided' };
     }
-    
-    // Use template literal syntax consistently
+
     let result;
+
+    // 1) age + ToS
     if (ageAttested && tosAccepted) {
       result = await sql`
         UPDATE users
@@ -544,6 +544,7 @@ export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
         WHERE id = ${userId}
         RETURNING id, username, email, role, age_attested_at, tos_accepted_at
       `;
+    // 2) age only
     } else if (ageAttested) {
       result = await sql`
         UPDATE users
@@ -551,6 +552,7 @@ export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
         WHERE id = ${userId}
         RETURNING id, username, email, role, age_attested_at, tos_accepted_at
       `;
+    // 3) ToS only
     } else {
       result = await sql`
         UPDATE users
@@ -559,7 +561,7 @@ export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
         RETURNING id, username, email, role, age_attested_at, tos_accepted_at
       `;
     }
-    
+
     return { success: true, user: result.rows[0] };
   } catch (error) {
     console.error('Update user acceptance error:', error);
