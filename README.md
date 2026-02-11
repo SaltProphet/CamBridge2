@@ -6,9 +6,36 @@ CamBridge is a multi-tenant "room rental" platform where models can rent private
 
 **Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and secure database-backed authentication with password hashing and JWT tokens.
 
-## 🔐 NEW: Secure Authentication System
+## 🚀 NEW: Phase 1 - Passwordless Auth + Creator System
 
-CamBridge now includes a production-ready authentication system:
+CamBridge now includes a complete passwordless authentication system with creator onboarding and join request workflow:
+
+### For Users (Clients)
+- **Magic-Link Login**: Passwordless authentication via email (15-minute expiration)
+- **Age Gate**: 18+ attestation required before access
+- **Terms of Service**: Explicit acceptance required
+- **Join Request System**: Request access to creator rooms, wait for approval
+- **Privacy-First**: No passwords to remember or manage
+
+### For Creators (Models)
+- **Creator Onboarding**: Convert user account to creator with unique slug
+- **Join Request Management**: Approve/deny access requests from dashboard
+- **Ban System**: Ban users by email or user ID from all your rooms
+- **Daily Token Minting**: Server-side token generation (never exposed to client)
+- **Real-Time Dashboard**: Auto-refreshing pending requests (10-second polling)
+
+### Security & Privacy
+- **HttpOnly Cookies**: SameSite=Strict, Secure in production
+- **Single-Use Tokens**: SHA-256 hashed, 15-minute TTL
+- **Rate Limiting**: 5 magic links per hour per email, 10 join requests per hour per user
+- **Server-Side Token Minting**: Daily API key never exposed to client
+- **Multi-Factor Bans**: User ID, email, IP hash, device hash
+
+See [PHASE1.md](PHASE1.md) for complete Phase 1 documentation.
+
+## 🔐 Legacy: Password-Based Authentication
+
+CamBridge still supports the original authentication system for existing users:
 
 ### For Models (Performers)
 - **Create Account**: Register at `/register` with username, email, and secure password
