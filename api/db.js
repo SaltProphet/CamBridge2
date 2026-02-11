@@ -172,6 +172,20 @@ export async function initializeTables() {
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_payments_webhook_events_provider_subscription ON payments_webhook_events(provider, external_subscription_id)`;
 
+    // Creator payment notes for manual billing communications
+    await sql`
+      CREATE TABLE IF NOT EXISTS creator_payment_notes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        creator_id UUID NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+        note TEXT NOT NULL,
+        payment_method VARCHAR(50),
+        payment_details TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creator_payment_notes_creator ON creator_payment_notes(creator_id, created_at DESC)`;
+
     return { success: true };
   } catch (error) {
     console.error('Database initialization error:', error);

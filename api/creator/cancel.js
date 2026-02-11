@@ -36,7 +36,8 @@ export async function processCreatorCancel(req, deps = {}) {
   const cancelResult = await cancelFn.call(provider, {
     creatorId: creator.id,
     userId: auth.user.id,
-    reason: req.body?.reason || null
+    reason: req.body?.reason || null,
+    externalSubscriptionId: creator.subscription_external_id || null
   });
 
   if (!cancelResult?.success) {

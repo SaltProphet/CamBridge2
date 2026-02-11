@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Activated - CAMBRIDGE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #000;
+            --text-light: #fff;
+            --text-dim: #777;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 680px;
+            background: rgba(0,255,136,0.05);
+            border: 1px solid rgba(0,255,136,0.3);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+        }
+
+        p { color: var(--text-dim); margin-bottom: 1rem; }
+
+        .btn {
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            background: var(--accent);
+            color: #000;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover { background: var(--accent-dim); }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>Subscription Activated</h1>
+        <p>Your payment was successful. Your subscription is now active.</p>
+        <p>It may take a moment for your dashboard to reflect the update.</p>
+        <a class="btn" href="/dashboard">Go to Dashboard</a>
+    </main>
+</body>
+</html>

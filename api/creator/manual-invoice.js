@@ -1,5 +1,6 @@
 import { getCreatorByUserId, updateCreatorSubscription, recordProcessedWebhookEvent } from '../db.js';
 import { authenticate } from '../middleware.js';
+import { sendInvoiceEmail } from '../services/email.js';
 
 function errorPayload(error, code, extras = {}) {
   return { error, code, ...extras };
@@ -17,6 +18,18 @@ function normalizeEmail(email) {
   }
 
   return cleaned;
+}
+
+function getPlanPrice(plan) {
+  const prices = {
+    pro: 30,
+    enterprise: 99
+  };
+  return prices[plan] || 0;
+}
+
+function paymentsPaused() {
+  return process.env.PRELAUNCH_BETA === 'true' || process.env.PAYMENTS_PAUSED === 'true';
 }
 
 export async function processManualInvoice(req, deps = {}) {
@@ -53,6 +66,13 @@ export async function processManualInvoice(req, deps = {}) {
       }
     };
   } else if (req.method === 'POST') {
+    if (paymentsPaused()) {
+      return {
+        status: 503,
+        body: errorPayload('Manual invoices are paused during the pre-release beta.', 'PAYMENTS_PAUSED')
+      };
+    }
+
     // POST: Request invoice to be sent
     const invoiceEmail = normalizeEmail(req.body?.invoiceEmail || auth.user.email);
     const selectedPlan = req.body?.plan;
@@ -94,14 +114,16 @@ export async function processManualInvoice(req, deps = {}) {
         subscription_started_at: new Date(),
       });
 
-      // TODO: In production, this would call an email service to send invoice
-      // For now, log that invoice was requested
-      console.log('Manual invoice requested:', {
-        creator_id: creator.id,
-        invoiceEmail,
+      // Send invoice email
+      const emailResult = await sendInvoiceEmail({
+        to: invoiceEmail,
+        creatorId: creator.id,
+        invoiceId,
         plan: selectedPlan,
-        invoiceId
+        amount: getPlanPrice(selectedPlan)
       });
+
+      console.log('Invoice email sent:', emailResult);
 
       return {
         status: 200,

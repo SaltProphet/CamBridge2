@@ -368,6 +368,26 @@ export class StripePaymentsProvider extends PaymentsProvider {
     this.apiBaseUrl = 'https://api.stripe.com';
   }
 
+  resolvePlanPricing(plan) {
+    const normalized = String(plan || '').toLowerCase();
+    const pricing = {
+      pro: {
+        amount: 3000,
+        currency: 'usd',
+        name: 'CamBridge Pro Creator Plan',
+        description: 'Pro Creator - $30/month'
+      },
+      enterprise: {
+        amount: 9900,
+        currency: 'usd',
+        name: 'CamBridge Enterprise Creator Plan',
+        description: 'Enterprise Creator - $99/month'
+      }
+    };
+
+    return pricing[normalized] || null;
+  }
+
   async request(pathname, params = {}) {
     if (!this.secretKey) {
       return { success: false, error: 'Stripe provider is not configured' };
@@ -396,6 +416,81 @@ export class StripePaymentsProvider extends PaymentsProvider {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  }
+
+  async subscribeCreator({ creatorId, creatorEmail, plan, successUrl, cancelUrl }) {
+    if (!creatorId || !creatorEmail || !plan) {
+      return { success: false, error: 'creatorId, creatorEmail, and plan are required' };
+    }
+
+    const pricing = this.resolvePlanPricing(plan);
+    if (!pricing) {
+      return { success: false, error: `Unsupported plan: ${plan}` };
+    }
+
+    if (!successUrl || !cancelUrl) {
+      return { success: false, error: 'successUrl and cancelUrl are required' };
+    }
+
+    const priceId = String(
+      plan === 'enterprise'
+        ? process.env.STRIPE_PRICE_ENTERPRISE || ''
+        : process.env.STRIPE_PRICE_PRO || ''
+    );
+
+    const params = {
+      mode: 'subscription',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_email: creatorEmail,
+      client_reference_id: creatorId,
+      'metadata[creatorId]': creatorId,
+      'metadata[plan]': plan,
+      'line_items[0][quantity]': '1'
+    };
+
+    if (priceId) {
+      params['line_items[0][price]'] = priceId;
+    } else {
+      params['line_items[0][price_data][currency]'] = pricing.currency;
+      params['line_items[0][price_data][product_data][name]'] = pricing.name;
+      params['line_items[0][price_data][product_data][description]'] = pricing.description;
+      params['line_items[0][price_data][recurring][interval]'] = 'month';
+      params['line_items[0][price_data][unit_amount]'] = String(pricing.amount);
+    }
+
+    const result = await this.request('/v1/checkout/sessions', params);
+    if (!result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      checkoutUrl: result.data?.url || null,
+      sessionId: result.data?.id || null,
+      provider: 'stripe'
+    };
+  }
+
+  async cancelSubscription({ externalSubscriptionId }) {
+    if (!externalSubscriptionId) {
+      return { success: false, error: 'externalSubscriptionId is required' };
+    }
+
+    const result = await this.request(`/v1/subscriptions/${externalSubscriptionId}`, {
+      cancel_at_period_end: 'true'
+    });
+
+    if (!result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      subscriptionId: result.data?.id || externalSubscriptionId,
+      cancelAtPeriodEnd: result.data?.cancel_at_period_end || true,
+      status: result.data?.status || 'canceled'
+    };
   }
 
   async getCustomerByCreatorId(creatorId) {

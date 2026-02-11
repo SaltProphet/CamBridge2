@@ -32,15 +32,22 @@ test('stripe webhook rejects invalid signature', async () => {
   assert.equal(result.body.code, 'INVALID_SIGNATURE');
 });
 
-test('stripe webhook happy path updates creator status', async () => {
+test('stripe webhook happy path updates creator subscription', async () => {
   const payload = {
+    id: 'evt_123',
     type: 'customer.subscription.updated',
-    data: { object: { status: 'active', metadata: { creatorId: 'creator-stripe' } } }
+    data: {
+      object: {
+        id: 'sub_123',
+        status: 'active',
+        metadata: { creatorId: 'creator-stripe' }
+      }
+    }
   };
   const rawBody = JSON.stringify(payload);
   const signature = stripeSignature('whsec_test', '1234567890', rawBody);
 
-  let statusUpdate;
+  let subscriptionUpdate;
   const result = await processStripeWebhook(
     {
       method: 'POST',
@@ -50,15 +57,24 @@ test('stripe webhook happy path updates creator status', async () => {
     },
     {
       webhookSecret: 'whsec_test',
-      updateCreatorStatusFn: async (creatorId, status) => {
-        statusUpdate = { creatorId, status };
+      updateCreatorSubscriptionFn: async (creatorId, patch) => {
+        subscriptionUpdate = { creatorId, patch };
         return { success: true };
-      }
+      },
+      hasProcessedWebhookEventFn: async () => false,
+      recordProcessedWebhookEventFn: async () => ({ success: true })
     }
   );
 
   assert.equal(result.status, 200);
-  assert.deepEqual(statusUpdate, { creatorId: 'creator-stripe', status: 'active' });
+  assert.deepEqual(subscriptionUpdate, {
+    creatorId: 'creator-stripe',
+    patch: {
+      subscription_provider: 'stripe',
+      subscription_status: 'active',
+      subscription_external_id: 'sub_123'
+    }
+  });
 });
 
 test('ccbill webhook happy path updates creator status', async () => {

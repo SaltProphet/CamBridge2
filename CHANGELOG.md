@@ -9,45 +9,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- API test command: `npm run test:api` for unified Node test execution
-- Missing constants in `api/join-request.js`: `PLAN_PARTICIPANT_CAPS` and `DEFAULT_DUPLICATE_WINDOW_MINUTES`
-- Comprehensive error payloads with error codes for all join request validation paths
-- Updated routing logic to handle room lookup and validation
-- Improved policy decision logging with metadata tracking
+### Phase 3.2: Stripe Payment Integration (In Progress)
+- Stripe webhook integration for payment processing
+- Test mode payment flow validation
+- Production payment credentials management
 
-### Fixed
+### Added - Phase 3.1: Manual Payments & Communications ✅ COMPLETE
+- **Email Service** (`api/services/email.js`):
+  - Resend SDK integration with console fallback
+  - Invoice email generation with 14-day due date
+  - Subscription confirmation emails
+  - Payment reminder emails
+  - Template variable interpolation system
+  
+- **Email Templates** (`api/templates/manual-invoice.html`):
+  - Professional HTML invoice template
+  - Payment method options display (card, transfer, crypto)
+  - Dashboard integration links
+  - Mobile responsive design
+
+- **Payment Communications** (`api/creator/payment-notes.js`):
+  - Creator payment notes endpoint (GET/POST)
+  - Payment method tracking
+  - Payment details storage
+  - Note history retrieval
+
+- **Admin Billing Management** (`api/admin/manual-billing.js`):
+  - Admin-only pending payment listing
+  - Payment approval workflow
+  - Payment rejection workflow
+  - Payment reminder sending
+  - Role-based access control with `requireAdmin()`
+
+- **Dashboard UI Enhancements**:
+  - Payment status card (shows when manual + pending)
+  - Payment method dropdown
+  - Payment details textarea
+  - Payment notes history display
+  - Form submission and validation
+
+- **Database Schema**:
+  - `creator_payment_notes` table for payment communications
+  - Indexed queries for performance (creator_id, created_at)
+  - Cascade delete for data integrity
+
+- **Testing Infrastructure**:
+  - Comprehensive test suite for manual invoice endpoint (9/9 passing)
+  - Email generation tests with fallback verification
+  - Payment notes storage validation
+  - Admin endpoint authorization tests
+
+- **Comprehensive Test Report** (`PHASE3_TEST_REPORT.md`):
+  - Full manual payment workflow end-to-end verification
+  - Security validation checklist
+  - Deployment readiness assessment
+
+### Fixed - Phase 3.1
+- Email template path resolution (moved to api/templates/)
+- Admin role authorization in `api/middleware.js`
+- Database schema initialization for payment notes
+
+### Changed - Phase 3.1
+- Updated `api/creator/subscribe.js` to send invoice emails
+- Updated `api/creator/manual-invoice.js` to integrate email service
+- Enhanced `api/db.js` with creator_payment_notes table
+- Enhanced `api/middleware.js` with `requireAdmin()` function
+- Enhanced `dashboard.html` with payment communications UI
+
+---
+
+## Previous Releases
+
+### Phase 3A: Stabilization ✅ COMPLETE
+
 - **CRITICAL**: Fixed `api/join-request.js` malformed control flow and syntax errors
-  - Removed mixed `res.status().json()` and return-object patterns
-  - Fixed undefined variable references (`policyCheck`, `room`, `requestResult`)
-  - Corrected promise chain to use consistent `{status, body}` return format
-  - Added missing policy checks: creator status, user compliance, ban status
-  - Fixed error handling in catch block (removed undefined `requestId` reference)
-
 - **CRITICAL**: Fixed `@vercel/postgres` version alignment
-  - Updated `package.json` to use compatible version set
-  - Ensured `package.json` and `package-lock.json` consistency
-  - Selected stable dependency versions: express 4.18.2, bcryptjs 2.4.3, resend 3.2.0
+- Dependency versions updated for stability
+- Comprehensive error payloads with error codes
+- API test command: `npm run test:api`
 
-- Rewrote `processJoinRequest()` function with proper flow control
-  - Added all missing policy gates before creating join request
-  - Improved error messages and status codes
-  - Added room existence and status validation
-  - Fixed rate limiting logic integration
+### Phase 1-2: Core Platform ✅ COMPLETE
 
-### Changed
-- Dependency versions updated for stability:
-  - `@vercel/postgres`: ^0.12.0 (from ^0.10.0)
-  - `bcryptjs`: ^2.4.3 (from ^3.0.3)
-  - `dotenv`: ^16.4.5 (from ^17.2.4)
-  - `express`: ^4.18.2 (from ^5.2.1)
-  - `jsonwebtoken`: ^9.1.2 (from ^9.0.3)
-  - `resend`: ^3.2.0 (from ^4.0.2)
-
-- Restructured join request validation flow for clarity:
-  1. Authentication
-  2. Input validation
-  3. Kill switch check
+- Email magic-link authentication
+- Creator onboarding and slug management
+- Multi-room support with access codes
+- Join request workflow
+- Payment provider abstraction
+- P2P WebRTC video via Daily.co
+- Speech-to-text via Deepgram
   4. Creator lookup
   5. Creator status check
   6. User compliance (age/ToS)

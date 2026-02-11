@@ -1,6 +1,7 @@
 import { getCreatorByUserId, updateCreatorSubscription } from '../db.js';
 import { authenticate } from '../middleware.js';
 import { getPaymentsProvider } from '../providers/payments.js';
+import { sendInvoiceEmail } from '../services/email.js';
 
 function errorPayload(error, code, extras = {}) {
   return { error, code, ...extras };
@@ -34,6 +35,28 @@ function normalizeProvider(provider) {
   return ALLOWED_PROVIDERS.includes(cleaned) ? cleaned : 'manual';
 }
 
+function resolveBaseUrl(req) {
+  const proto = req.headers?.['x-forwarded-proto'] || 'http';
+  const host = req.headers?.['x-forwarded-host'] || req.headers?.host;
+  if (!host) {
+    return process.env.PUBLIC_BASE_URL || null;
+  }
+
+  return `${proto}://${host}`;
+}
+
+function paymentsPaused() {
+  return process.env.PRELAUNCH_BETA === 'true' || process.env.PAYMENTS_PAUSED === 'true';
+}
+
+function getPlanPrice(plan) {
+  const prices = {
+    pro: 30,
+    enterprise: 99
+  };
+  return prices[plan] || 0;
+}
+
 export async function processCreatorSubscribe(req, deps = {}) {
   const {
     authenticateFn = authenticate,
@@ -63,6 +86,13 @@ export async function processCreatorSubscribe(req, deps = {}) {
 
   const provider = normalizeProvider(req.body?.provider);
 
+  if (paymentsPaused()) {
+    return {
+      status: 503,
+      body: errorPayload('Payments are paused during the pre-release beta.', 'PAYMENTS_PAUSED')
+    };
+  }
+
   // Get the payments provider for this request
   const paymentProvider = getPaymentsProviderFn();
   if (!paymentProvider) {
@@ -79,6 +109,20 @@ export async function processCreatorSubscribe(req, deps = {}) {
         subscription_started_at: new Date(),
       });
 
+      // Generate invoice ID
+      const invoiceId = `inv_${creator.id}_${Date.now()}`;
+
+      // Send invoice email
+      const emailResult = await sendInvoiceEmail({
+        to: auth.user.email,
+        creatorId: creator.id,
+        invoiceId,
+        plan: plan,
+        amount: getPlanPrice(plan)
+      });
+
+      console.log('Invoice email sent for subscription:', { invoiceId, creator: creator.id, result: emailResult });
+
       return {
         status: 200,
         body: {
@@ -86,7 +130,8 @@ export async function processCreatorSubscribe(req, deps = {}) {
           creatorId: creator.id,
           plan,
           provider: 'manual',
-          message: 'Invoice created. Check your email for payment details.'
+          invoiceId: invoiceId,
+          message: 'Invoice created and sent to your email. Check your inbox for payment details.'
         }
       };
     } catch (err) {
@@ -97,6 +142,15 @@ export async function processCreatorSubscribe(req, deps = {}) {
       };
     }
   } else if (provider === 'stripe' || provider === 'ccbill') {
+    await updateCreatorSubscriptionFn(creator.id, {
+      subscription_provider: provider,
+      subscription_status: 'PENDING'
+    });
+
+    const baseUrl = resolveBaseUrl(req) || 'http://localhost:3000';
+    const successUrl = new URL('/subscribe-success.html', baseUrl).toString();
+    const cancelUrl = new URL('/subscribe.html?status=cancel', baseUrl).toString();
+
     // Stripe/CCBill: delegate to provider's subscription function
     const subscribeFn = paymentProvider?.subscribeCreator || paymentProvider?.createSubscription;
     if (!subscribeFn) {
@@ -107,7 +161,10 @@ export async function processCreatorSubscribe(req, deps = {}) {
       creatorId: creator.id,
       userId: auth.user.id,
       plan,
-      provider
+      provider,
+      creatorEmail: auth.user.email,
+      successUrl,
+      cancelUrl
     });
 
     if (!subscribeResult?.success) {
