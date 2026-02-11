@@ -1,10 +1,7 @@
-// API endpoint for model login
-import bcrypt from 'bcryptjs';
-import { getUserByUsername, createSession } from '../db.js';
-import { generateToken, rateLimit } from '../middleware.js';
+// API endpoint deprecated: password login removed for MVP passwordless auth
 
 export default async function handler(req, res) {
-  // Only allow POST
+  // Hard-disable legacy password login route
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

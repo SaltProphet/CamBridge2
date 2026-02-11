@@ -259,12 +259,42 @@ export async function updateUser(userId, updates) {
 }
 
 // Room operations
-export async function createRoom(userId, roomName, accessCode) {
+export async function createRoom(userId, roomName, accessCode, options = {}) {
   try {
+    const {
+      creatorId = null,
+      roomSlug = roomName,
+      roomType = 'public',
+      enabled = true,
+      joinMode = 'knock',
+      maxParticipants = null
+    } = options;
     const dailyRoomUrl = `https://cambridge.daily.co/${roomName}-private`;
     const result = await sql`
-      INSERT INTO rooms (user_id, room_name, access_code, daily_room_url)
-      VALUES (${userId}, ${roomName}, ${accessCode}, ${dailyRoomUrl})
+      INSERT INTO rooms (
+        user_id,
+        creator_id,
+        room_name,
+        room_slug,
+        room_type,
+        access_code,
+        daily_room_url,
+        enabled,
+        join_mode,
+        max_participants
+      )
+      VALUES (
+        ${userId},
+        ${creatorId},
+        ${roomName},
+        ${roomSlug},
+        ${roomType},
+        ${accessCode},
+        ${dailyRoomUrl},
+        ${enabled},
+        ${joinMode},
+        ${maxParticipants}
+      )
       RETURNING *
     `;
     return { success: true, room: result.rows[0] };
@@ -286,11 +316,40 @@ export async function getRoomsByUserId(userId) {
   }
 }
 
-export async function getRoomByName(roomName) {
+export async function getRoomByName(roomIdentifier, creatorSlug = null) {
   try {
-    const result = await sql`
-      SELECT * FROM rooms WHERE room_name = ${roomName} AND is_active = true
-    `;
+    let result;
+
+    if (creatorSlug) {
+      const legacyRoomName = `${creatorSlug}-${roomIdentifier}`;
+      result = await sql`
+        SELECT r.*
+        FROM rooms r
+        JOIN creators c ON r.creator_id = c.id
+        WHERE c.slug = ${creatorSlug}
+          AND (
+            r.room_slug = ${roomIdentifier}
+            OR r.room_type = ${roomIdentifier}
+            OR r.room_name = ${legacyRoomName}
+          )
+          AND r.is_active = true
+          AND (r.enabled = true OR r.enabled IS NULL)
+        ORDER BY CASE
+          WHEN r.room_slug = ${roomIdentifier} THEN 1
+          WHEN r.room_type = ${roomIdentifier} THEN 2
+          ELSE 3
+        END
+        LIMIT 1
+      `;
+    } else {
+      result = await sql`
+        SELECT * FROM rooms
+        WHERE room_name = ${roomIdentifier}
+          AND is_active = true
+          AND (enabled = true OR enabled IS NULL)
+      `;
+    }
+
     return result.rows[0] || null;
   } catch (error) {
     console.error('Get room error:', error);
@@ -315,7 +374,16 @@ const ACCESS_CODE_REGEX = /^[A-Z0-9]{8}$/;
 
 export async function updateRoom(roomId, userId, updates) {
   try {
-    const { access_code, is_active, max_session_duration } = updates;
+    const {
+      access_code,
+      is_active,
+      max_session_duration,
+      room_slug,
+      room_type,
+      enabled,
+      join_mode,
+      max_participants
+    } = updates;
 
     // Build dynamic SET clause only for provided fields
     const setClauses = [];
@@ -339,11 +407,51 @@ export async function updateRoom(roomId, userId, updates) {
       setClauses.push(`is_active = $${paramIndex}`);
       values.push(is_active);
       paramIndex++;
+
+      // Keep legacy/new active flags synchronized.
+      setClauses.push(`enabled = $${paramIndex}`);
+      values.push(is_active);
+      paramIndex++;
     }
 
     if (max_session_duration !== undefined) {
       setClauses.push(`max_session_duration = $${paramIndex}`);
       values.push(max_session_duration);
+      paramIndex++;
+    }
+
+    if (room_slug !== undefined) {
+      setClauses.push(`room_slug = $${paramIndex}`);
+      values.push(room_slug);
+      paramIndex++;
+    }
+
+    if (room_type !== undefined) {
+      setClauses.push(`room_type = $${paramIndex}`);
+      values.push(room_type);
+      paramIndex++;
+    }
+
+    if (enabled !== undefined) {
+      setClauses.push(`enabled = $${paramIndex}`);
+      values.push(enabled);
+      paramIndex++;
+
+      // Keep legacy/new active flags synchronized.
+      setClauses.push(`is_active = $${paramIndex}`);
+      values.push(enabled);
+      paramIndex++;
+    }
+
+    if (join_mode !== undefined) {
+      setClauses.push(`join_mode = $${paramIndex}`);
+      values.push(join_mode);
+      paramIndex++;
+    }
+
+    if (max_participants !== undefined) {
+      setClauses.push(`max_participants = $${paramIndex}`);
+      values.push(max_participants);
       paramIndex++;
     }
 
@@ -530,13 +638,13 @@ export async function createUserByEmail(email, displayName = null) {
 
 export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
   try {
-    // Build update query dynamically
     if (!ageAttested && !tosAccepted) {
       return { success: false, error: 'No acceptance flags provided' };
     }
-    
-    // Use template literal syntax consistently
+
     let result;
+
+    // 1) age + ToS
     if (ageAttested && tosAccepted) {
       result = await sql`
         UPDATE users
@@ -544,6 +652,7 @@ export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
         WHERE id = ${userId}
         RETURNING id, username, email, role, age_attested_at, tos_accepted_at
       `;
+    // 2) age only
     } else if (ageAttested) {
       result = await sql`
         UPDATE users
@@ -551,6 +660,7 @@ export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
         WHERE id = ${userId}
         RETURNING id, username, email, role, age_attested_at, tos_accepted_at
       `;
+    // 3) ToS only
     } else {
       result = await sql`
         UPDATE users
@@ -559,7 +669,7 @@ export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
         RETURNING id, username, email, role, age_attested_at, tos_accepted_at
       `;
     }
-    
+
     return { success: true, user: result.rows[0] };
   } catch (error) {
     console.error('Update user acceptance error:', error);

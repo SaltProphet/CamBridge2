@@ -1,27 +1,7 @@
-// API endpoint for model registration
-import bcrypt from 'bcryptjs';
-import { createUser, getUserByUsername, getUserByEmail, createRoom } from '../db.js';
-import { 
-  validateUsername, 
-  validateEmail, 
-  validatePassword, 
-  sanitizeInput,
-  rateLimit
-} from '../middleware.js';
-
-// Generate random access code (8 uppercase alphanumeric characters)
-// Format defined by ACCESS_CODE_REGEX in db.js
-function generateAccessCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
+// API endpoint deprecated: password registration removed for MVP passwordless auth
 
 export default async function handler(req, res) {
-  // Only allow POST
+  // Hard-disable legacy password registration route
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
