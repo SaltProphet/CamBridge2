@@ -1,8 +1,31 @@
 // Phase 0: Centralized Policy Gates
 // All authentication and authorization checks go through these gates
 
-import { getUserById, getCreatorById, checkBan } from '../db.js';
 import crypto from 'crypto';
+
+// Lazy load database utilities to avoid import-time database connection errors
+let dbUtils = null;
+
+async function getDbUtils() {
+  if (dbUtils) return dbUtils;
+  try {
+    const db = await import('../db.js');
+    dbUtils = {
+      getUserById: db.getUserById,
+      getCreatorById: db.getCreatorById,
+      checkBan: db.checkBan
+    };
+  } catch (e) {
+    console.warn('⚠️  Could not load database utilities:', e.message);
+    // Return mock functions that return null
+    dbUtils = {
+      getUserById: async () => null,
+      getCreatorById: async () => null,
+      checkBan: async () => null
+    };
+  }
+  return dbUtils;
+}
 
 /**
  * Kill Switch Configuration
@@ -223,7 +246,8 @@ export class PolicyGates {
     }
 
     // 2. Get user
-    const user = await getUserById(userId);
+    const db = await getDbUtils();
+    const user = await db.getUserById(userId);
     if (!user) {
       return { allowed: false, reason: 'User not found' };
     }
@@ -263,7 +287,8 @@ export class PolicyGates {
     }
 
     // 2. Get user
-    const user = await getUserById(userId);
+    const db = await getDbUtils();
+    const user = await db.getUserById(userId);
     if (!user) {
       return { allowed: false, reason: 'User not found' };
     }
@@ -304,7 +329,8 @@ export class PolicyGates {
     }
 
     // 2. Get user
-    const user = await getUserById(userId);
+    const db = await getDbUtils();
+    const user = await db.getUserById(userId);
     if (!user) {
       return { allowed: false, reason: 'User not found' };
     }
