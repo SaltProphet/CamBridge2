@@ -1,10 +1,10 @@
 {
-  "routes": [
-    { "src": "^/login$", "dest": "/login.html" },
-    { "src": "^/register$", "dest": "/register.html" },
-    { "src": "^/dashboard$", "dest": "/dashboard.html" },
-    { "src": "^/room/(.*)$", "dest": "/room.html" },
-    { "src": "^/terms$", "dest": "/terms.html" },
-    { "src": "^/privacy$", "dest": "/privacy.html" }
+  "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/:slug", "destination": "/room.html" }
   ]
 }
