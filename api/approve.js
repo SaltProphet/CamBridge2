@@ -2,7 +2,7 @@
 // Approve a join request (authenticated users only)
 
 import jwt from 'jsonwebtoken';
-import { updateJoinRequestStatus } from './db-simple.js';
+import { updateJoinRequestStatus, getJoinRequestById } from './db-simple.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
@@ -42,6 +42,17 @@ export default async function handler(req, res) {
     // Validate input
     if (!requestId) {
       return res.status(400).json({ error: 'Request ID is required' });
+    }
+
+    // Get the join request to verify ownership
+    const joinRequest = await getJoinRequestById(requestId);
+    if (!joinRequest) {
+      return res.status(404).json({ error: 'Join request not found' });
+    }
+
+    // Verify the authenticated user owns the room associated with this join request
+    if (joinRequest.room_owner_id !== decoded.userId) {
+      return res.status(403).json({ error: 'You do not have permission to approve this join request' });
     }
 
     // Update request status to approved

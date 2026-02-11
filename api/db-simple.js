@@ -293,6 +293,32 @@ export async function getJoinRequestsByOwnerId(ownerId, status = null) {
   }
 }
 
+export async function getJoinRequestById(requestId) {
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const request = mockDb.join_requests.find(jr => jr.id === requestId);
+    if (!request) {
+      return null;
+    }
+    
+    const room = mockDb.rooms.find(r => r.id === request.room_id);
+    return { ...request, room_owner_id: room?.owner_id };
+  }
+  
+  try {
+    const result = await sql`
+      SELECT jr.id, jr.room_id, jr.requester_email, jr.status, jr.created_at, r.owner_id as room_owner_id
+      FROM join_requests jr
+      JOIN rooms r ON jr.room_id = r.id
+      WHERE jr.id = ${requestId}
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get join request error:', error);
+    return null;
+  }
+}
+
 export async function updateJoinRequestStatus(requestId, status) {
   // Use mock database if no SQL connection
   if (!sql) {
