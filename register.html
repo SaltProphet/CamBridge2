@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - CamBridge</title>
+    <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-container">
+            <h1>Create Your Account</h1>
+            <p class="subtitle">Choose your room name and create your account</p>
+            
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="roomSlug">Room Name</label>
+                    <input type="text" id="roomSlug" name="roomSlug" 
+                           placeholder="e.g., mystudio" 
+                           required pattern="[a-z0-9-]+" minlength="3" maxlength="50">
+                    <small class="hint">Your unique URL: cambridge.app/room/your-room-name</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" 
+                           placeholder="At least 8 characters" required minlength="8">
+                </div>
+                
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" name="age_verified" required>
+                        <span>I am 18 years of age or older</span>
+                    </label>
+                </div>
+                
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" name="tos_accepted" required>
+                        <span>I agree to the <a href="#" id="tos-link">Terms of Service</a></span>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Create Account & Room</button>
+                
+                <div class="error" id="error-message"></div>
+                <div class="success" id="success-message"></div>
+            </form>
+            
+            <div class="auth-links">
+                <p>Already have an account? <a href="/login.html">Login here</a></p>
+                <p><a href="/">← Back to home</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ToS Modal -->
+    <div id="tos-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Terms of Service</h2>
+                <button class="modal-close" id="tos-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>1. Acceptance of Terms</h3>
+                <p>By registering for and using CamBridge, you agree to be bound by these Terms of Service.</p>
+                
+                <h3>2. Age Requirement</h3>
+                <p>You must be at least 18 years of age to use this service.</p>
+                
+                <h3>3. Account Responsibilities</h3>
+                <p>You are responsible for maintaining the confidentiality of your account credentials.</p>
+                
+                <h3>4. Privacy</h3>
+                <p>We are committed to protecting your privacy. Your personal information will not be shared with third parties.</p>
+                
+                <p><strong>Last Updated:</strong> February 11, 2026</p>
+            </div>
+            <div class="modal-footer">
+                <button id="tos-accept" class="btn">I Understand</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/register.js"></script>
+</body>
+</html>

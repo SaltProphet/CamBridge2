@@ -25,20 +25,14 @@
             margin-bottom: 1rem;
         }
         
-        .room-link {
-            display: inline-block;
-            padding: 1rem 2rem;
-            background: var(--bg-dark);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            text-decoration: none;
-            font-size: 1.1rem;
-            margin: 1rem 0;
+        .user-info {
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
         }
         
-        .room-link:hover {
-            background: var(--accent);
-            color: var(--bg-dark);
+        .user-info strong {
+            color: var(--accent);
         }
         
         .room-info {
@@ -48,6 +42,172 @@
             margin-bottom: 2rem;
         }
         
+        .room-info h2 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .room-info p {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .room-url-display {
+            background: var(--bg-dark);
+            padding: 1rem;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        
+        .copy-btn:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+        
+        .logout-btn {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+        
+        .loading {
+            color: var(--text);
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+    </style>
+</head>
+<body>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    
+    <div id="loading" class="loading">
+        <p>Loading your room...</p>
+    </div>
+    
+    <div id="room-content" class="room-container" style="display: none;">
+        <div class="room-header">
+            <h1>Welcome to Your Room</h1>
+            <p style="color: var(--text);">Your room: <strong id="room-slug" style="color: var(--accent);">Loading...</strong></p>
+            <div class="user-info">
+                Logged in as: <strong id="user-email">Loading...</strong>
+            </div>
+        </div>
+        
+        <div class="room-info">
+            <h2>Your Room Link</h2>
+            <p>Share this link to invite people to your room:</p>
+            <div class="room-url-display" id="room-url">Loading...</div>
+            <button class="copy-btn" onclick="copyLink()">Copy Link to Clipboard</button>
+        </div>
+        
+        <div class="room-info">
+            <h2>Room Status</h2>
+            <p id="status-text">Loading...</p>
+        </div>
+        
+        <div class="room-info">
+            <h2>Account Settings</h2>
+            <p><a href="/forgot-password.html" style="color: var(--accent);">Change Password</a></p>
+        </div>
+    </div>
+
+    <script>
+        const roomSlug = window.location.pathname.split('/').pop();
+        let roomUrl = '';
+        
+        // Check authentication and load user data
+        async function loadRoomData() {
+            try {
+                const response = await fetch('/api/me', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                // Display user info
+                document.getElementById('user-email').textContent = data.user.email;
+                document.getElementById('room-slug').textContent = roomSlug;
+                
+                // Display room URL
+                roomUrl = `${window.location.origin}/room/${roomSlug}`;
+                document.getElementById('room-url').textContent = roomUrl;
+                document.getElementById('status-text').textContent = `Your room "${roomSlug}" is active and ready! Share the link above to invite people.`;
+                
+                // Show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('room-content').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading room data:', error);
+                document.getElementById('loading').innerHTML = '<p style="color: var(--error);">Error loading room. Please try logging in again.</p><p><a href="/login.html" style="color: var(--accent);">Go to Login</a></p>';
+            }
+        }
+        
+        function copyLink() {
+            navigator.clipboard.writeText(roomUrl).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.background = 'var(--accent)';
+                btn.style.color = 'var(--bg-dark)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--accent)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                prompt('Copy this link:', roomUrl);
+            });
+        }
+        
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) {
+                console.error('Logout error:', e);
+            }
+            window.location.href = '/';
+        }
+        
+        // Load room data on page load
+        loadRoomData();
+    </script>
+</body>
+</html>
         .room-info h2 {
             color: var(--text-light);
             margin-bottom: 1rem;
