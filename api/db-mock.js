@@ -40,6 +40,9 @@ export const sql = async (strings, ...values) => {
         }]
       };
     }
+    
+    // INSERT INTO users
+    if (query.includes('INSERT INTO users')) {
       const [email, username, hash, displayName, isActive, role, ageAt, tosAt, createdAt, updatedAt] = values;
       const id = generateId();
       mockDb.users.push({

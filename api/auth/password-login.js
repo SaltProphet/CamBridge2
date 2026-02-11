@@ -11,9 +11,9 @@ let sqlApi = null;
 async function getSqlApi() {
   if (sqlApi) return sqlApi;
   
-  // If POSTGRES_URL is not set, use mock database immediately
-  if (!process.env.POSTGRES_URL) {
-    console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
+  // If neither POSTGRES_URL nor POSTGRES_PRISMA_URL is set, use mock database immediately
+  if (!process.env.POSTGRES_URL && !process.env.POSTGRES_PRISMA_URL) {
+    console.log('⚠️  POSTGRES_URL/POSTGRES_PRISMA_URL not set, using in-memory mock database');
     const mockDb = await import('../db-mock.js');
     sqlApi = mockDb.sql;
     return sqlApi;
@@ -33,6 +33,20 @@ async function getSqlApi() {
 
 const LOGIN_MAX_REQUESTS = 10;
 const ONE_HOUR_MS = 3600000;
+
+// Create session in database
+async function createSession(userId, token, expiresAt, sql) {
+  try {
+    await sql`
+      INSERT INTO sessions (user_id, token, expires_at)
+      VALUES (${userId}, ${token}, ${expiresAt})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Create session error:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -107,7 +121,7 @@ export default async function handler(req, res) {
 
     // Create session record with 7-day expiration
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await createSession(user.id, jwtToken, expiresAt);
+    await createSession(user.id, jwtToken, expiresAt, sql);
 
     logPolicyDecision({ 
       requestId, 
