@@ -187,8 +187,14 @@ export function constructWebhookEvent(body, signature) {
       .update(signedContent)
       .digest('hex');
 
+    const expectedBuffer = Buffer.from(expectedHash);
+    const providedBuffer = Buffer.from(hash);
+    if (expectedBuffer.length !== providedBuffer.length) {
+      throw new Error('Signature verification failed');
+    }
+
     // Use timing-safe comparison
-    if (!crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expectedHash))) {
+    if (!crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
       throw new Error('Signature verification failed');
     }
 

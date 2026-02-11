@@ -7,22 +7,20 @@
 
 import test from 'node:test';
 import assert from 'node:assert';
-import { 
-  createCheckoutSession, 
-  constructWebhookEvent, 
-  processStripeEvent 
-} from '../providers/stripe.js';
-import { 
-  handleStripeWebhook,
-  handlePaymentSuccess
-} from './stripe-webhook.js';
 import crypto from 'crypto';
 
 // Test configuration
 const TEST_WEBHOOK_SECRET = 'whsec_test_123456789';
-process.env.STRIPE_SECRET_KEY = 'sk_test_51234567890'; 
+process.env.STRIPE_SECRET_KEY = 'sk_test_51234567890';
 process.env.STRIPE_PUBLIC_KEY = 'pk_test_51234567890';
 process.env.STRIPE_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
+
+const { 
+  createCheckoutSession, 
+  constructWebhookEvent, 
+  processStripeEvent 
+} = await import('../providers/stripe.js');
+const { handleStripeWebhook } = await import('./stripe-webhook.js');
 
 /**
  * Helper: Create a valid Stripe webhook signature
@@ -80,7 +78,8 @@ test('Stripe: constructWebhookEvent verifies signature', () => {
 // Test 4: Reject invalid signature
 test('Stripe: constructWebhookEvent rejects invalid signature', () => {
   const payload = JSON.stringify({ type: 'test.event' });
-  const badSignature = 't=123456789,v1=badsignaturehash';
+  const timestamp = Math.floor(Date.now() / 1000);
+  const badSignature = `t=${timestamp},v1=badsignaturehash`;
 
   assert.throws(
     () => constructWebhookEvent(payload, badSignature),
