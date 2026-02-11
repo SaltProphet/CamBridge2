@@ -2,6 +2,20 @@
 
 ## Vercel Deployment
 
+### ⚠️ 404 Error Fix (Feb 2026)
+
+**Issue**: Getting 404 errors after deployment? This was fixed by properly configuring `vercel.json`.
+
+**Solution**: The repository now includes:
+- Proper `vercel.json` configuration (specifies static site, no build needed)
+- `.vercelignore` file (excludes unnecessary files from deployment)
+- Clear instructions below for deployment
+
+If you're still getting 404 errors, ensure:
+1. Your Vercel project is linked to the correct repository
+2. Environment variables are set (see below)
+3. You've deployed the latest commit with the fixed configuration
+
 ### Prerequisites
 
 1. **Vercel Account** - Sign up at [vercel.com](https://vercel.com)
@@ -99,14 +113,34 @@ DEEPGRAM_KEY=your-deepgram-api-key-optional
 
 ### Troubleshooting
 
+#### Getting 404 Errors on All Pages
+**Symptoms**: Home page and all routes return 404
+**Causes**:
+1. Project not deployed correctly
+2. Incorrect vercel.json configuration (fixed as of Feb 2026)
+3. Missing or incorrect build settings
+
+**Solutions**:
+1. Ensure you've pushed the latest code with fixed `vercel.json`
+2. Verify deployment completed successfully in Vercel dashboard
+3. Check Vercel deployment logs for errors
+4. Ensure `outputDirectory` is set to `.` (root directory)
+5. Try redeploying: `vercel --prod` or trigger redeploy in dashboard
+
+#### Specific Routes Return 404
+**Symptoms**: Home page works but `/dashboard` or other routes return 404
+**Cause**: Clean URLs not working properly
+**Solution**: Ensure `vercel.json` has `"cleanUrls": true`
+
 #### Build Fails
 - **Error**: `vite: not found`
-  - **Fix**: Run `npm install` before building
+  - **Fix**: This is a legacy error. The project no longer uses Vite. Ensure `buildCommand` in `vercel.json` is set to `echo 'No build required'`
   
 #### API Routes Return 404
-- **Cause**: API files were copied to `dist/api` instead of staying at root
-  - **Fix**: Ensure `vite.config.js` does NOT copy `api` to dist
-  - **Verify**: `api/` should exist at project root, not in `dist/`
+- **Cause**: API directory not detected by Vercel
+  - **Fix**: Ensure `api/` directory exists at project root
+  - **Verify**: Check deployment logs show "Serverless Functions" being created
+  - **Test**: Visit `/api/health` after deployment
 
 #### Database Connection Fails
 - **Check**: Environment variables are set in Vercel
