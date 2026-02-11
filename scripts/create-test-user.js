@@ -22,6 +22,20 @@ const TEST_DISPLAY_NAME = 'Test Creator';
 
 async function createTestUser() {
   try {
+    // Check if database URL is configured
+    if (!process.env.POSTGRES_URL_NON_POOLING && !process.env.DATABASE_URL) {
+      console.error('❌ Database not configured');
+      console.log('\n📋 To use this script, configure your database:');
+      console.log('   Add POSTGRES_URL_NON_POOLING to .env.local');
+      console.log('   Example: POSTGRES_URL_NON_POOLING=postgresql://user:pass@localhost/db');
+      console.log('\n✅ Alternatively, use these credentials manually:');
+      console.log(`   Email: ${TEST_EMAIL}`);
+      console.log(`   Password: ${TEST_PASSWORD}`);
+      console.log(`   Slug: ${TEST_SLUG}`);
+      console.log('\n💡 For frontend testing without DB, use the credentials directly in creator-login.html');
+      process.exit(0);
+    }
+
     console.log('🔧 Creating test user...');
     
     // Hash password
@@ -86,6 +100,15 @@ async function createTestUser() {
     if (error.message.includes('duplicate key')) {
       console.log(`\n✓ Test user already exists`);
       console.log('\n📋 Test Credentials:');
+      console.log(`   Email: ${TEST_EMAIL}`);
+      console.log(`   Password: ${TEST_PASSWORD}`);
+      process.exit(0);
+    }
+    if (error.message.includes('connect') || error.message.includes('ECONNREFUSED')) {
+      console.log('\n❌ Database connection failed');
+      console.log('   Check your POSTGRES_URL_NON_POOLING in .env.local');
+      console.log('   Ensure PostgreSQL is running');
+      console.log('\n✅ You can still use these credentials manually:');
       console.log(`   Email: ${TEST_EMAIL}`);
       console.log(`   Password: ${TEST_PASSWORD}`);
       process.exit(0);
