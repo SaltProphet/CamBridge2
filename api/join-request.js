@@ -11,11 +11,19 @@ import {
 } from './db.js';
 import { authenticate, consumeRateLimit, buildRateLimitKey } from './middleware.js';
 import { getPaymentsProvider } from './providers/payments.js';
-import { PolicyGates } from './policies/gates.js';
+import { PolicyGates, killSwitch } from './policies/gates.js';
 import { getRequestId, logPolicyDecision } from './logging.js';
 
 const JOIN_REQUEST_MAX_REQUESTS = 10;
 const ONE_HOUR_MS = 3600000;
+const DEFAULT_DUPLICATE_WINDOW_MINUTES = 30;
+
+const PLAN_PARTICIPANT_CAPS = {
+  free: 10,
+  basic: 25,
+  pro: 50,
+  unlimited: Infinity
+};
 
 function errorPayload(error, code, extras = {}) {
   return {
@@ -104,7 +112,6 @@ export async function processJoinRequest(req, deps = {}) {
     checkBanStatusFn = PolicyGates.checkBanStatus.bind(PolicyGates),
     getApprovedParticipantCountFn = getApprovedParticipantCount,
     hasDuplicatePendingRequestFn = hasDuplicatePendingRequest,
-    checkRateLimitFn = checkJoinRequestRateLimit,
     killSwitchEnabledFn = () => killSwitch.isJoinApprovalsEnabled()
   } = deps;
 
@@ -115,16 +122,17 @@ export async function processJoinRequest(req, deps = {}) {
   const requestId = getRequestId(req);
   const endpoint = '/api/join-request';
 
-  // Authenticate user
-  const auth = await authenticate(req);
+  // 1) Authenticate user
+  const auth = await authenticateFn(req);
   if (!auth.authenticated) {
     logPolicyDecision({ requestId, endpoint, actorId: null, decision: 'deny', reason: auth.error || 'Unauthorized' });
-    return res.status(401).json({ error: auth.error || 'Unauthorized' });
+    return { status: 401, body: errorPayload(auth.error || 'Unauthorized', 'UNAUTHORIZED') };
   }
 
   const userId = auth.user.id;
   const { creatorSlug, roomSlug, accessCode } = req.body || {};
 
+  // 2) Validate input
   if (!creatorSlug || typeof creatorSlug !== 'string') {
     return {
       status: 400,
@@ -132,6 +140,7 @@ export async function processJoinRequest(req, deps = {}) {
     };
   }
 
+  // 3) Check kill switch
   if (!killSwitchEnabledFn()) {
     return {
       status: 403,
@@ -139,91 +148,156 @@ export async function processJoinRequest(req, deps = {}) {
     };
   }
 
+  // 4) Look up creator
   const creator = await getCreatorBySlugFn(creatorSlug);
   if (!creator) {
     return { status: 404, body: errorPayload('Creator not found', 'CREATOR_NOT_FOUND') };
   }
 
-    if (!policyCheck.allowed) {
-      logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: policyCheck.reason || 'join request policy blocked', metadata: { creatorId: creator.id } });
-      const isBanned = policyCheck.reason?.includes('banned');
-      return res.status(403).json({ 
-        error: policyCheck.reason,
-        requiresAcceptance: policyCheck.reason?.includes('attestation') || policyCheck.reason?.includes('Terms'),
-        banned: isBanned,
-        reason: isBanned ? policyCheck.reason : undefined
-      });
-    }
+  // 5) Check creator status
+  const creatorCheck = await checkCreatorStatusFn(creator);
+  if (!creatorCheck.allowed) {
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: creatorCheck.reason || 'creator inactive', metadata: { creatorId: creator.id } });
+    return { status: 403, body: errorPayload(creatorCheck.reason || 'Creator is not active', 'CREATOR_INACTIVE') };
+  }
 
-    // Rate limit check
-    const rateLimitCheck = await consumeRateLimit({
-      key: buildRateLimitKey('join-request', `user:${userId}:creator:${creator.id}`),
-      maxRequests: JOIN_REQUEST_MAX_REQUESTS,
-      windowMs: ONE_HOUR_MS
-    });
-    if (!rateLimitCheck.allowed) {
-      logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: 'join request rate limit exceeded', metadata: { creatorId: creator.id } });
-      return res.status(429).json({ 
-        error: 'Too many join requests. Please try again later.',
-        remaining: rateLimitCheck.remaining
-      });
-    }
-
-    // 5) join mode behavior
-    const joinMode = room.join_mode || 'knock';
-    if (joinMode === 'keyed') {
-      const cleanAccessCode = typeof accessCode === 'string' ? accessCode.trim().toUpperCase() : '';
-      if (!cleanAccessCode || cleanAccessCode !== room.access_code) {
-        return {
-          status: 403,
-          body: errorPayload('Valid room access code is required', 'ACCESS_CODE_REQUIRED')
-        };
+  // 6) Check user compliance (age, ToS)
+  const complianceCheck = await checkUserComplianceFn(userId);
+  if (!complianceCheck.allowed) {
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: complianceCheck.reason || 'user compliance required', metadata: { creatorId: creator.id } });
+    return {
+      status: 403,
+      body: {
+        ...errorPayload(complianceCheck.reason || 'Age attestation and ToS acceptance required', 'USER_COMPLIANCE_REQUIRED'),
+        requiresAcceptance: true
       }
-    } else if (!['open', 'knock'].includes(joinMode)) {
+    };
+  }
+
+  // 7) Check ban status
+  const banCheck = await checkBanStatusFn(creator.id, userId, req);
+  if (!banCheck.allowed) {
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: 'user is banned', metadata: { creatorId: creator.id } });
+    return {
+      status: 403,
+      body: {
+        ...errorPayload(banCheck.reason || 'You are banned from this creator', 'USER_BANNED'),
+        banned: true
+      }
+    };
+  }
+
+  // 8) Rate limit check
+  const rateLimitCheck = await consumeRateLimit({
+    key: buildRateLimitKey('join-request', `user:${userId}:creator:${creator.id}`),
+    maxRequests: JOIN_REQUEST_MAX_REQUESTS,
+    windowMs: ONE_HOUR_MS
+  });
+  if (!rateLimitCheck.allowed) {
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: 'rate limit exceeded', metadata: { creatorId: creator.id } });
+    return {
+      status: 429,
+      body: errorPayload('Too many join requests. Please try again later.', 'RATE_LIMIT_EXCEEDED', { remaining: rateLimitCheck.remaining })
+    };
+  }
+
+  // 9) Get or create default room if roomSlug not specified
+  let room = null;
+  if (roomSlug) {
+    room = await getRoomByNameFn(roomSlug, creator.id);
+    if (!room) {
+      return { status: 404, body: errorPayload('Room not found', 'ROOM_NOT_FOUND') };
+    }
+  } else {
+    // Use creator's default room (usually 'main')
+    room = await getRoomByNameFn('main', creator.id);
+    if (!room) {
+      return { status: 404, body: errorPayload('Creator has no default room', 'NO_DEFAULT_ROOM') };
+    }
+  }
+
+  // 10) Check room is active
+  if (!room.enabled || !room.is_active) {
+    return {
+      status: 403,
+      body: errorPayload('Room is not currently available', 'ROOM_INACTIVE')
+    };
+  }
+
+  // 11) Handle join mode and access codes
+  const joinMode = room.join_mode || 'knock';
+  if (joinMode === 'keyed') {
+    const cleanAccessCode = typeof accessCode === 'string' ? accessCode.trim().toUpperCase() : '';
+    if (!cleanAccessCode || cleanAccessCode !== room.access_code) {
       return {
-        status: 400,
-        body: errorPayload('Unsupported room join mode', 'INVALID_JOIN_MODE')
+        status: 403,
+        body: errorPayload('Valid room access code is required', 'ACCESS_CODE_REQUIRED')
       };
     }
+  } else if (!['open', 'knock'].includes(joinMode)) {
+    return {
+      status: 400,
+      body: errorPayload('Unsupported room join mode', 'INVALID_JOIN_MODE')
+    };
+  }
 
-    // 6) room participant cap / plan cap
-    const planCap = resolvePlanParticipantCap(creator.plan);
-    const roomCap = Number.isInteger(room.max_participants) && room.max_participants > 0
-      ? room.max_participants
-      : Infinity;
-    const effectiveCap = Math.min(planCap, roomCap);
+  // 12) Check room participant cap / plan cap
+  const planCap = resolvePlanParticipantCap(creator.plan);
+  const roomCap = Number.isInteger(room.max_participants) && room.max_participants > 0
+    ? room.max_participants
+    : Infinity;
+  const effectiveCap = Math.min(planCap, roomCap);
 
-    if (Number.isFinite(effectiveCap)) {
-      const approvedCount = await getApprovedParticipantCountFn(room.id);
-      if (approvedCount >= effectiveCap) {
-        return {
-          status: 403,
-          body: errorPayload('Room participant limit reached', 'ROOM_CAP_REACHED')
-        };
-      }
-    }
-
-    // 7) duplicate pending request suppression
-    const duplicatePending = await hasDuplicatePendingRequestFn(
-      creator.id,
-      room.id,
-      userId,
-      process.env.JOIN_REQUEST_DUP_WINDOW_MINUTES
-    );
-
-    if (duplicatePending) {
+  if (Number.isFinite(effectiveCap)) {
+    const approvedCount = await getApprovedParticipantCountFn(room.id);
+    if (approvedCount >= effectiveCap) {
       return {
-        status: 409,
-        body: errorPayload('A pending request already exists for this room', 'DUPLICATE_PENDING_REQUEST')
+        status: 403,
+        body: errorPayload('Room participant limit reached', 'ROOM_CAP_REACHED', { cap: effectiveCap })
       };
     }
   }
 
+  // 13) Suppress duplicate pending requests
+  const duplicatePending = await hasDuplicatePendingRequestFn(
+    creator.id,
+    room.id,
+    userId,
+    process.env.JOIN_REQUEST_DUP_WINDOW_MINUTES
+  );
+
+  if (duplicatePending) {
+    return {
+      status: 409,
+      body: errorPayload('A pending request already exists for this room', 'DUPLICATE_PENDING_REQUEST')
+    };
+  }
+
+  // 14) Generate tracking hashes
   const { ipHash, deviceHash } = generateTrackingHashes(req, userId);
 
-    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'allow', reason: 'join request created', metadata: { creatorId: creator.id, joinRequestId: requestResult.request.id } });
+  // 15) Create join request
+  const requestResult = await createJoinRequestFn(
+    creator.id,
+    room.id,
+    userId,
+    ipHash,
+    deviceHash
+  );
 
-    return res.status(201).json({
+  if (!requestResult.success) {
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'error', reason: 'failed to create join request', metadata: { creatorId: creator.id } });
+    return {
+      status: 500,
+      body: errorPayload('Failed to create join request', 'JOIN_REQUEST_FAILED')
+    };
+  }
+
+  logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'allow', reason: 'join request created', metadata: { creatorId: creator.id, joinRequestId: requestResult.request.id } });
+
+  return {
+    status: 201,
+    body: {
       success: true,
       message: 'Join request created. Waiting for creator approval.',
       requestId: requestResult.request.id,
@@ -238,9 +312,10 @@ export default async function handler(req, res) {
     const result = await processJoinRequest(req);
     return res.status(result.status).json(result.body);
   } catch (error) {
-    console.error('Join request error:', { requestId, endpoint, error: error.message });
-    return res.status(500).json({ 
-      error: 'An error occurred while creating join request' 
+    const requestId = getRequestId(req);
+    console.error('Join request error:', { requestId, endpoint: '/api/join-request', error: error.message, stack: error.stack });
+    return res.status(500).json({
+      error: 'An error occurred while creating join request'
     });
   }
 }
