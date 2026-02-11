@@ -39,8 +39,8 @@ DEEPGRAM_KEY=your-deepgram-api-key-optional
    Or connect via Vercel dashboard (Import Git Repository)
 
 2. **Configure Build Settings**
-   - Build Command: `echo 'Static site'` (auto-detected from vercel.json)
-   - Output Directory: `.` (root directory, auto-detected from vercel.json)
+   - Build Command: `echo 'Static site'` (specified in vercel.json)
+   - Output Directory: `.` (root directory, specified in vercel.json)
    - Install Command: `npm install` (required for API dependencies)
 
 3. **Set Environment Variables**
