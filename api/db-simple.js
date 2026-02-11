@@ -18,7 +18,7 @@ const mockDb = {
   idCounter: 1
 };
 
-function generateUUID() {
+function generateMockId() {
   return `mock-uuid-${mockDb.idCounter++}`;
 }
 
@@ -84,7 +84,7 @@ export async function createUser(email, passwordHash) {
     }
     
     const user = {
-      id: generateUUID(),
+      id: generateMockId(),
       email,
       password_hash: passwordHash,
       created_at: new Date().toISOString()
@@ -156,7 +156,7 @@ export async function createRoom(ownerId, slug) {
     }
     
     const room = {
-      id: generateUUID(),
+      id: generateMockId(),
       owner_id: ownerId,
       slug,
       created_at: new Date().toISOString()
@@ -224,7 +224,7 @@ export async function createJoinRequest(roomId, requesterEmail) {
   // Use mock database if no SQL connection
   if (!sql) {
     const request = {
-      id: generateUUID(),
+      id: generateMockId(),
       room_id: roomId,
       requester_email: requesterEmail,
       status: 'pending',

@@ -7,6 +7,7 @@ import { getUserByEmail } from './db-simple.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRY = '7d'; // 7 days
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
 
     // Set HttpOnly cookie
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
-    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax${isProduction ? '; Secure' : ''}`);
+    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${isProduction ? '; Secure' : ''}`);
 
     // Return user data (without password hash)
     return res.status(200).json({

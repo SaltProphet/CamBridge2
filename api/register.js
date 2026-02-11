@@ -4,6 +4,8 @@
 import bcrypt from 'bcryptjs';
 import { createUser, getUserByEmail } from './db-simple.js';
 
+const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -34,8 +36,8 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Hash password with bcrypt (12 rounds)
-    const passwordHash = await bcrypt.hash(password, 12);
+    // Hash password with bcrypt (12 rounds by default)
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     // Create user
     const result = await createUser(email, passwordHash);
