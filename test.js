@@ -128,6 +128,39 @@ if (appContent.includes('const LANGUAGE_STRINGS = {') &&
     process.exit(1);
 }
 
+
+// Test 11: Dashboard subscription API wiring
+console.log('\n✅ Test 11: Dashboard Subscription API Wiring');
+const dashboardContent = fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8');
+if (dashboardContent.includes("fetch('/api/creator/subscription'") &&
+    dashboardContent.includes("fetch('/api/creator/cancel'")) {
+    console.log('   PASSED - Dashboard calls subscription and cancel endpoints');
+} else {
+    console.log('   FAILED - Dashboard subscription endpoint wiring missing');
+    process.exit(1);
+}
+
+// Test 12: Subscribe page and endpoint wiring
+console.log('\n✅ Test 12: Subscribe Page Endpoint Wiring');
+const subscribeContent = fs.readFileSync(path.join(__dirname, 'subscribe.html'), 'utf8');
+if (subscribeContent.includes("fetch('/api/creator/subscribe'") &&
+    subscribeContent.includes('input[name="plan"]')) {
+    console.log('   PASSED - Subscribe page exists with plan selection and subscribe endpoint');
+} else {
+    console.log('   FAILED - Subscribe page missing endpoint or plan selection');
+    process.exit(1);
+}
+
+// Test 13: Duplicate submission guards for subscribe/cancel
+console.log('\n✅ Test 13: Duplicate Submission Guards');
+if (dashboardContent.includes('if (subscriptionLoading) return;') &&
+    subscribeContent.includes('if (isSubmitting) return;')) {
+    console.log('   PASSED - Duplicate submission protection present for cancel and subscribe flows');
+} else {
+    console.log('   FAILED - Missing duplicate submission guards');
+    process.exit(1);
+}
+
 console.log('\n' + '='.repeat(60));
 console.log('\n✅ ALL TESTS PASSED\n');
 console.log('Summary:');

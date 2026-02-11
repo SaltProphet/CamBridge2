@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscribe - CAMBRIDGE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #000;
+            --text-light: #fff;
+            --text-dim: #777;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+            --error: #ff4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 720px;
+            background: rgba(0,255,136,0.05);
+            border: 1px solid rgba(0,255,136,0.3);
+            padding: 2rem;
+        }
+
+        h1 { color: var(--accent); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.08rem; }
+
+        .plans { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
+
+        .plan-option {
+            border: 1px solid rgba(0,255,136,0.35);
+            padding: 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: start;
+            cursor: pointer;
+        }
+
+        .plan-option input { margin-top: 0.3rem; accent-color: var(--accent); }
+
+        .plan-name { color: var(--accent); margin-bottom: 0.25rem; }
+        .plan-meta { color: var(--text-dim); font-size: 0.85rem; }
+
+        .btn {
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+        }
+
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-primary:hover { background: var(--accent-dim); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .back-link { color: var(--text-dim); text-decoration: none; align-self: center; }
+
+        .error, .success { margin-top: 0.75rem; min-height: 1rem; font-size: 0.85rem; }
+        .error { color: var(--error); }
+        .success { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>Select a Subscription Plan</h1>
+        <form id="subscribe-form">
+            <div class="plans">
+                <label class="plan-option" for="plan-basic">
+                    <input type="radio" id="plan-basic" name="plan" value="basic" checked>
+                    <div>
+                        <div class="plan-name">Basic</div>
+                        <div class="plan-meta">Starter creator tools and standard support.</div>
+                    </div>
+                </label>
+                <label class="plan-option" for="plan-pro">
+                    <input type="radio" id="plan-pro" name="plan" value="pro">
+                    <div>
+                        <div class="plan-name">Pro</div>
+                        <div class="plan-meta">Priority support, expanded limits, and premium creator features.</div>
+                    </div>
+                </label>
+                <label class="plan-option" for="plan-elite">
+                    <input type="radio" id="plan-elite" name="plan" value="elite">
+                    <div>
+                        <div class="plan-name">Elite</div>
+                        <div class="plan-meta">Full suite with highest limits and premium assistance.</div>
+                    </div>
+                </label>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary" id="subscribe-btn">Start Checkout</button>
+                <a href="/dashboard" class="back-link">← Back to dashboard</a>
+            </div>
+            <div class="error" id="subscribe-error"></div>
+            <div class="success" id="subscribe-success"></div>
+        </form>
+    </main>
+
+    <script>
+        const form = document.getElementById('subscribe-form');
+        const subscribeBtn = document.getElementById('subscribe-btn');
+        const errorEl = document.getElementById('subscribe-error');
+        const successEl = document.getElementById('subscribe-success');
+
+        let isSubmitting = false;
+
+        function redirectToLogin() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            window.location.href = '/login';
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (isSubmitting) return;
+
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                redirectToLogin();
+                return;
+            }
+
+            const selectedPlan = form.querySelector('input[name="plan"]:checked')?.value;
+            if (!selectedPlan) {
+                errorEl.textContent = 'Please choose a plan.';
+                return;
+            }
+
+            isSubmitting = true;
+            errorEl.textContent = '';
+            successEl.textContent = '';
+            subscribeBtn.disabled = true;
+            subscribeBtn.textContent = 'Starting...';
+
+            try {
+                const response = await fetch('/api/creator/subscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ plan: selectedPlan })
+                });
+
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
+
+                const data = await response.json();
+                if (!response.ok) {
+                    errorEl.textContent = data.error || 'Unable to start checkout. Please try again.';
+                    return;
+                }
+
+                successEl.textContent = 'Subscription request created. Redirecting...';
+                const redirectUrl = data.checkoutUrl || data.redirectUrl || '/dashboard';
+                window.location.href = redirectUrl;
+            } catch (error) {
+                console.error('Subscribe error:', error);
+                errorEl.textContent = 'Network error while starting checkout.';
+            } finally {
+                isSubmitting = false;
+                subscribeBtn.disabled = false;
+                subscribeBtn.textContent = 'Start Checkout';
+            }
+        });
+    </script>
+</body>
+</html>
