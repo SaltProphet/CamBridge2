@@ -25,7 +25,7 @@ console.log('  DB:', process.env.POSTGRES_URL ? '✓ Connected' : '⚠ Mock mode
 (async () => {
   console.log('📦 Starting module imports...');
   
-  let registerHandler, loginHandler, meHandler, createRoomHandler, joinRequestHandler, approveHandler, joinStatusHandler, initDbHandler;
+  let registerHandler, loginHandler, meHandler, createRoomHandler, joinRequestHandler, approveHandler, joinStatusHandler, initDbHandler, logoutHandler;
   
   try {
     // Import all handlers
@@ -37,6 +37,7 @@ console.log('  DB:', process.env.POSTGRES_URL ? '✓ Connected' : '⚠ Mock mode
     approveHandler = (await import('./api/approve.js')).default;
     joinStatusHandler = (await import('./api/join-status.js')).default;
     initDbHandler = (await import('./api/init-db.js')).default;
+    logoutHandler = (await import('./api/logout.js')).default;
     
     console.log('✓ All handlers loaded successfully\n');
     
@@ -51,6 +52,7 @@ console.log('  DB:', process.env.POSTGRES_URL ? '✓ Connected' : '⚠ Mock mode
     app.post('/api/register', (req, res) => registerHandler(req, res));
     app.post('/api/login', (req, res) => loginHandler(req, res));
     app.get('/api/me', (req, res) => meHandler(req, res));
+    app.post('/api/logout', (req, res) => logoutHandler(req, res));
     app.post('/api/create-room', (req, res) => createRoomHandler(req, res));
     app.post('/api/join-request', (req, res) => joinRequestHandler(req, res));
     app.post('/api/approve', (req, res) => approveHandler(req, res));

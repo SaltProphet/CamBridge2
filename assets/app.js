@@ -85,9 +85,15 @@ async function checkAuth() {
 }
 
 async function logout() {
-    // Clear cookie by calling logout endpoint (if exists) or just reload
+    // Clear cookie by calling logout endpoint
     currentUser = null;
-    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    try {
+        await apiCall('/api/logout', {
+            method: 'POST',
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
     showAuthView();
 }
 
