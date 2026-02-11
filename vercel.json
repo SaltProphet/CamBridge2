@@ -4,7 +4,6 @@
     { "source": "/register", "destination": "/register.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/terms", "destination": "/terms.html" },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/:slug", "destination": "/room.html" }
+    { "source": "/privacy", "destination": "/privacy.html" }
   ]
 }
