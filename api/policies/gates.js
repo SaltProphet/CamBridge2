@@ -8,6 +8,18 @@ let dbUtils = null;
 
 async function getDbUtils() {
   if (dbUtils) return dbUtils;
+  
+  // If POSTGRES_URL is not set, return mock functions immediately
+  if (!process.env.POSTGRES_URL) {
+    console.log('⚠️  POSTGRES_URL not set, using mock database utilities');
+    dbUtils = {
+      getUserById: async () => null,
+      getCreatorById: async () => null,
+      checkBan: async () => null
+    };
+    return dbUtils;
+  }
+  
   try {
     const db = await import('../db.js');
     dbUtils = {

@@ -11,11 +11,19 @@ let sqlApi = null;
 async function getSqlApi() {
   if (sqlApi) return sqlApi;
   
+  // If POSTGRES_URL is not set, use mock database immediately
+  if (!process.env.POSTGRES_URL) {
+    console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
+    const mockDb = await import('../db-mock.js');
+    sqlApi = mockDb.sql;
+    return sqlApi;
+  }
+  
   try {
     const pgModule = await import('@vercel/postgres');
     sqlApi = pgModule.sql;
   } catch (e) {
-    console.warn('⚠️  PostgreSQL not available, using in-memory mock database');
+    console.warn('⚠️  PostgreSQL not available, using in-memory mock database:', e.message);
     const mockDb = await import('../db-mock.js');
     sqlApi = mockDb.sql;
   }

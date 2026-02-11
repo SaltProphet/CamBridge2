@@ -11,11 +11,19 @@ let sqlApi = null;
 async function getSqlApi() {
   if (sqlApi) return sqlApi;
   
+  // If POSTGRES_URL is not set, use mock database immediately
+  if (!process.env.POSTGRES_URL) {
+    console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
+    const mockDb = await import('../db-mock.js');
+    sqlApi = mockDb.sql;
+    return sqlApi;
+  }
+  
   try {
     const pgModule = await import('@vercel/postgres');
     sqlApi = pgModule.sql;
   } catch (e) {
-    console.warn('⚠️  PostgreSQL not available, using in-memory mock database');
+    console.warn('⚠️  PostgreSQL not available, using in-memory mock database:', e.message);
     const mockDb = await import('../db-mock.js');
     sqlApi = mockDb.sql;
   }
@@ -90,13 +98,19 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('📝 Registration request received');
+    console.log('Body:', req.body);
+    
     // Get sql API (real DB or mock)
     const sql = await getSqlApi();
+    console.log('✓ Database API loaded (mock or real)');
 
     // Check if BETA_MODE is enabled
     if (!killSwitch.isBetaMode()) {
+      console.log('❌ BETA_MODE disabled');
       return res.status(403).json({ error: 'BETA_MODE is not enabled' });
     }
+    console.log('✓ BETA_MODE enabled');
 
     const requestId = getRequestId(req);
     const endpoint = '/api/auth/password-register';
@@ -163,6 +177,7 @@ export default async function handler(req, res) {
     const existingUser = await sql`
       SELECT id FROM users WHERE email = ${normalizedEmail}
     `;
+    console.log('✓ Checked for existing user');
     if (existingUser.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -175,16 +190,20 @@ export default async function handler(req, res) {
       const existingSlug = await sql`
         SELECT id FROM creators WHERE slug = ${slug}
       `;
+      console.log('✓ Checked slug uniqueness');
       if (existingSlug.rows.length > 0) {
         return res.status(409).json({ error: 'Slug is already taken' });
       }
     }
 
     // Hash password
+    console.log('Hashing password...');
     const passwordHash = await bcrypt.hash(password, 10);
+    console.log('✓ Password hashed');
 
     // Create user with password hash
     const now = new Date();
+    console.log('Creating user record...');
     const userResult = await sql`
       INSERT INTO users (
         username, email, password_hash, display_name, is_active, 
@@ -203,6 +222,7 @@ export default async function handler(req, res) {
       )
       RETURNING id, username, email, display_name
     `;
+    console.log('✓ User record created:', userResult);
 
     if (userResult.rows.length === 0) {
       console.error('Failed to create user');
@@ -291,10 +311,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Password registration error:', error.message);
-    console.error('Error details:', error.code || error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error code:', error.code);
     return res.status(500).json({ 
       error: 'Registration failed. Please try again.',
-      details: error.message // Remove in production
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }

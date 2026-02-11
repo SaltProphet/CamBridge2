@@ -29,18 +29,38 @@ console.log('  BETA_MODE:', process.env.BETA_MODE ? '✓ Set' : '✗ Not set');
 (async () => {
   console.log('📦 Starting module imports...');
   
+  let passwordRegisterHandler, passwordLoginHandler, creatorPublicInfoHandler;
+  
   try {
     console.log('  Importing password-register handler...');
-    const { default: passwordRegisterHandler } = await import('./api/auth/password-register.js');
-    console.log('    ✓ password-register loaded');
+    try {
+      const mod = await import('./api/auth/password-register.js');
+      passwordRegisterHandler = mod.default;
+      console.log('    ✓ password-register loaded');
+    } catch (e) {
+      console.error('    ✗ Failed to load password-register:', e.message);
+      throw e;
+    }
     
     console.log('  Importing password-login handler...');
-    const { default: passwordLoginHandler } = await import('./api/auth/password-login.js');
-    console.log('    ✓ password-login loaded');
+    try {
+      const mod = await import('./api/auth/password-login.js');
+      passwordLoginHandler = mod.default;
+      console.log('    ✓ password-login loaded');
+    } catch (e) {
+      console.error('    ✗ Failed to load password-login:', e.message);
+      throw e;
+    }
     
     console.log('  Importing creator public-info handler...');
-    const { default: creatorPublicInfoHandler } = await import('./api/creator/public-info.js');
-    console.log('    ✓ public-info loaded');
+    try {
+      const mod = await import('./api/creator/public-info.js');
+      creatorPublicInfoHandler = mod.default;
+      console.log('    ✓ public-info loaded');
+    } catch (e) {
+      console.error('    ✗ Failed to load public-info:', e.message);
+      throw e;
+    }
     
     console.log('✓ All handlers loaded successfully\n');
     
