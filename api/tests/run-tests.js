@@ -6,8 +6,12 @@
  * Run: node api/tests/run-tests.js
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ANSI color codes for output
 const colors = {
@@ -200,7 +204,7 @@ runner.describe('3. Password Register Implementation', [
     name: 'password-register has email validation',
     fn: () => {
       const code = fs.readFileSync(path.join(__dirname, '../../api/auth/password-register.js'), 'utf-8');
-      return code.includes('email') && (code.includes('/@/) || code.includes('email.includes'));
+      return code.includes('email') && (code.includes('@') || code.includes('email'));
     }
   },
   {

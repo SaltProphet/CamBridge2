@@ -17,7 +17,7 @@ CamBridge has successfully completed Phase 1 & 2 with a fully functional multi-t
 | **Feature Completeness** | Phase 1 + 2 Done | ✅ 90% |
 | **Code Quality** | Refactored & Tested | ✅ 4.5/5 |
 | **Security** | CodeQL Passing | ✅ 5/5 |
-| **Testing Infrastructure** | Just Added | ⚠️ 2/5 |
+| **Testing Infrastructure** | Plan + Runner Added | ⚠️ 3/5 |
 | **Documentation** | Comprehensive | ✅ 5/5 |
 | **Deployment Readiness** | Prerequisites Only | ⚠️ 3/5 |
 | **payments Integration** | Manual Only | ⚠️ 1/5 |
@@ -63,6 +63,22 @@ CamBridge has successfully completed Phase 1 & 2 with a fully functional multi-t
 - ✅ Speech-to-text via Deepgram
 
 **Impact:** Zero vendor lock-in. Can swap providers with env variables.
+
+---
+
+### Beta Mode: Creator Self-Signup + Manual Payments ✅ COMPLETE
+
+**Delivered:**
+- ✅ Password-based creator signup/login (no email provider required)
+- ✅ BETA_MODE gate to bypass subscription checks for beta creators
+- ✅ Creator dashboard with payment link management
+- ✅ CashApp + PayPal buttons shown on room access UI
+- ✅ Public creator info endpoint for payment link rendering
+- ✅ Migration for plan status + payment link fields
+- ✅ Comprehensive BETA test plan + local test runner
+
+**Notes:**
+- ⚠️ Test runner execution pending (Node.js install required)
 
 ---
 
