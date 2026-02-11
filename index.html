@@ -1,36 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CamBridge — Commission-free private video sessions</title>
-  <link rel="stylesheet" href="/public/styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CamBridge - Commission-Free Private Video Sessions</title>
+    <meta name="description" content="Commission-free private video sessions. Private link. Controlled entry. Direct session.">
+    <link rel="stylesheet" href="/public/styles.css">
 </head>
-<body class="bg page-font">
-  <main class="min-h-screen flex-col-center">
-    <header class="hero">
-      <img src="/assets/mark.svg" alt="CamBridge mark" class="mark" />
-      <h1 class="headline">COMMISSION-FREE<br/>PRIVATE VIDEO SESSIONS</h1>
-      <div class="hero-actions">
-        <a class="btn-primary" href="/request-access.html">Request Access</a>
-        <a class="link-secondary" href="/creator-login.html">Creator Login</a>
-      </div>
-    </header>
-
-    <section class="below-fold" aria-labelledby="how">
-      <div class="info">
-        <h2 id="how" class="section-title">HOW IT WORKS</h2>
-        <p class="muted">Private link. Controlled entry. Direct session.</p>
-      </div>
-      <div class="info">
-        <h2 class="section-title">PRICING</h2>
-        <p class="muted">Flat monthly.</p>
-      </div>
+<body class="bg-bg-dark text-text-primary min-h-screen flex flex-col">
+    <!-- Hero Section -->
+    <main class="flex-1 flex items-center justify-center px-6 py-20">
+        <div class="w-full max-w-2xl mx-auto text-center space-y-12">
+            <!-- Logo Mark -->
+            <div class="flex justify-center mb-8">
+                <img src="/assets/mark.svg" alt="CamBridge" class="w-20 h-20">
+            </div>
+            
+            <!-- Headline -->
+            <h1 class="text-5xl md:text-7xl font-light tracking-tighter-custom leading-tight">
+                COMMISSION-FREE<br>
+                PRIVATE VIDEO SESSIONS
+            </h1>
+            
+            <!-- Primary CTA -->
+            <div class="space-y-4">
+                <a href="/request-access.html" 
+                   class="inline-block px-8 py-4 border border-border-normal hover:border-border-hover text-text-primary text-sm font-medium tracking-wider transition-colors duration-200">
+                    REQUEST ACCESS
+                </a>
+                
+                <!-- Secondary Link -->
+                <div>
+                    <a href="/creator-login.html" 
+                       class="text-text-muted hover:text-text-primary text-sm underline transition-colors duration-200">
+                        Creator Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Below Fold Section -->
+    <section class="border-t border-border-normal py-20 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- How It Works -->
+            <div class="mb-16">
+                <h2 class="text-xs font-medium tracking-widest text-text-muted mb-6 uppercase">
+                    How It Works
+                </h2>
+                <div class="space-y-3 text-text-primary text-sm">
+                    <p>Private link.</p>
+                    <p>Controlled entry.</p>
+                    <p>Direct session.</p>
+                </div>
+            </div>
+            
+            <!-- Pricing -->
+            <div>
+                <h2 class="text-xs font-medium tracking-widest text-text-muted mb-6 uppercase">
+                    Pricing
+                </h2>
+                <p class="text-text-primary text-sm">Flat monthly.</p>
+            </div>
+        </div>
     </section>
-  </main>
-
-  <script>
-    // No JS needed on landing. Keep console clean.
-  </script>
 </body>
 </html>
