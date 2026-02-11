@@ -1,0 +1,616 @@
+From a4ad507c0cea20af245be7ff7afa72a8f439756d Mon Sep 17 00:00:00 2001
+From: "copilot-swe-agent[bot]" <198982749+Copilot@users.noreply.github.com>
+Date: Wed, 11 Feb 2026 15:32:50 +0000
+Subject: [PATCH] Fix all issues in PR #46: runtime errors, database
+ connection, error handling
+
+---
+ api/auth/login.js                | 75 +++-----------------------------
+ api/auth/password-login.js       | 38 ++++++++++++++--
+ api/auth/password-register.js    | 37 ++++++++++++----
+ api/db-mock.js                   | 11 +++++
+ api/db.js                        | 14 +++++-
+ api/health.js                    |  2 +-
+ api/init-db.js                   |  3 +-
+ api/join-request.js              |  2 +-
+ api/middleware.js                | 21 +++++----
+ api/request-access.js            |  2 +-
+ api/webhooks/stripe-webhook.js   |  2 +-
+ public/pages/creator-login.html  | 58 ++++++++++++++++++++++--
+ public/pages/creator-signup.html | 64 +++++++++++++++++++++++++--
+ 13 files changed, 223 insertions(+), 106 deletions(-)
+
+diff --git a/api/auth/login.js b/api/auth/login.js
+index c986430..72a346b 100644
+--- a/api/auth/login.js
++++ b/api/auth/login.js
+@@ -1,72 +1,9 @@
+ // API endpoint deprecated: password login removed for MVP passwordless auth
++// This endpoint is permanently disabled - use /api/auth/password-login instead
+ 
+-export default async function handler(req, res) {
+-  // Hard-disable legacy password login route
+-  if (req.method !== 'POST') {
+-    return res.status(405).json({ error: 'Method not allowed' });
+-  }
+-
+-  // Rate limiting: 10 login attempts per 15 minutes
+-  const rateLimitCheck = await rateLimit(10, 900000)(req);
+-  if (!rateLimitCheck.allowed) {
+-    return res.status(429).json({ 
+-      error: 'Too many login attempts. Please try again later.' 
+-    });
+-  }
+-
+-  try {
+-    const { username, password } = req.body;
+-
+-    // Validate inputs
+-    if (!username || !password) {
+-      return res.status(400).json({ error: 'Username and password are required' });
+-    }
+-
+-    // Get user from database
+-    const user = await getUserByUsername(username.toLowerCase().trim());
+-    if (!user) {
+-      return res.status(401).json({ error: 'Invalid username or password' });
+-    }
+-
+-    // Verify password
+-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+-    if (!isValidPassword) {
+-      return res.status(401).json({ error: 'Invalid username or password' });
+-    }
+-
+-    // Generate JWT token
+-    const token = generateToken(user.id, user.username);
+-
+-    // Calculate expiration date (7 days from now)
+-    const expiresAt = new Date();
+-    expiresAt.setDate(expiresAt.getDate() + 7);
+-
+-    // Store session in database
+-    const sessionResult = await createSession(user.id, token, expiresAt);
+-    if (!sessionResult.success) {
+-      console.error('Session creation failed:', sessionResult.error);
+-      return res.status(500).json({ error: 'Failed to create session' });
+-    }
+-
+-    // Return success with token
+-    return res.status(200).json({
+-      success: true,
+-      message: 'Login successful',
+-      token,
+-      user: {
+-        id: user.id,
+-        username: user.username,
+-        email: user.email,
+-        displayName: user.display_name,
+-        bio: user.bio,
+-        avatarUrl: user.avatar_url
+-      }
+-    });
+-
+-  } catch (error) {
+-    console.error('Login error:', error);
+-    return res.status(500).json({ 
+-      error: 'An error occurred during login' 
+-    });
+-  }
++export default function handler(req, res) {
++  // Legacy password login is permanently disabled
++  return res.status(410).json({
++    error: 'Password login endpoint has been removed. Use /api/auth/password-login instead.'
++  });
+ }
+diff --git a/api/auth/password-login.js b/api/auth/password-login.js
+index 510891c..e963710 100644
+--- a/api/auth/password-login.js
++++ b/api/auth/password-login.js
+@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
+ import { generateToken, validateEmail, consumeRateLimit, buildRateLimitKey } from '../middleware.js';
+ import { killSwitch } from '../policies/gates.js';
+ import { getRequestId, logPolicyDecision } from '../logging.js';
++import { createSession } from '../db.js';
+ 
+ // Try to load real database, fall back to mock
+ let sqlApi = null;
+@@ -46,7 +47,13 @@ export default async function handler(req, res) {
+ 
+     // Check if BETA_MODE is enabled
+     if (!killSwitch.isBetaMode()) {
+-      return res.status(403).json({ error: 'BETA_MODE is not enabled' });
++      console.log('❌ Login blocked: BETA_MODE is not enabled');
++      return res.status(403).json({ 
++        ok: false,
++        code: 'BETA_MODE_DISABLED',
++        error: 'BETA_MODE is not enabled. Registration and login are currently disabled.',
++        message: 'The platform is not currently accepting new logins. Please contact support.'
++      });
+     }
+ 
+     const requestId = getRequestId(req);
+@@ -107,7 +114,11 @@ export default async function handler(req, res) {
+ 
+     // Create session record with 7-day expiration
+     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+-    await createSession(user.id, jwtToken, expiresAt);
++    const sessionResult = await createSession(user.id, jwtToken, expiresAt);
++    if (!sessionResult.success) {
++      console.warn('⚠️  Session creation failed (non-fatal):', sessionResult.error);
++      // Don't fail login if session creation fails - user still gets token
++    }
+ 
+     logPolicyDecision({ 
+       requestId, 
+@@ -130,7 +141,26 @@ export default async function handler(req, res) {
+     });
+ 
+   } catch (error) {
+-    console.error('Password login error:', error);
+-    return res.status(500).json({ error: 'Login failed. Please try again.' });
++    console.error('❌ Password login error:', error.message);
++    console.error('Error stack:', error.stack);
++    console.error('Error code:', error.code);
++    
++    // Return detailed error information
++    const errorResponse = {
++      ok: false,
++      code: error.code || 'LOGIN_ERROR',
++      message: error.message || 'Login failed. Please try again.',
++      error: error.message || 'Login failed. Please try again.'
++    };
++    
++    // Add more details in development
++    if (process.env.NODE_ENV === 'development') {
++      errorResponse.details = {
++        stack: error.stack,
++        code: error.code
++      };
++    }
++    
++    return res.status(500).json(errorResponse);
+   }
+ }
+diff --git a/api/auth/password-register.js b/api/auth/password-register.js
+index 870c9d3..b35a6b1 100644
+--- a/api/auth/password-register.js
++++ b/api/auth/password-register.js
+@@ -55,7 +55,7 @@ function validateSlug(slug) {
+ }
+ 
+ // Generate unique slug from display name
+-async function generateUniqueSlug(displayName) {
++async function generateUniqueSlug(displayName, sql) {
+   let baseSlug = displayName
+     .toLowerCase()
+     .replace(/[^\w\s-]/g, '') // Remove special chars
+@@ -107,8 +107,13 @@ export default async function handler(req, res) {
+ 
+     // Check if BETA_MODE is enabled
+     if (!killSwitch.isBetaMode()) {
+-      console.log('❌ BETA_MODE disabled');
+-      return res.status(403).json({ error: 'BETA_MODE is not enabled' });
++      console.log('❌ Registration blocked: BETA_MODE is not enabled');
++      return res.status(403).json({ 
++        ok: false,
++        code: 'BETA_MODE_DISABLED',
++        error: 'BETA_MODE is not enabled. Registration is currently disabled.',
++        message: 'The platform is not currently accepting new registrations. Please contact support.'
++      });
+     }
+     console.log('✓ BETA_MODE enabled');
+ 
+@@ -184,7 +189,7 @@ export default async function handler(req, res) {
+ 
+     // Generate slug if not provided
+     if (!slug) {
+-      slug = await generateUniqueSlug(displayName);
++      slug = await generateUniqueSlug(displayName, sql);
+     } else {
+       // Verify desired slug is unique
+       const existingSlug = await sql`
+@@ -310,12 +315,26 @@ export default async function handler(req, res) {
+     });
+ 
+   } catch (error) {
+-    console.error('Password registration error:', error.message);
++    console.error('❌ Password registration error:', error.message);
+     console.error('Error stack:', error.stack);
+     console.error('Error code:', error.code);
+-    return res.status(500).json({ 
+-      error: 'Registration failed. Please try again.',
+-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+-    });
++    
++    // Return detailed error information
++    const errorResponse = {
++      ok: false,
++      code: error.code || 'REGISTRATION_ERROR',
++      message: error.message || 'Registration failed. Please try again.',
++      error: error.message || 'Registration failed. Please try again.'
++    };
++    
++    // Add more details in development
++    if (process.env.NODE_ENV === 'development') {
++      errorResponse.details = {
++        stack: error.stack,
++        code: error.code
++      };
++    }
++    
++    return res.status(500).json(errorResponse);
+   }
+ }
+diff --git a/api/db-mock.js b/api/db-mock.js
+index 16322a1..f9ea8c1 100644
+--- a/api/db-mock.js
++++ b/api/db-mock.js
+@@ -40,6 +40,9 @@ export const sql = async (strings, ...values) => {
+         }]
+       };
+     }
++    
++    // INSERT INTO users
++    if (query.includes('INSERT INTO users')) {
+       const [email, username, hash, displayName, isActive, role, ageAt, tosAt, createdAt, updatedAt] = values;
+       const id = generateId();
+       mockDb.users.push({
+@@ -70,6 +73,14 @@ export const sql = async (strings, ...values) => {
+       return { rows: user ? [{ id: user.id }] : [] };
+     }
+     
++    // SELECT full user for login
++    if (query.includes('SELECT id, username, email, password_hash, display_name, role')) {
++      const [email] = values;
++      const user = mockDb.users.find(u => u.email === email);
++      console.log('  ✓ User login lookup:', email, user ? 'found' : 'not found');
++      return { rows: user ? [user] : [] };
++    }
++    
+     // INSERT INTO creators
+     if (query.includes('INSERT INTO creators')) {
+       const [userId, slug, displayName, planStatus, status, createdAt] = values;
+diff --git a/api/db.js b/api/db.js
+index 77b86a0..64996d7 100644
+--- a/api/db.js
++++ b/api/db.js
+@@ -1,9 +1,21 @@
+ // Database utility functions
+ // Using Vercel Postgres (migrating to Neon)
+-import { sql } from '@vercel/postgres';
++// Use POSTGRES_PRISMA_URL (pooled connection) if available, otherwise fall back to POSTGRES_URL
++import { createPool } from '@vercel/postgres';
++
++// Create connection pool with proper connection string
++const connectionString = process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
++const pool = connectionString ? createPool({ connectionString }) : null;
++
++// Export sql template tag from pool
++export const sql = pool ? pool.sql : null;
+ 
+ // Initialize database tables
+ export async function initializeTables() {
++  if (!sql) {
++    throw new Error('Database not configured. Set POSTGRES_PRISMA_URL or POSTGRES_URL environment variable.');
++  }
++  
+   try {
+     // Users table for model accounts
+     await sql`
+diff --git a/api/health.js b/api/health.js
+index 77b8844..2606656 100644
+--- a/api/health.js
++++ b/api/health.js
+@@ -1,6 +1,6 @@
+ // Health check endpoint for database status
+ // This endpoint is public and doesn't require authentication
+-import { sql } from '@vercel/postgres';
++import { sql } from './db.js';
+ 
+ export default async function handler(req, res) {
+   // Allow GET requests only
+diff --git a/api/init-db.js b/api/init-db.js
+index 20a09df..8e171be 100644
+--- a/api/init-db.js
++++ b/api/init-db.js
+@@ -1,7 +1,6 @@
+ // API endpoint to initialize database tables
+ // This should be called once during setup
+-import { initializeTables } from './db.js';
+-import { sql } from '@vercel/postgres';
++import { initializeTables, sql } from './db.js';
+ 
+ export default async function handler(req, res) {
+   const INIT_SECRET = process.env.DB_INIT_SECRET;
+diff --git a/api/join-request.js b/api/join-request.js
+index 7370551..1b08983 100644
+--- a/api/join-request.js
++++ b/api/join-request.js
+@@ -1,7 +1,7 @@
+ // API endpoint to create a join request
+ // Phase 1: Client requests to join a creator's room with policy-enforced join modes
+ import crypto from 'crypto';
+-import { sql } from '@vercel/postgres';
++import { sql } from './db.js';
+ import {
+   getCreatorBySlug,
+   getRoomByName,
+diff --git a/api/middleware.js b/api/middleware.js
+index 21126f8..0e7dc35 100644
+--- a/api/middleware.js
++++ b/api/middleware.js
+@@ -1,5 +1,6 @@
+ // Authentication middleware for Vercel serverless functions
+ import jwt from 'jsonwebtoken';
++import { sql as dbSql } from './db.js';
+ 
+ const JWT_SECRET = process.env.JWT_SECRET;
+ 
+@@ -15,23 +16,25 @@ let getSessionByTokenFunc = null;
+ async function getSqlApi() {
+   if (sqlApi) return sqlApi;
+   
+-  // If POSTGRES_URL is not set, use mock database immediately
+-  if (!process.env.POSTGRES_URL) {
++  // If POSTGRES_URL/POSTGRES_PRISMA_URL is not set, use mock database immediately
++  if (!process.env.POSTGRES_URL && !process.env.POSTGRES_PRISMA_URL) {
+     console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
+     const mockDb = await import('./db-mock.js');
+     sqlApi = mockDb.sql;
+     return sqlApi;
+   }
+   
+-  try {
+-    const pgModule = await import('@vercel/postgres');
+-    sqlApi = pgModule.sql;
+-  } catch (e) {
+-    console.warn('⚠️  PostgreSQL not available, using in-memory mock database:', e.message);
+-    const mockDb = await import('./db-mock.js');
+-    sqlApi = mockDb.sql;
++  // Use sql from db.js (which handles pooled connection properly)
++  if (dbSql) {
++    sqlApi = dbSql;
++    return sqlApi;
+   }
+   
++  // Fallback to mock if db.js sql is null
++  console.warn('⚠️  Database not configured properly, using in-memory mock database');
++  const mockDb = await import('./db-mock.js');
++  sqlApi = mockDb.sql;
++  
+   return sqlApi;
+ }
+ 
+diff --git a/api/request-access.js b/api/request-access.js
+index 7f21a40..e9aa848 100644
+--- a/api/request-access.js
++++ b/api/request-access.js
+@@ -1,4 +1,4 @@
+-import { sql } from '@vercel/postgres';
++import { sql } from './db.js';
+ import { withCORS } from './middleware.js';
+ 
+ /**
+diff --git a/api/webhooks/stripe-webhook.js b/api/webhooks/stripe-webhook.js
+index 93d8add..4e6bc3c 100644
+--- a/api/webhooks/stripe-webhook.js
++++ b/api/webhooks/stripe-webhook.js
+@@ -11,7 +11,7 @@
+  */
+ 
+ import { constructWebhookEvent, processStripeEvent } from '../providers/stripe.js';
+-import { sql } from '@vercel/postgres';
++import { sql } from '../db.js';
+ 
+ /**
+  * Main webhook handler
+diff --git a/public/pages/creator-login.html b/public/pages/creator-login.html
+index 94b02f9..9eb13c9 100644
+--- a/public/pages/creator-login.html
++++ b/public/pages/creator-login.html
+@@ -249,6 +249,25 @@
+         const errorMsg = document.getElementById('error-message');
+         const errorMsgP = errorMsg.querySelector('p');
+ 
++        // Helper to read response body (JSON or text)
++        async function readResponse(response) {
++            const contentType = response.headers.get('content-type');
++            console.log('Response Content-Type:', contentType);
++            
++            try {
++                if (contentType && contentType.includes('application/json')) {
++                    return await response.json();
++                } else {
++                    const text = await response.text();
++                    console.log('Non-JSON response:', text.substring(0, 500));
++                    return { error: text.substring(0, 500) };
++                }
++            } catch (e) {
++                console.error('Error reading response:', e);
++                return { error: 'Failed to parse server response' };
++            }
++        }
++
+         form.addEventListener('submit', async (e) => {
+             e.preventDefault();
+ 
+@@ -294,7 +313,15 @@
+             loadingMsg.classList.add('show');
+ 
+             try {
+-                const response = await fetch('/api/auth/password-login', {
++                // Log request details
++                const requestUrl = '/api/auth/password-login';
++                console.group('🔵 LOGIN REQUEST');
++                console.log('URL:', requestUrl);
++                console.log('Method:', 'POST');
++                console.log('Payload (no password):', { email: data.email });
++                console.groupEnd();
++
++                const response = await fetch(requestUrl, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json'
+@@ -302,16 +329,33 @@
+                     body: JSON.stringify(data)
+                 });
+ 
+-                const result = await response.json();
++                // Log response details
++                console.group('🔵 LOGIN RESPONSE');
++                console.log('Status:', response.status, response.statusText);
++                console.log('Headers Content-Type:', response.headers.get('content-type'));
++                console.groupEnd();
++
++                const result = await readResponse(response);
++                
++                console.group('🔵 LOGIN RESPONSE BODY');
++                console.log('Body:', result);
++                console.groupEnd();
+ 
+                 if (!response.ok) {
+-                    throw new Error(result.error || 'Login failed');
++                    // Build detailed error message
++                    const errorDetails = result.error || result.message || 'Login failed';
++                    const httpStatus = `HTTP ${response.status}`;
++                    const detailedError = `${httpStatus}: ${errorDetails}`;
++                    
++                    throw new Error(detailedError);
+                 }
+ 
+                 // Store token in localStorage and set cookie
+                 localStorage.setItem('auth_token', result.token);
+                 document.cookie = `auth_token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Strict`;
+ 
++                console.log('✅ Login successful!');
++
+                 // Show success message
+                 loadingMsg.classList.remove('show');
+                 successMsg.classList.add('show');
+@@ -322,9 +366,15 @@
+                 }, 1500);
+ 
+             } catch (error) {
+-                console.error('Login error:', error);
++                console.group('❌ LOGIN ERROR');
++                console.error('Error message:', error.message);
++                console.error('Error stack:', error.stack);
++                console.groupEnd();
++                
+                 loginBtn.disabled = false;
+                 loadingMsg.classList.remove('show');
++                
++                // Show detailed error to user
+                 errorMsgP.textContent = error.message;
+                 errorMsg.classList.add('show');
+             }
+diff --git a/public/pages/creator-signup.html b/public/pages/creator-signup.html
+index 3d1e9d3..2973d1e 100644
+--- a/public/pages/creator-signup.html
++++ b/public/pages/creator-signup.html
+@@ -312,6 +312,25 @@
+         const errorMsg = document.getElementById('error-message');
+         const errorMsgP = errorMsg.querySelector('p');
+ 
++        // Helper to read response body (JSON or text)
++        async function readResponse(response) {
++            const contentType = response.headers.get('content-type');
++            console.log('Response Content-Type:', contentType);
++            
++            try {
++                if (contentType && contentType.includes('application/json')) {
++                    return await response.json();
++                } else {
++                    const text = await response.text();
++                    console.log('Non-JSON response:', text.substring(0, 500));
++                    return { error: text.substring(0, 500) };
++                }
++            } catch (e) {
++                console.error('Error reading response:', e);
++                return { error: 'Failed to parse server response' };
++            }
++        }
++
+         form.addEventListener('submit', async (e) => {
+             e.preventDefault();
+ 
+@@ -382,7 +401,21 @@
+             loadingMsg.classList.add('show');
+ 
+             try {
+-                const response = await fetch('/api/auth/password-register', {
++                // Log request details
++                const requestUrl = '/api/auth/password-register';
++                console.group('🔵 REGISTRATION REQUEST');
++                console.log('URL:', requestUrl);
++                console.log('Method:', 'POST');
++                console.log('Payload (no password):', {
++                    email: data.email,
++                    displayName: data.displayName,
++                    desiredSlug: data.desiredSlug,
++                    ageConfirm: data.ageConfirm,
++                    tosAccept: data.tosAccept
++                });
++                console.groupEnd();
++
++                const response = await fetch(requestUrl, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json'
+@@ -390,16 +423,33 @@
+                     body: JSON.stringify(data)
+                 });
+ 
+-                const result = await response.json();
++                // Log response details
++                console.group('🔵 REGISTRATION RESPONSE');
++                console.log('Status:', response.status, response.statusText);
++                console.log('Headers Content-Type:', response.headers.get('content-type'));
++                console.groupEnd();
++
++                const result = await readResponse(response);
++                
++                console.group('🔵 REGISTRATION RESPONSE BODY');
++                console.log('Body:', result);
++                console.groupEnd();
+ 
+                 if (!response.ok) {
+-                    throw new Error(result.error || 'Registration failed');
++                    // Build detailed error message
++                    const errorDetails = result.error || result.message || 'Registration failed';
++                    const httpStatus = `HTTP ${response.status}`;
++                    const detailedError = `${httpStatus}: ${errorDetails}`;
++                    
++                    throw new Error(detailedError);
+                 }
+ 
+                 // Store token in localStorage and set cookie
+                 localStorage.setItem('auth_token', result.token);
+                 document.cookie = `auth_token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Strict`;
+ 
++                console.log('✅ Registration successful!');
++                
+                 // Show success message
+                 loadingMsg.classList.remove('show');
+                 successMsg.classList.add('show');
+@@ -410,9 +460,15 @@
+                 }, 1500);
+ 
+             } catch (error) {
+-                console.error('Signup error:', error);
++                console.group('❌ REGISTRATION ERROR');
++                console.error('Error message:', error.message);
++                console.error('Error stack:', error.stack);
++                console.groupEnd();
++                
+                 signupBtn.disabled = false;
+                 loadingMsg.classList.remove('show');
++                
++                // Show detailed error to user
+                 errorMsgP.textContent = error.message;
+                 errorMsg.classList.add('show');
+             }
+-- 
+2.52.0
+
