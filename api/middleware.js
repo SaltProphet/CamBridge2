@@ -1,5 +1,6 @@
 // Authentication middleware for Vercel serverless functions
 import jwt from 'jsonwebtoken';
+import { sql as dbSql } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -15,22 +16,24 @@ let getSessionByTokenFunc = null;
 async function getSqlApi() {
   if (sqlApi) return sqlApi;
   
-  // If POSTGRES_URL is not set, use mock database immediately
-  if (!process.env.POSTGRES_URL) {
+  // If POSTGRES_URL/POSTGRES_PRISMA_URL is not set, use mock database immediately
+  if (!process.env.POSTGRES_URL && !process.env.POSTGRES_PRISMA_URL) {
     console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
     const mockDb = await import('./db-mock.js');
     sqlApi = mockDb.sql;
     return sqlApi;
   }
   
-  try {
-    const pgModule = await import('@vercel/postgres');
-    sqlApi = pgModule.sql;
-  } catch (e) {
-    console.warn('⚠️  PostgreSQL not available, using in-memory mock database:', e.message);
-    const mockDb = await import('./db-mock.js');
-    sqlApi = mockDb.sql;
+  // Use sql from db.js (which handles pooled connection properly)
+  if (dbSql) {
+    sqlApi = dbSql;
+    return sqlApi;
   }
+  
+  // Fallback to mock if db.js sql is null
+  console.warn('⚠️  Database not configured properly, using in-memory mock database');
+  const mockDb = await import('./db-mock.js');
+  sqlApi = mockDb.sql;
   
   return sqlApi;
 }

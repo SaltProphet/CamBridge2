@@ -11,7 +11,7 @@
  */
 
 import { constructWebhookEvent, processStripeEvent } from '../providers/stripe.js';
-import { sql } from '@vercel/postgres';
+import { sql } from '../db.js';
 
 /**
  * Main webhook handler

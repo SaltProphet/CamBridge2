@@ -32,3 +32,5 @@ temp/
 /assets/sounds/*.mp3
 .vercel
 index.old.html
+.env
+.env.local

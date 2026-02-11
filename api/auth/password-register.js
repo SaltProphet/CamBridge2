@@ -55,7 +55,7 @@ function validateSlug(slug) {
 }
 
 // Generate unique slug from display name
-async function generateUniqueSlug(displayName) {
+async function generateUniqueSlug(displayName, sql) {
   let baseSlug = displayName
     .toLowerCase()
     .replace(/[^\w\s-]/g, '') // Remove special chars
@@ -107,8 +107,13 @@ export default async function handler(req, res) {
 
     // Check if BETA_MODE is enabled
     if (!killSwitch.isBetaMode()) {
-      console.log('❌ BETA_MODE disabled');
-      return res.status(403).json({ error: 'BETA_MODE is not enabled' });
+      console.log('❌ Registration blocked: BETA_MODE is not enabled');
+      return res.status(403).json({ 
+        ok: false,
+        code: 'BETA_MODE_DISABLED',
+        error: 'BETA_MODE is not enabled. Registration is currently disabled.',
+        message: 'The platform is not currently accepting new registrations. Please contact support.'
+      });
     }
     console.log('✓ BETA_MODE enabled');
 
@@ -184,7 +189,7 @@ export default async function handler(req, res) {
 
     // Generate slug if not provided
     if (!slug) {
-      slug = await generateUniqueSlug(displayName);
+      slug = await generateUniqueSlug(displayName, sql);
     } else {
       // Verify desired slug is unique
       const existingSlug = await sql`
@@ -310,12 +315,26 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Password registration error:', error.message);
+    console.error('❌ Password registration error:', error.message);
     console.error('Error stack:', error.stack);
     console.error('Error code:', error.code);
-    return res.status(500).json({ 
-      error: 'Registration failed. Please try again.',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    
+    // Return detailed error information
+    const errorResponse = {
+      ok: false,
+      code: error.code || 'REGISTRATION_ERROR',
+      message: error.message || 'Registration failed. Please try again.',
+      error: error.message || 'Registration failed. Please try again.'
+    };
+    
+    // Add more details in development
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.details = {
+        stack: error.stack,
+        code: error.code
+      };
+    }
+    
+    return res.status(500).json(errorResponse);
   }
 }
