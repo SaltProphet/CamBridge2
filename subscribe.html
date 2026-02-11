@@ -82,31 +82,51 @@
     <main class="card">
         <h1>Select a Subscription Plan</h1>
         <form id="subscribe-form">
+            <h2 style="color: var(--text-light); font-size: 0.95rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05rem;">Subscription Plans</h2>
             <div class="plans">
-                <label class="plan-option" for="plan-basic">
-                    <input type="radio" id="plan-basic" name="plan" value="basic" checked>
-                    <div>
-                        <div class="plan-name">Basic</div>
-                        <div class="plan-meta">Starter creator tools and standard support.</div>
-                    </div>
-                </label>
                 <label class="plan-option" for="plan-pro">
-                    <input type="radio" id="plan-pro" name="plan" value="pro">
+                    <input type="radio" id="plan-pro" name="plan" value="pro" checked>
                     <div>
                         <div class="plan-name">Pro</div>
-                        <div class="plan-meta">Priority support, expanded limits, and premium creator features.</div>
+                        <div class="plan-meta">$30/month - Unlimited rooms, priority support, 100% of tips retained</div>
                     </div>
                 </label>
-                <label class="plan-option" for="plan-elite">
-                    <input type="radio" id="plan-elite" name="plan" value="elite">
+                <label class="plan-option" for="plan-enterprise">
+                    <input type="radio" id="plan-enterprise" name="plan" value="enterprise">
                     <div>
-                        <div class="plan-name">Elite</div>
-                        <div class="plan-meta">Full suite with highest limits and premium assistance.</div>
+                        <div class="plan-name">Enterprise</div>
+                        <div class="plan-meta">$99/month - Priority support, dedicated account manager</div>
                     </div>
                 </label>
             </div>
+
+            <h2 style="color: var(--text-light); font-size: 0.95rem; margin-bottom: 1rem; margin-top: 1.5rem; text-transform: uppercase; letter-spacing: 0.05rem;">Payment Method</h2>
+            <div class="plans">
+                <label class="plan-option" for="provider-manual">
+                    <input type="radio" id="provider-manual" name="provider" value="manual" checked>
+                    <div>
+                        <div class="plan-name">Manual Invoice</div>
+                        <div class="plan-meta">Get an invoice, send payment via email. No automated billing.</div>
+                    </div>
+                </label>
+                <label class="plan-option" for="provider-stripe">
+                    <input type="radio" id="provider-stripe" name="provider" value="stripe">
+                    <div>
+                        <div class="plan-name">Stripe (Recommended)</div>
+                        <div class="plan-meta">Credit/debit card. Auto-renews monthly, cancel anytime.</div>
+                    </div>
+                </label>
+                <label class="plan-option" for="provider-ccbill">
+                    <input type="radio" id="provider-ccbill" name="provider" value="ccbill">
+                    <div>
+                        <div class="plan-name">CCBill</div>
+                        <div class="plan-meta">Alternative payment processor. Auto-renews monthly.</div>
+                    </div>
+                </label>
+            </div>
+
             <div class="actions">
-                <button type="submit" class="btn btn-primary" id="subscribe-btn">Start Checkout</button>
+                <button type="submit" class="btn btn-primary" id="subscribe-btn">Continue to Payment</button>
                 <a href="/dashboard" class="back-link">← Back to dashboard</a>
             </div>
             <div class="error" id="subscribe-error"></div>
@@ -139,8 +159,15 @@
             }
 
             const selectedPlan = form.querySelector('input[name="plan"]:checked')?.value;
+            const selectedProvider = form.querySelector('input[name="provider"]:checked')?.value;
+            
             if (!selectedPlan) {
                 errorEl.textContent = 'Please choose a plan.';
+                return;
+            }
+
+            if (!selectedProvider) {
+                errorEl.textContent = 'Please choose a payment method.';
                 return;
             }
 
@@ -148,7 +175,7 @@
             errorEl.textContent = '';
             successEl.textContent = '';
             subscribeBtn.disabled = true;
-            subscribeBtn.textContent = 'Starting...';
+            subscribeBtn.textContent = 'Processing...';
 
             try {
                 const response = await fetch('/api/creator/subscribe', {
@@ -157,7 +184,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ plan: selectedPlan })
+                    body: JSON.stringify({ plan: selectedPlan, provider: selectedProvider })
                 });
 
                 if (response.status === 401) {
@@ -171,16 +198,24 @@
                     return;
                 }
 
-                successEl.textContent = 'Subscription request created. Redirecting...';
-                const redirectUrl = data.checkoutUrl || data.redirectUrl || '/dashboard';
-                window.location.href = redirectUrl;
+                // Handle different provider flows
+                if (selectedProvider === 'manual') {
+                    successEl.textContent = 'invoice sent! Check your email for payment details.';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 3000);
+                } else {
+                    successEl.textContent = 'Redirecting to payment...';
+                    const redirectUrl = data.checkoutUrl || data.redirectUrl || '/dashboard';
+                    window.location.href = redirectUrl;
+                }
             } catch (error) {
                 console.error('Subscribe error:', error);
                 errorEl.textContent = 'Network error while starting checkout.';
             } finally {
                 isSubmitting = false;
                 subscribeBtn.disabled = false;
-                subscribeBtn.textContent = 'Start Checkout';
+                subscribeBtn.textContent = 'Continue to Payment';
             }
         });
     </script>

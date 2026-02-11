@@ -969,6 +969,12 @@
 
         function updateSubscriptionActions(subscription) {
             const status = (subscription?.status || '').toLowerCase();
+            
+            if (status === 'loading') {
+                subscriptionActions.innerHTML = '<p style="color: var(--text);">Loading...</p>';
+                return;
+            }
+
             if (status === 'active') {
                 subscriptionActions.innerHTML = `
                     <button class="btn btn-secondary" id="cancel-subscription-btn">
@@ -981,6 +987,36 @@
                 return;
             }
 
+            if (status === 'pending') {
+                subscriptionActions.innerHTML = `
+                    <button class="btn btn-secondary" id="view-invoice-btn">
+                        <i class="fas fa-envelope"></i> View Invoice
+                    </button>
+                    <a class="btn btn-secondary" href="/subscribe" style="text-decoration: none; display: inline-block;">
+                        <i class="fas fa-arrow-left"></i> Change Method
+                    </a>
+                `;
+                const viewInvoiceBtn = document.getElementById('view-invoice-btn');
+                viewInvoiceBtn.disabled = subscriptionLoading;
+                viewInvoiceBtn.addEventListener('click', async () => {
+                    const token = localStorage.getItem('authToken');
+                    try {
+                        const response = await fetch('/api/creator/manual-invoice', {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            alert(`Invoice for ${data.plan} plan. Check your email at ${data.creatorId}.`);
+                        }
+                    } catch (err) {
+                        alert('Could not load invoice details.');
+                    }
+                });
+                return;
+            }
+
+            // Default: inactive/expired
             subscriptionActions.innerHTML = `
                 <a class="btn btn-primary" href="/subscribe" id="subscribe-now-link">
                     <i class="fas fa-credit-card"></i> Subscribe Now
@@ -992,6 +1028,7 @@
                 subscribeLink.style.opacity = '0.6';
             }
         }
+
 
         function updateSubscriptionUI(subscription) {
             currentSubscription = subscription;
