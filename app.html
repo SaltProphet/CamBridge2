@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CamBridge App</title>
+    <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Unauthenticated View -->
+        <div id="auth-view" class="view">
+            <div class="container">
+                <h1>CamBridge</h1>
+                
+                <div class="forms">
+                    <!-- Register Form -->
+                    <div class="form-section">
+                        <h2>Register</h2>
+                        <form id="register-form">
+                            <input type="text" name="roomSlug" placeholder="Choose your room name (e.g., mystudio)" required pattern="[a-z0-9-]+" minlength="3" maxlength="50">
+                            <small class="hint">This will be your unique room URL: cambridge.app/r/your-room-name</small>
+                            
+                            <input type="email" name="email" placeholder="Email" required>
+                            <input type="password" name="password" placeholder="Password (min 8 chars)" required minlength="8">
+                            
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" name="age_verified" required>
+                                    <span>I am 18 years of age or older</span>
+                                </label>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" name="tos_accepted" required>
+                                    <span>I agree to the <a href="#" id="tos-link">Terms of Service</a></span>
+                                </label>
+                            </div>
+                            
+                            <button type="submit">Create Account & Room</button>
+                            <div class="error" id="register-error"></div>
+                            <div class="success" id="register-success"></div>
+                        </form>
+                    </div>
+
+                    <!-- Login Form -->
+                    <div class="form-section">
+                        <h2>Login</h2>
+                        <form id="login-form">
+                            <input type="email" name="email" placeholder="Email" required>
+                            <input type="password" name="password" placeholder="Password" required>
+                            <button type="submit">Login</button>
+                            <div class="error" id="login-error"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terms of Service Modal -->
+        <div id="tos-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Terms of Service</h2>
+                    <button class="modal-close" id="tos-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h3>1. Acceptance of Terms</h3>
+                    <p>By registering for and using CamBridge, you agree to be bound by these Terms of Service.</p>
+                    
+                    <h3>2. Age Requirement</h3>
+                    <p>You must be at least 18 years of age to use this service. By registering, you attest that you are 18 years of age or older.</p>
+                    
+                    <h3>3. Account Responsibilities</h3>
+                    <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
+                    
+                    <h3>4. Privacy</h3>
+                    <p>We are committed to protecting your privacy. Your personal information will not be shared with third parties without your consent.</p>
+                    
+                    <h3>5. Acceptable Use</h3>
+                    <p>You agree to use CamBridge only for lawful purposes and in accordance with these Terms of Service.</p>
+                    
+                    <h3>6. Termination</h3>
+                    <p>We reserve the right to terminate or suspend your account at any time for violation of these terms.</p>
+                    
+                    <h3>7. Changes to Terms</h3>
+                    <p>We may modify these terms at any time. Continued use of the service after changes constitutes acceptance of the new terms.</p>
+                    
+                    <p><strong>Last Updated:</strong> February 11, 2026</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="tos-accept" class="btn">I Understand</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authenticated View -->
+        <div id="dashboard-view" class="view hidden">
+            <div class="container">
+                <div class="header">
+                    <h1>CamBridge</h1>
+                    <button id="logout-btn" class="btn-secondary">Logout</button>
+                </div>
+
+                <!-- Create Room Section -->
+                <div class="section">
+                    <h2>Create Room</h2>
+                    <form id="create-room-form">
+                        <input type="text" name="slug" placeholder="Room slug (e.g., my-room)" required pattern="[a-z0-9-]+" minlength="3">
+                        <button type="submit">Create Room</button>
+                        <div class="error" id="create-room-error"></div>
+                    </form>
+                </div>
+
+                <!-- Rooms List -->
+                <div class="section">
+                    <h2>My Rooms</h2>
+                    <div id="rooms-list" class="list">
+                        <p class="empty">No rooms yet</p>
+                    </div>
+                </div>
+
+                <!-- Join Requests -->
+                <div class="section">
+                    <h2>Pending Join Requests</h2>
+                    <div id="requests-list" class="list">
+                        <p class="empty">No pending requests</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/app.js"></script>
+</body>
+</html>
