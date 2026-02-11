@@ -76,11 +76,21 @@
         .error, .success { margin-top: 0.75rem; min-height: 1rem; font-size: 0.85rem; }
         .error { color: var(--error); }
         .success { color: var(--accent); }
+
+        .notice {
+            margin-bottom: 1.25rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(255, 170, 0, 0.4);
+            background: rgba(255, 170, 0, 0.08);
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
     <main class="card">
         <h1>Select a Subscription Plan</h1>
+        <div class="notice" id="beta-notice" style="display: none;"></div>
         <form id="subscribe-form">
             <h2 style="color: var(--text-light); font-size: 0.95rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05rem;">Subscription Plans</h2>
             <div class="plans">
@@ -139,8 +149,10 @@
         const subscribeBtn = document.getElementById('subscribe-btn');
         const errorEl = document.getElementById('subscribe-error');
         const successEl = document.getElementById('subscribe-success');
+        const betaNotice = document.getElementById('beta-notice');
 
         let isSubmitting = false;
+        let paymentsPaused = false;
 
         function redirectToLogin() {
             localStorage.removeItem('authToken');
@@ -151,6 +163,11 @@
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             if (isSubmitting) return;
+
+            if (paymentsPaused) {
+                errorEl.textContent = 'Payments are paused during the pre-release beta.';
+                return;
+            }
 
             const token = localStorage.getItem('authToken');
             if (!token) {
@@ -218,6 +235,28 @@
                 subscribeBtn.textContent = 'Continue to Payment';
             }
         });
+
+        async function loadBetaNotice() {
+            try {
+                const response = await fetch('/config.json');
+                const config = await response.json();
+                paymentsPaused = config?.beta?.paymentsPaused ?? true;
+                if (paymentsPaused) {
+                    betaNotice.textContent = config?.beta?.message || 'Pre-release beta: payments and email are pending.';
+                    betaNotice.style.display = 'block';
+                    subscribeBtn.disabled = true;
+                    subscribeBtn.textContent = 'Payments Paused';
+                }
+            } catch (err) {
+                paymentsPaused = true;
+                betaNotice.textContent = 'Pre-release beta: payments and email are pending.';
+                betaNotice.style.display = 'block';
+                subscribeBtn.disabled = true;
+                subscribeBtn.textContent = 'Payments Paused';
+            }
+        }
+
+        loadBetaNotice();
     </script>
 </body>
 </html>

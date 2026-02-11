@@ -28,6 +28,10 @@ function getPlanPrice(plan) {
   return prices[plan] || 0;
 }
 
+function paymentsPaused() {
+  return process.env.PRELAUNCH_BETA === 'true' || process.env.PAYMENTS_PAUSED === 'true';
+}
+
 export async function processManualInvoice(req, deps = {}) {
   const {
     authenticateFn = authenticate,
@@ -62,6 +66,13 @@ export async function processManualInvoice(req, deps = {}) {
       }
     };
   } else if (req.method === 'POST') {
+    if (paymentsPaused()) {
+      return {
+        status: 503,
+        body: errorPayload('Manual invoices are paused during the pre-release beta.', 'PAYMENTS_PAUSED')
+      };
+    }
+
     // POST: Request invoice to be sent
     const invoiceEmail = normalizeEmail(req.body?.invoiceEmail || auth.user.email);
     const selectedPlan = req.body?.plan;

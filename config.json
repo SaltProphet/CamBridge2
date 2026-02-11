@@ -4,6 +4,12 @@
   "maxSessionDuration": 7200,
   "sessionWarningTime": 6600,
   "maxRoomsPerModel": 8,
+  "beta": {
+    "paymentsPaused": true,
+    "emailPaused": true,
+    "domainPending": true,
+    "message": "Pre-release beta: payments and email are pending. We'll notify you when billing opens."
+  },
   "models": {
     "testmodel": {
       "active": true,

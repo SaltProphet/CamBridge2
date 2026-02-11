@@ -45,6 +45,10 @@ function resolveBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+function paymentsPaused() {
+  return process.env.PRELAUNCH_BETA === 'true' || process.env.PAYMENTS_PAUSED === 'true';
+}
+
 function getPlanPrice(plan) {
   const prices = {
     pro: 30,
@@ -81,6 +85,13 @@ export async function processCreatorSubscribe(req, deps = {}) {
   }
 
   const provider = normalizeProvider(req.body?.provider);
+
+  if (paymentsPaused()) {
+    return {
+      status: 503,
+      body: errorPayload('Payments are paused during the pre-release beta.', 'PAYMENTS_PAUSED')
+    };
+  }
 
   // Get the payments provider for this request
   const paymentProvider = getPaymentsProviderFn();

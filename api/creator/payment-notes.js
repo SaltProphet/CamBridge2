@@ -5,6 +5,10 @@ function errorPayload(error, code, extras = {}) {
   return { error, code, ...extras };
 }
 
+function paymentsPaused() {
+  return process.env.PRELAUNCH_BETA === 'true' || process.env.PAYMENTS_PAUSED === 'true';
+}
+
 /**
  * Payment notes endpoint for manual billing communications
  * Allows creators to add notes about their payment status/method
@@ -50,6 +54,13 @@ export async function processPaymentNotes(req, deps = {}) {
       };
     }
   } else if (req.method === 'POST') {
+    if (paymentsPaused()) {
+      return {
+        status: 503,
+        body: errorPayload('Payment communications are paused during the pre-release beta.', 'PAYMENTS_PAUSED')
+      };
+    }
+
     // POST: Add a payment note
     const { note, paymentMethod, paymentDetails } = req.body;
 

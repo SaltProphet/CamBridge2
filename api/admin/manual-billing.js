@@ -6,6 +6,10 @@ function errorPayload(error, code, extras = {}) {
   return { error, code, ...extras };
 }
 
+function paymentsPaused() {
+  return process.env.PRELAUNCH_BETA === 'true' || process.env.PAYMENTS_PAUSED === 'true';
+}
+
 /**
  * Admin endpoint for managing manual billing
  * View pending payments, approve subscriptions, send reminders
@@ -61,6 +65,13 @@ export async function processManualBillingAdmin(req, deps = {}) {
       };
     }
   } else if (req.method === 'POST') {
+    if (paymentsPaused()) {
+      return {
+        status: 503,
+        body: errorPayload('Manual billing actions are paused during the pre-release beta.', 'PAYMENTS_PAUSED')
+      };
+    }
+
     // POST: Approve payment and activate subscription
     const { creatorId, action } = req.body;
 
