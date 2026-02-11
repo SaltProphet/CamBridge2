@@ -1,5 +1,4 @@
 // API endpoint for model logout
-import { deleteSession } from '../db.js';
 import { extractToken } from '../middleware.js';
 import { getRequestId, logPolicyDecision } from '../logging.js';
 
