@@ -161,19 +161,19 @@ runner.describe('2. File Structure & Existence', [
   {
     name: 'creator-signup.html exists',
     fn: () => {
-      return fs.existsSync(path.join(__dirname, '../../creator-signup.html'));
+      return fs.existsSync(path.join(__dirname, '../../public/pages/creator-signup.html'));
     }
   },
   {
     name: 'creator-login.html exists',
     fn: () => {
-      return fs.existsSync(path.join(__dirname, '../../creator-login.html'));
+      return fs.existsSync(path.join(__dirname, '../../public/pages/creator-login.html'));
     }
   },
   {
     name: 'creator-dashboard.html exists',
     fn: () => {
-      return fs.existsSync(path.join(__dirname, '../../creator-dashboard.html'));
+      return fs.existsSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'));
     }
   },
   {
@@ -544,63 +544,63 @@ runner.describe('10. Creator Signup Page (HTML/JS)', [
   {
     name: 'creator-signup.html contains email input',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('type="email"') || html.includes('email');
     }
   },
   {
     name: 'creator-signup.html contains password input',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('type="password"') || html.includes('password');
     }
   },
   {
     name: 'creator-signup.html contains slug input',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('slug') || html.includes('desired');
     }
   },
   {
     name: 'creator-signup.html has age confirmation checkbox',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('age') && html.includes('checkbox');
     }
   },
   {
     name: 'creator-signup.html has ToS acceptance checkbox',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('ToS') || html.includes('terms') || html.includes('agree');
     }
   },
   {
     name: 'creator-signup.html submits to /api/auth/password-register',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('password-register') || html.includes('/api/auth');
     }
   },
   {
     name: 'creator-signup.html has password validation (≥8 chars)',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('8') || html.includes('minlength');
     }
   },
   {
     name: 'creator-signup.html has client-side form validation',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('validate') || html.includes('addEventListener') || html.includes('submit');
     }
   },
   {
     name: 'creator-signup.html stores JWT token on success',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('localStorage') || html.includes('token') || html.includes('redirect');
     }
   }
@@ -614,42 +614,42 @@ runner.describe('11. Creator Login Page (HTML/JS)', [
   {
     name: 'creator-login.html contains email input',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('type="email"') || html.includes('email');
     }
   },
   {
     name: 'creator-login.html contains password input',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('type="password"') || html.includes('password');
     }
   },
   {
     name: 'creator-login.html submits to /api/auth/password-login',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('password-login') || html.includes('/api/auth');
     }
   },
   {
     name: 'creator-login.html stores JWT token on success',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('localStorage') || html.includes('token');
     }
   },
   {
     name: 'creator-login.html has error message display',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('error') || html.includes('message') || html.includes('alert');
     }
   },
   {
     name: 'creator-login.html link to signup page',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('signup') || html.includes('register');
     }
   }
@@ -663,35 +663,35 @@ runner.describe('12. Creator Dashboard Page (HTML/JS)', [
   {
     name: 'creator-dashboard.html exists and has content',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.length > 5000; // Should be substantial
     }
   },
   {
     name: 'creator-dashboard.html fetches creator info',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.includes('creator/info') || html.includes('/api');
     }
   },
   {
     name: 'creator-dashboard.html displays creator slug/URL',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.includes('slug') || html.includes('URL') || html.includes('creator');
     }
   },
   {
     name: 'creator-dashboard.html displays rooms',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.includes('room') || html.includes('rooms');
     }
   },
   {
     name: 'creator-dashboard.html has payment link fields',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return (html.includes('cashapp') || html.includes('CashApp')) &&
              (html.includes('paypal') || html.includes('PayPal'));
     }
@@ -699,21 +699,21 @@ runner.describe('12. Creator Dashboard Page (HTML/JS)', [
   {
     name: 'creator-dashboard.html has logout button',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.includes('logout') || html.includes('sign out');
     }
   },
   {
     name: 'creator-dashboard.html verifies authentication',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.includes('token') || html.includes('auth') || html.includes('401');
     }
   },
   {
     name: 'creator-dashboard.html has copy-to-clipboard buttons',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-dashboard.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-dashboard.html'), 'utf-8');
       return html.includes('copy') || html.includes('clipboard');
     }
   }
@@ -879,14 +879,14 @@ runner.describe('16. Security Validation', [
   {
     name: 'creator-signup.html has secure password fields',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-signup.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-signup.html'), 'utf-8');
       return html.includes('type="password"');
     }
   },
   {
     name: 'creator-login.html has secure password fields',
     fn: () => {
-      const html = fs.readFileSync(path.join(__dirname, '../../creator-login.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, '../../public/pages/creator-login.html'), 'utf-8');
       return html.includes('type="password"');
     }
   },
