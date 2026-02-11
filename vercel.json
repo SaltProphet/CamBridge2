@@ -1,10 +1,10 @@
-{
-  "routes": [
-    { "src": "^/login$", "dest": "/login.html" },
-    { "src": "^/register$", "dest": "/register.html" },
-    { "src": "^/dashboard$", "dest": "/dashboard.html" },
-    { "src": "^/room/(.*)$", "dest": "/room.html" },
-    { "src": "^/terms$", "dest": "/terms.html" },
-    { "src": "^/privacy$", "dest": "/privacy.html" }
-  ]
-}
+{"routes": [
+  {
+    "src": "/api/(.*)",
+    "dest": "server.js"
+  },
+  {
+    "src": "/(.*)",
+    "dest": "index.html"
+  }
+]}
