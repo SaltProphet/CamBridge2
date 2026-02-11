@@ -1,27 +1,82 @@
 // CamBridge - Room-Specific Logic for Multi-Tenant Platform
 // Handles dynamic routing, watermark, session management
 
-// Extract room name and room slug from URL path
-// Support both /room/:modelname/:roomslug and /r/:creatorSlug/:roomSlug patterns
+// URL parsing utilities (consistent with api/utils/url-parser.js)
+/**
+ * Parse creator slug from URL pathname
+ * Supports: /r/:creatorSlug and /r/:creatorSlug/:roomSlug
+ * @param {string} pathname - The URL pathname
+ * @returns {Object} { creatorSlug: string|null, roomSlug: string|null }
+ */
+function parseCreatorSlugFromPath(pathname) {
+  if (!pathname || typeof pathname !== 'string') {
+    return { creatorSlug: null, roomSlug: null };
+  }
+
+  // Match /r/:creatorSlug or /r/:creatorSlug/:roomSlug
+  const match = pathname.match(/\/r\/([a-z0-9_-]+)(?:\/([a-z0-9_-]+))?/i);
+  
+  if (!match) {
+    return { creatorSlug: null, roomSlug: null };
+  }
+
+  return {
+    creatorSlug: match[1] || null,
+    roomSlug: match[2] || null
+  };
+}
+
+/**
+ * Parse room URL pattern from pathname (legacy support)
+ * @param {string} pathname - The URL pathname
+ * @returns {Object} { modelName: string|null, roomSlug: string|null }
+ */
+function parseRoomFromPath(pathname) {
+  if (!pathname || typeof pathname !== 'string') {
+    return { modelName: null, roomSlug: null };
+  }
+
+  // Match /room/:modelname or /room/:modelname/:roomslug
+  const match = pathname.match(/\/room\/([a-z0-9_-]+)(?:\/([a-z0-9_-]+))?/i);
+  
+  if (!match) {
+    return { modelName: null, roomSlug: null };
+  }
+
+  return {
+    modelName: match[1] || null,
+    roomSlug: match[2] || 'main' // Default to 'main' if not specified
+  };
+}
+
+// Extract creator slug and room slug from URL path using utility functions
 const urlPath = window.location.pathname;
-let modelName = null;
+let creatorSlug = null;
+let modelName = null; // Alias for backward compatibility
 let roomSlug = 'main';
 
 // Try /r/:creatorSlug/:roomSlug pattern first (new convention)
-const rMatch = urlPath.match(/\/r\/([a-z0-9_-]+)(?:\/([a-z0-9_-]+))?/i);
-if (rMatch) {
-  modelName = rMatch[1];
-  roomSlug = rMatch[2] || 'main';
+const parsedCreator = parseCreatorSlugFromPath(urlPath);
+if (parsedCreator.creatorSlug) {
+  creatorSlug = parsedCreator.creatorSlug;
+  modelName = creatorSlug; // For backward compatibility
+  roomSlug = parsedCreator.roomSlug || 'main';
 } else {
   // Fall back to /room/:modelname/:roomslug pattern (legacy)
-  const roomMatch = urlPath.match(/\/room\/([a-z0-9_-]+)(?:\/([a-z0-9_-]+))?/i);
-  if (roomMatch) {
-    modelName = roomMatch[1];
-    roomSlug = roomMatch[2] || 'main';
+  const parsedRoom = parseRoomFromPath(urlPath);
+  if (parsedRoom.modelName) {
+    modelName = parsedRoom.modelName;
+    creatorSlug = modelName;
+    roomSlug = parsedRoom.roomSlug || 'main';
   }
 }
 
 const roomName = modelName; // For backward compatibility
+
+// Expose to window for debug panel
+window.creatorSlug = creatorSlug;
+window.roomSlug = roomSlug;
+window.modelName = modelName;
 
 // Configuration
 let config = null;
@@ -32,6 +87,21 @@ let currentRoom = null; // Will hold room metadata from config
 let sessionStartTime = null;
 let sessionTimer = null;
 let sessionWarningShown = false;
+
+// Debug panel update helper
+function updateDebugError(error) {
+  const debugErrorEl = document.getElementById('debug-last-error');
+  if (debugErrorEl) {
+    debugErrorEl.textContent = error || '-';
+  }
+}
+
+function updateDebugJoinStatus(status) {
+  const debugStatusEl = document.getElementById('debug-join-status');
+  if (debugStatusEl) {
+    debugStatusEl.textContent = status || '-';
+  }
+}
 
 // Load configuration
 async function loadConfig() {
@@ -96,6 +166,9 @@ function showError(message) {
     if (errorElement) {
         errorElement.textContent = message;
     }
+    
+    // Update debug panel
+    updateDebugError(message);
     
     // Disable unlock button
     const unlockBtn = document.getElementById('unlock-btn');
