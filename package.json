@@ -11,7 +11,8 @@
     "css:build": "npx tailwindcss -i ./styles/input.css -o ./public/styles.css --minify --config ./styles/tailwind.config.js",
     "css:watch": "npx tailwindcss -i ./styles/input.css -o ./public/styles.css --watch --config ./styles/tailwind.config.js",
     "test": "node test.js",
-    "test:api": "node --test api/**/*.test.js"
+    "test:api": "node --test api/**/*.test.js",
+    "create:test-user": "node scripts/create-test-user.js"
   },
   "dependencies": {
     "@vercel/postgres": "^0.10.0",
