@@ -4,6 +4,18 @@ import crypto from 'crypto';
 import { getLoginToken, markLoginTokenUsed, getUserByEmail, createUserByEmail, createSession } from '../db.js';
 import { generateToken } from '../middleware.js';
 
+function safeRedirectPath(returnTo) {
+  if (typeof returnTo !== 'string') {
+    return '/dashboard';
+  }
+
+  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    return '/dashboard';
+  }
+
+  return returnTo;
+}
+
 export default async function handler(req, res) {
   // Only allow GET
   if (req.method !== 'GET') {
@@ -137,8 +149,8 @@ export default async function handler(req, res) {
 
     res.setHeader('Set-Cookie', cookieOptions);
 
-    // Redirect to return URL or dashboard
-    const redirectUrl = returnTo || '/dashboard';
+    // External URLs are intentionally blocked to prevent open redirect vulnerabilities.
+    const redirectUrl = safeRedirectPath(returnTo);
     
     return res.redirect(redirectUrl);
 
