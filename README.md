@@ -469,7 +469,7 @@ When deploying to Vercel or other platforms, set these environment variables:
 ### Deployment
 
 #### Option 1: Vercel (Recommended for Multi-Tenant)
-The included `vercel.json` handles URL routing automatically:
+The included `vercel.json` serves static files directly from the root directory:
 ```bash
 # Install Vercel CLI
 npm i -g vercel
@@ -478,12 +478,14 @@ npm i -g vercel
 vercel --prod
 ```
 
-The routing configuration handles:
-- `/room/:modelname/:roomslug` → Serves room.html with model and room slug extraction
-- `/room/:modelname` → Serves room.html, defaults to 'main' room
-- `/dashboard` → Serves dashboard.html
-- `/app` → Serves legacy bridge (app.html)
-- `/` → Serves landing page
+The configuration:
+- Serves all static files (HTML, JS, CSS) from root directory
+- API functions in `/api/*` are auto-detected and deployed as serverless functions
+- `/` → Automatically serves `index.html`
+- `/landing.html` → Serves landing page
+- `/dashboard` → Serves `dashboard.html` (Vercel auto-handles .html extension)
+- `/room.html` → Serves room page
+- `/register` → Serves `register.html`
 
 #### Option 2: Netlify
 Create a `_redirects` file:

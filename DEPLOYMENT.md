@@ -39,9 +39,9 @@ DEEPGRAM_KEY=your-deepgram-api-key-optional
    Or connect via Vercel dashboard (Import Git Repository)
 
 2. **Configure Build Settings**
-   - Build Command: `npm run build` (auto-detected from vercel.json)
-   - Output Directory: `dist` (auto-detected from vercel.json)
-   - Install Command: `npm install` (auto-detected)
+   - Build Command: `echo 'Static site'` (auto-detected from vercel.json)
+   - Output Directory: `.` (root directory, auto-detected from vercel.json)
+   - Install Command: `npm install` (required for API dependencies)
 
 3. **Set Environment Variables**
    - Go to Project Settings → Environment Variables
@@ -67,34 +67,33 @@ DEEPGRAM_KEY=your-deepgram-api-key-optional
 │   ├── profile/
 │   ├── rooms/
 │   └── *.js
-├── dist/                 # Build output (static files)
-│   ├── *.html
-│   ├── *.js
-│   ├── *.css
-│   └── assets/
-├── src/                  # React source (landing page)
+├── *.html                # Static HTML pages (served from root)
+├── *.js                  # Static JavaScript files
+├── *.css                 # Static CSS files
+├── assets/               # Static assets
+├── src/                  # React source (for future SPA features)
 ├── vercel.json           # Vercel configuration
-└── vite.config.js        # Build configuration
+└── vite.config.js        # Build configuration (for future use)
 ```
 
 ### How It Works
 
-1. **Build Process** (`npm run build`)
-   - Vite builds React app → `dist/index.html` + assets
-   - Static files copied → `dist/*.html`, `dist/*.js`, etc.
-   - API directory stays at root (not copied to dist)
+1. **Build Process**
+   - No build step required - static files served as-is from root directory
+   - `npm install` runs to install API dependencies only
 
 2. **Vercel Deployment**
-   - Static files served from `dist/`
+   - Static files (HTML, JS, CSS) served directly from root directory
    - API functions served from root `api/` as serverless functions
-   - URL rewrites handle pretty URLs (e.g., `/dashboard` → `/dashboard.html`)
+   - Vercel auto-detects API directory and creates serverless functions
 
 3. **Routing**
-   - `/` → React landing page (`dist/index.html`)
-   - `/room/:model/:room` → `dist/room.html` (via rewrite)
-   - `/dashboard` → `dist/dashboard.html` (via rewrite)
+   - `/` → `index.html` (auto-served by Vercel)
+   - `/landing.html` → `landing.html`
+   - `/register` → `register.html` (Vercel auto-handles `.html` extension)
+   - `/dashboard` → `dashboard.html`
+   - `/room.html` → `room.html`
    - `/api/*` → Serverless functions in `api/` directory
-   - Other routes → React app (SPA fallback)
 
 ### Troubleshooting
 
