@@ -98,8 +98,7 @@ export default async function handler(req, res) {
     // Get room (if roomSlug provided)
     let room = null;
     if (roomSlug) {
-      const roomName = `${creatorSlug}-${roomSlug}`;
-      room = await getRoomByName(roomName);
+      room = await getRoomByName(roomSlug, creatorSlug);
       
       if (!room) {
         return res.status(404).json({ error: 'Room not found' });
