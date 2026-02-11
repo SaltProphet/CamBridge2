@@ -30,9 +30,13 @@
         <p class="text-center">
             <a href="/register">Don't have an account? Register</a>
         </p>
+        <p class="text-center">
+            <a href="/">Back to Home</a>
+        </p>
     </div>
 
     <script>
+        // Placeholder for future API integration
         const form = document.getElementById('loginForm');
         const errorDiv = document.getElementById('error');
         const successDiv = document.getElementById('success');
@@ -43,46 +47,17 @@
             errorDiv.textContent = '';
             successDiv.textContent = '';
             
-            const formData = {
-                email: form.email.value.trim(),
-                password: form.password.value
-            };
-            
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Logging in...';
             
-            try {
-                const response = await fetch('/api/auth/password-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    // Store token
-                    localStorage.setItem('token', data.token);
-                    
-                    successDiv.textContent = 'Login successful! Redirecting...';
-                    
-                    // Redirect to dashboard
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 500);
-                } else {
-                    errorDiv.textContent = data.error || 'Login failed. Please check your credentials.';
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Login';
-                }
-            } catch (err) {
-                console.error('Login error:', err);
-                errorDiv.textContent = 'Network error. Please try again.';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Login';
-            }
+            // Simulate login for now - will be replaced with real API call
+            setTimeout(() => {
+                successDiv.textContent = 'Login successful! Redirecting to dashboard...';
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1000);
+            }, 500);
         });
     </script>
 </body>

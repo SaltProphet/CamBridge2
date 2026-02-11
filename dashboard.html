@@ -13,121 +13,48 @@
             <button id="logoutBtn" class="btn btn-secondary">Logout</button>
         </div>
         
-        <div id="loading">Loading...</div>
-        <div id="content" style="display: none;">
+        <div id="content">
             <div class="user-info">
-                <h2 id="userName"></h2>
-                <p id="userEmail"></p>
+                <h2>Welcome to CamBridge</h2>
+                <p>Your personal video room dashboard</p>
             </div>
             
             <div class="room-section">
                 <h3>Your Room Link</h3>
                 <div class="room-link-container">
-                    <input type="text" id="roomLink" readonly>
+                    <input type="text" id="roomLink" readonly value="">
                     <button id="copyBtn" class="btn">Copy Link</button>
                 </div>
                 <p class="help-text">Share this link with people you want to join your room</p>
-                <a href="#" id="joinRoomBtn" class="btn btn-primary">Enter Your Room</a>
+                <a href="/room/demo" class="btn btn-primary">Enter Your Room</a>
             </div>
         </div>
-        
-        <div id="error" class="error-message"></div>
     </div>
 
     <script>
-        // Check if user is logged in
-        const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = '/login';
-        }
-        
-        const loading = document.getElementById('loading');
-        const content = document.getElementById('content');
-        const errorDiv = document.getElementById('error');
-        
-        // Decode JWT to get user info (simple base64 decode, not cryptographically secure)
-        function parseJwt(token) {
-            try {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                return JSON.parse(jsonPayload);
-            } catch (e) {
-                return null;
-            }
-        }
-        
-        // Load user data
-        async function loadUserData() {
-            try {
-                // Parse token for user ID
-                const tokenData = parseJwt(token);
-                if (!tokenData || !tokenData.id) {
-                    throw new Error('Invalid token');
-                }
-                
-                // Fetch creator info
-                const response = await fetch('/api/creator/info', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    credentials: 'include'
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load user data');
-                }
-                
-                const data = await response.json();
-                
-                // Display user info
-                document.getElementById('userName').textContent = data.displayName || 'Creator';
-                document.getElementById('userEmail').textContent = data.email || '';
-                
-                // Set room link
-                const roomLink = `${window.location.origin}/${data.slug || 'main'}`;
-                document.getElementById('roomLink').value = roomLink;
-                document.getElementById('joinRoomBtn').href = `/${data.slug || 'main'}`;
-                
-                // Show content
-                loading.style.display = 'none';
-                content.style.display = 'block';
-            } catch (err) {
-                console.error('Error loading user data:', err);
-                errorDiv.textContent = 'Failed to load dashboard. Please try logging in again.';
-                loading.style.display = 'none';
-                
-                // Clear invalid token
-                localStorage.removeItem('token');
-                setTimeout(() => {
-                    window.location.href = '/login';
-                }, 2000);
-            }
-        }
+        // Generate a room link placeholder
+        const roomLink = `${window.location.origin}/room/demo`;
+        document.getElementById('roomLink').value = roomLink;
         
         // Copy link button
         document.getElementById('copyBtn').addEventListener('click', () => {
             const linkInput = document.getElementById('roomLink');
             linkInput.select();
-            document.execCommand('copy');
-            
-            const btn = document.getElementById('copyBtn');
-            btn.textContent = 'Copied!';
-            setTimeout(() => {
-                btn.textContent = 'Copy Link';
-            }, 2000);
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = 'Copy Link';
+                }, 2000);
+            });
         });
         
         // Logout button
         document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem('token');
+            // Clear any stored data
+            localStorage.clear();
             window.location.href = '/';
         });
-        
-        // Load data on page load
-        loadUserData();
     </script>
 </body>
 </html>
