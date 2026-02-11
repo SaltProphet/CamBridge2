@@ -11,6 +11,7 @@ import {
 import { authenticate, rateLimit } from './middleware.js';
 import { getPaymentsProvider } from './providers/payments.js';
 import { PolicyGates } from './policies/gates.js';
+import { getRequestId, logPolicyDecision } from './logging.js';
 
 // Rate limit: 10 requests per hour per user per creator
 const joinRequestRateLimit = new Map();
@@ -45,9 +46,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const requestId = getRequestId(req);
+  const endpoint = '/api/join-request';
+
   // Authenticate user
   const auth = await authenticate(req);
   if (!auth.authenticated) {
+    logPolicyDecision({ requestId, endpoint, actorId: null, decision: 'deny', reason: auth.error || 'Unauthorized' });
     return res.status(401).json({ error: auth.error || 'Unauthorized' });
   }
 
@@ -77,6 +82,7 @@ export default async function handler(req, res) {
     });
 
     if (!policyCheck.allowed) {
+      logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: policyCheck.reason || 'join request policy blocked', metadata: { creatorId: creator.id } });
       const isBanned = policyCheck.reason?.includes('banned');
       return res.status(403).json({ 
         error: policyCheck.reason,
@@ -89,6 +95,7 @@ export default async function handler(req, res) {
     // Rate limit check
     const rateLimitCheck = checkJoinRequestRateLimit(userId, creator.id);
     if (!rateLimitCheck.allowed) {
+      logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: 'join request rate limit exceeded', metadata: { creatorId: creator.id } });
       return res.status(429).json({ 
         error: 'Too many join requests. Please try again later.',
         remaining: rateLimitCheck.remaining
@@ -132,6 +139,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to create join request' });
     }
 
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'allow', reason: 'join request created', metadata: { creatorId: creator.id, joinRequestId: requestResult.request.id } });
+
     return res.status(201).json({
       success: true,
       message: 'Join request created. Waiting for creator approval.',
@@ -141,7 +150,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Join request error:', error);
+    console.error('Join request error:', { requestId, endpoint, error: error.message });
     return res.status(500).json({ 
       error: 'An error occurred while creating join request' 
     });

@@ -1,5 +1,6 @@
 // Phase 0: Video Provider Abstraction
 // Allows swapping video providers (Daily.co, Twilio, Agora, etc.) via configuration
+import { assertProviderSecrets } from '../env.js';
 
 /**
  * VideoProvider Interface
@@ -193,6 +194,7 @@ export class DailyVideoProvider extends VideoProvider {
  */
 export function getVideoProvider() {
   const provider = process.env.VIDEO_PROVIDER || 'daily';
+  assertProviderSecrets('video', provider);
   const apiKey = process.env.DAILY_API_KEY;
   const domain = process.env.DAILY_DOMAIN || 'cambridge';
 

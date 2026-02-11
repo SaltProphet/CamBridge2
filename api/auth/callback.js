@@ -3,6 +3,7 @@
 import crypto from 'crypto';
 import { getLoginToken, markLoginTokenUsed, getUserByEmail, createUserByEmail, createSession } from '../db.js';
 import { generateToken } from '../middleware.js';
+import { getRequestId, logPolicyDecision } from '../logging.js';
 
 export default async function handler(req, res) {
   // Only allow GET
@@ -11,10 +12,13 @@ export default async function handler(req, res) {
   }
 
   try {
+    const requestId = getRequestId(req);
+    const endpoint = '/api/auth/callback';
     const { token, returnTo } = req.query;
 
     // Validate token parameter
     if (!token || typeof token !== 'string' || token.length !== 64) {
+      logPolicyDecision({ requestId, endpoint, actorId: null, decision: 'deny', reason: 'invalid token format' });
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
@@ -41,6 +45,7 @@ export default async function handler(req, res) {
     const loginToken = await getLoginToken(tokenHash);
     
     if (!loginToken) {
+      logPolicyDecision({ requestId, endpoint, actorId: null, decision: 'deny', reason: 'token expired or already used' });
       return res.status(401).send(`
         <!DOCTYPE html>
         <html>
@@ -64,6 +69,7 @@ export default async function handler(req, res) {
     await markLoginTokenUsed(tokenHash);
 
     const email = loginToken.email;
+    const actorId = email;
 
     // Check if user exists
     let user = await getUserByEmail(email);
@@ -72,6 +78,7 @@ export default async function handler(req, res) {
     if (!user) {
       const createResult = await createUserByEmail(email);
       if (!createResult.success) {
+        logPolicyDecision({ requestId, endpoint, actorId, decision: 'deny', reason: `user auto-create failed: ${createResult.error || 'unknown error'}` });
         console.error('Failed to create user:', createResult.error);
         return res.status(500).send(`
           <!DOCTYPE html>
@@ -104,6 +111,7 @@ export default async function handler(req, res) {
     // Store session in database
     const sessionResult = await createSession(user.id, jwtToken, expiresAt);
     if (!sessionResult.success) {
+      logPolicyDecision({ requestId, endpoint, actorId: user.id, decision: 'deny', reason: `session creation failed: ${sessionResult.error || 'unknown error'}` });
       console.error('Session creation failed:', sessionResult.error);
       return res.status(500).send(`
         <!DOCTYPE html>
@@ -137,13 +145,15 @@ export default async function handler(req, res) {
 
     res.setHeader('Set-Cookie', cookieOptions);
 
+    logPolicyDecision({ requestId, endpoint, actorId: user.id, decision: 'allow', reason: 'magic-link authentication completed' });
+
     // Redirect to return URL or dashboard
     const redirectUrl = returnTo || '/dashboard';
     
     return res.redirect(redirectUrl);
 
   } catch (error) {
-    console.error('Magic link callback error:', error);
+    console.error('Magic link callback error:', { requestId: getRequestId(req), endpoint: '/api/auth/callback', error: error.message });
     return res.status(500).send(`
       <!DOCTYPE html>
       <html>
