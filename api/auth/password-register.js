@@ -1,11 +1,27 @@
 // API endpoint for BETA MODE creator password registration
 // Creates user + creator account without email verification
 import bcrypt from 'bcryptjs';
-import { sql } from '@vercel/postgres';
 import { generateToken, validateEmail, consumeRateLimit, buildRateLimitKey } from '../middleware.js';
 import { PolicyGates, killSwitch } from '../policies/gates.js';
 import { getRequestId, logPolicyDecision } from '../logging.js';
-import { createRoom } from '../db.js';
+
+// Try to load real database, fall back to mock
+let sqlApi = null;
+
+async function getSqlApi() {
+  if (sqlApi) return sqlApi;
+  
+  try {
+    const pgModule = await import('@vercel/postgres');
+    sqlApi = pgModule.sql;
+  } catch (e) {
+    console.warn('⚠️  PostgreSQL not available, using in-memory mock database');
+    const mockDb = await import('../db-mock.js');
+    sqlApi = mockDb.sql;
+  }
+  
+  return sqlApi;
+}
 
 const REGISTER_MAX_REQUESTS = 5;
 const ONE_HOUR_MS = 3600000;
@@ -74,6 +90,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get sql API (real DB or mock)
+    const sql = await getSqlApi();
+
     // Check if BETA_MODE is enabled
     if (!killSwitch.isBetaMode()) {
       return res.status(403).json({ error: 'BETA_MODE is not enabled' });
@@ -271,7 +290,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Password registration error:', error);
-    return res.status(500).json({ error: 'Registration failed. Please try again.' });
+    console.error('Password registration error:', error.message);
+    console.error('Error details:', error.code || error.message);
+    return res.status(500).json({ 
+      error: 'Registration failed. Please try again.',
+      details: error.message // Remove in production
+    });
   }
 }

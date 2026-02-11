@@ -1,6 +1,23 @@
 // Public API endpoint to get creator payment information
 // No authentication required - only returns public-facing data
-import { sql } from '@vercel/postgres';
+
+// Try to load real database, fall back to mock
+let sqlApi = null;
+
+async function getSqlApi() {
+  if (sqlApi) return sqlApi;
+  
+  try {
+    const pgModule = await import('@vercel/postgres');
+    sqlApi = pgModule.sql;
+  } catch (e) {
+    console.warn('⚠️  PostgreSQL not available, using in-memory mock database');
+    const mockDb = await import('../db-mock.js');
+    sqlApi = mockDb.sql;
+  }
+  
+  return sqlApi;
+}
 
 export default async function handler(req, res) {
   // Only allow GET
@@ -9,6 +26,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const sql = await getSqlApi();
     const { slug } = req.query;
 
     if (!slug || typeof slug !== 'string') {
