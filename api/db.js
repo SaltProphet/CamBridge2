@@ -98,6 +98,14 @@ export async function initializeTables() {
 
     // Add bio column if it doesn't exist (for existing databases)
     await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS bio TEXT`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_provider VARCHAR(50) DEFAULT 'manual'`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_external_id VARCHAR(255)`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'inactive'`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_started_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_next_billing_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_canceled_at TIMESTAMPTZ`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creators_subscription_external ON creators(subscription_provider, subscription_external_id)`;
 
     // Extend rooms table with Phase 1 fields
     await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS creator_id UUID REFERENCES creators(id) ON DELETE CASCADE`;
@@ -149,6 +157,20 @@ export async function initializeTables() {
     await sql`CREATE INDEX IF NOT EXISTS idx_bans_user_id ON bans(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_bans_email ON bans(email)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_bans_active ON bans(active)`;
+
+    // payments_webhook_events table for idempotent webhook handling
+    await sql`
+      CREATE TABLE IF NOT EXISTS payments_webhook_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        provider VARCHAR(50) NOT NULL,
+        external_event_id VARCHAR(255) NOT NULL,
+        external_subscription_id VARCHAR(255),
+        creator_id UUID REFERENCES creators(id) ON DELETE SET NULL,
+        processed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(provider, external_event_id)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_payments_webhook_events_provider_subscription ON payments_webhook_events(provider, external_subscription_id)`;
 
     return { success: true };
   } catch (error) {
@@ -713,7 +735,15 @@ export async function createCreator(userId, slug, displayName, referralCode = nu
 export async function getCreatorBySlug(slug) {
   try {
     const result = await sql`
-      SELECT c.*, u.username, u.email, u.display_name as user_display_name
+      SELECT c.*,
+             COALESCE(c.subscription_provider, 'manual') as subscription_provider,
+             c.subscription_external_id,
+             COALESCE(c.subscription_status, 'inactive') as subscription_status,
+             c.subscription_started_at,
+             c.subscription_expires_at,
+             c.subscription_next_billing_at,
+             c.subscription_canceled_at,
+             u.username, u.email, u.display_name as user_display_name
       FROM creators c
       JOIN users u ON c.user_id = u.id
       WHERE c.slug = ${slug} AND c.status = 'active'
@@ -728,7 +758,11 @@ export async function getCreatorBySlug(slug) {
 export async function getCreatorByUserId(userId) {
   try {
     const result = await sql`
-      SELECT * FROM creators WHERE user_id = ${userId}
+      SELECT *,
+             COALESCE(subscription_provider, 'manual') as subscription_provider,
+             COALESCE(subscription_status, 'inactive') as subscription_status
+      FROM creators
+      WHERE user_id = ${userId}
     `;
     return result.rows[0] || null;
   } catch (error) {
@@ -740,7 +774,11 @@ export async function getCreatorByUserId(userId) {
 export async function getCreatorById(creatorId) {
   try {
     const result = await sql`
-      SELECT * FROM creators WHERE id = ${creatorId}
+      SELECT *,
+             COALESCE(subscription_provider, 'manual') as subscription_provider,
+             COALESCE(subscription_status, 'inactive') as subscription_status
+      FROM creators
+      WHERE id = ${creatorId}
     `;
     return result.rows[0] || null;
   } catch (error) {
@@ -761,6 +799,116 @@ export async function updateCreatorStatus(creatorId, status) {
   } catch (error) {
     console.error('Update creator status error:', error);
     return { success: false, error: error.message };
+  }
+}
+
+export async function hasProcessedWebhookEvent(provider, externalEventId) {
+  try {
+    if (!provider || !externalEventId) {
+      return false;
+    }
+
+    const result = await sql`
+      SELECT 1
+      FROM payments_webhook_events
+      WHERE provider = ${provider} AND external_event_id = ${externalEventId}
+      LIMIT 1
+    `;
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Has processed webhook event error:', error);
+    return false;
+  }
+}
+
+export async function recordProcessedWebhookEvent(provider, externalEventId, externalSubscriptionId = null, creatorId = null) {
+  try {
+    if (!provider || !externalEventId) {
+      return { success: false, error: 'provider and externalEventId are required' };
+    }
+
+    const result = await sql`
+      INSERT INTO payments_webhook_events (provider, external_event_id, external_subscription_id, creator_id)
+      VALUES (${provider}, ${externalEventId}, ${externalSubscriptionId}, ${creatorId})
+      ON CONFLICT (provider, external_event_id) DO NOTHING
+      RETURNING *
+    `;
+
+    return {
+      success: true,
+      inserted: result.rows.length > 0,
+      event: result.rows[0] || null
+    };
+  } catch (error) {
+    console.error('Record processed webhook event error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateCreatorSubscription(creatorId, patch = {}) {
+  try {
+    const updates = [];
+    const values = [creatorId];
+    let paramIndex = 2;
+
+    const allowedFields = [
+      'subscription_provider',
+      'subscription_external_id',
+      'subscription_status',
+      'subscription_started_at',
+      'subscription_expires_at',
+      'subscription_next_billing_at',
+      'subscription_canceled_at'
+    ];
+
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(patch, field)) {
+        updates.push(`${field} = $${paramIndex}`);
+        values.push(patch[field]);
+        paramIndex++;
+      }
+    }
+
+    if (updates.length === 0) {
+      return getCreatorById(creatorId).then(creator => ({ success: true, creator, unchanged: true }));
+    }
+
+    const query = `
+      UPDATE creators
+      SET ${updates.join(', ')}
+      WHERE id = $1
+      RETURNING *,
+                COALESCE(subscription_provider, 'manual') as subscription_provider,
+                COALESCE(subscription_status, 'inactive') as subscription_status
+    `;
+
+    const result = await sql.query(query, values);
+    return { success: true, creator: result.rows[0] || null, unchanged: false };
+  } catch (error) {
+    console.error('Update creator subscription error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getCreatorByExternalSubscriptionId(provider, externalId) {
+  try {
+    if (!provider || !externalId) {
+      return null;
+    }
+
+    const result = await sql`
+      SELECT *,
+             COALESCE(subscription_provider, 'manual') as subscription_provider,
+             COALESCE(subscription_status, 'inactive') as subscription_status
+      FROM creators
+      WHERE subscription_provider = ${provider}
+        AND subscription_external_id = ${externalId}
+      LIMIT 1
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get creator by external subscription ID error:', error);
+    return null;
   }
 }
 
