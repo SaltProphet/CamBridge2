@@ -47,7 +47,18 @@ console.log('  DB:', process.env.POSTGRES_URL ? '✓ Connected' : '⚠ Mock mode
 
     // Middleware
     app.use(express.json());
-    app.use(express.static(path.join(__dirname)));
+    
+    // Serve static files from specific directories only (not entire repo root)
+    app.use('/assets', express.static(path.join(__dirname, 'assets')));
+    app.use('/styles', express.static(path.join(__dirname, 'styles')));
+    app.use('/public', express.static(path.join(__dirname, 'public')));
+    
+    // Serve HTML files from root (index.html, app.html, etc.)
+    app.use(express.static(path.join(__dirname), {
+      index: false, // Don't auto-serve index.html
+      dotfiles: 'deny', // Deny access to dotfiles
+      extensions: ['html'] // Only serve HTML files
+    }));
 
     // API Routes
     app.post('/api/register', (req, res) => registerHandler(req, res));

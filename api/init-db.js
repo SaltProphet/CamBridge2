@@ -7,10 +7,18 @@ export default async function handler(req, res) {
   // GET method - Return status without requiring secret
   if (req.method === 'GET') {
     try {
+      // In mock DB mode, sql is intentionally null. Treat this as a healthy,
+      // initialized mock state so status checks succeed without Postgres.
       if (!sql) {
-        return res.status(500).json({
-          initialized: false,
-          error: 'Database not configured. Set POSTGRES_PRISMA_URL or POSTGRES_URL environment variable.'
+        return res.status(200).json({
+          initialized: true,
+          mock: true,
+          tables: {
+            users: true,
+            rooms: true,
+            join_requests: true
+          },
+          configured: !!INIT_SECRET
         });
       }
 

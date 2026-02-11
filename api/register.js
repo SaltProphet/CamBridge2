@@ -4,7 +4,33 @@
 import bcrypt from 'bcryptjs';
 import { createUser, getUserByEmail, usingMockDb } from './db-simple.js';
 
-const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
+const DEFAULT_BCRYPT_ROUNDS = 12;
+const MIN_BCRYPT_ROUNDS = 8;
+const MAX_BCRYPT_ROUNDS = 15;
+
+function getBcryptRounds() {
+  const raw = process.env.BCRYPT_ROUNDS;
+  if (!raw) {
+    return DEFAULT_BCRYPT_ROUNDS;
+  }
+
+  const parsed = parseInt(raw, 10);
+  if (Number.isNaN(parsed)) {
+    return DEFAULT_BCRYPT_ROUNDS;
+  }
+
+  // Clamp to a safe range to avoid too-weak or too-slow hashes
+  if (parsed < MIN_BCRYPT_ROUNDS) {
+    return MIN_BCRYPT_ROUNDS;
+  }
+  if (parsed > MAX_BCRYPT_ROUNDS) {
+    return MAX_BCRYPT_ROUNDS;
+  }
+
+  return parsed;
+}
+
+const BCRYPT_ROUNDS = getBcryptRounds();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

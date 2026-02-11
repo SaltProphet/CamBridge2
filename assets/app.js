@@ -145,11 +145,11 @@ function showDashboard() {
 
 async function loadDashboard() {
     // Load rooms
-    const roomsResult = await loadRooms();
+    await loadRooms();
     renderRooms();
     
     // Load join requests
-    const requestsResult = await loadJoinRequests();
+    await loadJoinRequests();
     renderJoinRequests();
 }
 

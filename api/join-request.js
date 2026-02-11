@@ -16,14 +16,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Room slug and email are required' });
     }
 
+    // Validate and normalize slug format (same as create-room)
+    const normalizedSlug = roomSlug.toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(normalizedSlug)) {
+      return res.status(400).json({ error: 'Room slug can only contain lowercase letters, numbers, and hyphens' });
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(requesterEmail)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Get room
-    const room = await getRoomBySlug(roomSlug);
+    // Get room using normalized slug
+    const room = await getRoomBySlug(normalizedSlug);
     
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
