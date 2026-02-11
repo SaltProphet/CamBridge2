@@ -103,7 +103,14 @@ export default async function handler(req, res) {
 
     // Create default rooms (main public room)
     const mainRoomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const mainRoomResult = await createRoom(userId, `${creatorSlug}-main`, mainRoomCode);
+    const mainRoomResult = await createRoom(userId, `${creatorSlug}-main`, mainRoomCode, {
+      creatorId: creator.id,
+      roomSlug: 'main',
+      roomType: 'public',
+      enabled: true,
+      joinMode: 'knock',
+      maxParticipants: null
+    });
     
     if (!mainRoomResult.success) {
       console.error('Failed to create main room:', mainRoomResult.error);
