@@ -15,9 +15,9 @@ let getSessionByTokenFunc = null;
 async function getSqlApi() {
   if (sqlApi) return sqlApi;
   
-  // If POSTGRES_URL is not set, use mock database immediately
-  if (!process.env.POSTGRES_URL) {
-    console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
+  // If neither POSTGRES_URL nor POSTGRES_PRISMA_URL is set, use mock database immediately
+  if (!process.env.POSTGRES_URL && !process.env.POSTGRES_PRISMA_URL) {
+    console.log('⚠️  POSTGRES_URL/POSTGRES_PRISMA_URL not set, using in-memory mock database');
     const mockDb = await import('./db-mock.js');
     sqlApi = mockDb.sql;
     return sqlApi;

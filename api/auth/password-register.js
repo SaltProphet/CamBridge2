@@ -11,9 +11,9 @@ let sqlApi = null;
 async function getSqlApi() {
   if (sqlApi) return sqlApi;
   
-  // If POSTGRES_URL is not set, use mock database immediately
-  if (!process.env.POSTGRES_URL) {
-    console.log('⚠️  POSTGRES_URL not set, using in-memory mock database');
+  // If neither POSTGRES_URL nor POSTGRES_PRISMA_URL is set, use mock database immediately
+  if (!process.env.POSTGRES_URL && !process.env.POSTGRES_PRISMA_URL) {
+    console.log('⚠️  POSTGRES_URL/POSTGRES_PRISMA_URL not set, using in-memory mock database');
     const mockDb = await import('../db-mock.js');
     sqlApi = mockDb.sql;
     return sqlApi;
@@ -55,7 +55,7 @@ function validateSlug(slug) {
 }
 
 // Generate unique slug from display name
-async function generateUniqueSlug(displayName) {
+async function generateUniqueSlug(displayName, sql) {
   let baseSlug = displayName
     .toLowerCase()
     .replace(/[^\w\s-]/g, '') // Remove special chars
@@ -184,7 +184,7 @@ export default async function handler(req, res) {
 
     // Generate slug if not provided
     if (!slug) {
-      slug = await generateUniqueSlug(displayName);
+      slug = await generateUniqueSlug(displayName, sql);
     } else {
       // Verify desired slug is unique
       const existingSlug = await sql`
