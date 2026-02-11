@@ -54,6 +54,98 @@ export async function initializeTables() {
     await sql`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`;
 
+    // ==================================================
+    // PHASE 1: Additional tables and columns
+    // ==================================================
+
+    // Extend users table with Phase 1 fields
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'client'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS tos_accepted_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_attested_at TIMESTAMPTZ`;
+
+    // login_tokens table for magic links
+    await sql`
+      CREATE TABLE IF NOT EXISTS login_tokens (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_login_tokens_email ON login_tokens(email)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_login_tokens_token_hash ON login_tokens(token_hash)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_login_tokens_expires_at ON login_tokens(expires_at)`;
+
+    // creators table
+    await sql`
+      CREATE TABLE IF NOT EXISTS creators (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        slug VARCHAR(100) NOT NULL UNIQUE,
+        display_name VARCHAR(200),
+        plan VARCHAR(50) DEFAULT 'free',
+        status VARCHAR(20) DEFAULT 'active',
+        referral_code VARCHAR(20) UNIQUE,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creators_slug ON creators(slug)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creators_user_id ON creators(user_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`;
+
+    // Extend rooms table with Phase 1 fields
+    await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS creator_id UUID REFERENCES creators(id) ON DELETE CASCADE`;
+    await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_slug VARCHAR(100)`;
+    await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_type VARCHAR(50) DEFAULT 'public'`;
+    await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT TRUE`;
+    await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS join_mode VARCHAR(20) DEFAULT 'knock'`;
+    await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS max_participants INTEGER`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_rooms_creator_id ON rooms(creator_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_rooms_room_slug ON rooms(room_slug)`;
+
+    // join_requests table
+    await sql`
+      CREATE TABLE IF NOT EXISTS join_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        creator_id UUID NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+        room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(20) DEFAULT 'pending',
+        daily_token VARCHAR(500),
+        token_expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        decided_at TIMESTAMPTZ,
+        decision_reason VARCHAR(500),
+        ip_hash VARCHAR(255),
+        device_hash VARCHAR(255)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_join_requests_creator_id ON join_requests(creator_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_join_requests_user_id ON join_requests(user_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_join_requests_status ON join_requests(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_join_requests_created_at ON join_requests(created_at)`;
+
+    // bans table
+    await sql`
+      CREATE TABLE IF NOT EXISTS bans (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        creator_id UUID NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        email VARCHAR(255),
+        ip_hash VARCHAR(255),
+        device_hash VARCHAR(255),
+        reason VARCHAR(500),
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        active BOOLEAN DEFAULT TRUE
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_bans_creator_id ON bans(creator_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_bans_user_id ON bans(user_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_bans_email ON bans(email)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_bans_active ON bans(active)`;
+
     return { success: true };
   } catch (error) {
     console.error('Database initialization error:', error);

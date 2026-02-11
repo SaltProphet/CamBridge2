@@ -68,19 +68,30 @@ export function generateToken(userId, username) {
   );
 }
 
-// Extract token from Authorization header
+// Extract token from Authorization header or cookie
 export function extractToken(req) {
+  // First try Authorization header
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return null;
+  if (authHeader) {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[0] === 'Bearer') {
+      return parts[1];
+    }
   }
   
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    return null;
+  // Phase 1: Try cookie for magic-link auth
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'auth_token') {
+        return value;
+      }
+    }
   }
   
-  return parts[1];
+  return null;
 }
 
 // Authentication middleware

@@ -414,7 +414,7 @@ async function validateAndJoin() {
 }
 
 // Start Daily.co call with iframe
-function startCall() {
+function startCall(usePhase1Token = false) {
     const dailyUrl = getDailyRoomUrl();
     
     if (!dailyUrl) {
@@ -422,6 +422,9 @@ function startCall() {
         errorMessage.textContent = 'Configuration error';
         return;
     }
+    
+    // Phase 1: Check if we should use the token from Phase 1 auth
+    const dailyToken = usePhase1Token && window.phase1DailyToken ? window.phase1DailyToken : null;
     
     // Create Daily.co iframe
     dailyCall = window.DailyIframe.createFrame(videoContainer, {
@@ -438,8 +441,14 @@ function startCall() {
         }
     });
     
-    // Join the room
-    dailyCall.join({ url: dailyUrl })
+    // Join the room (with token if Phase 1)
+    const joinOptions = { url: dailyUrl };
+    if (dailyToken) {
+        joinOptions.token = dailyToken;
+        console.log('Joining room with Phase 1 authentication token');
+    }
+    
+    dailyCall.join(joinOptions)
         .then(() => {
             // Show STT controls if Deepgram key is configured
             if (DEEPGRAM_KEY) {
@@ -1007,3 +1016,28 @@ function handleAppMessage(event) {
         Portal.processTip(sender || 'Remote', amount);
     }
 }
+
+// ==================================================
+// PHASE 1: Integration with phase1-auth.js
+// ==================================================
+
+// Callback for phase1-auth.js when join request is approved
+window.phase1Approved = function() {
+    console.log('Phase 1: Access approved, starting video call with token');
+    
+    // Hide gatekeeper
+    const gatekeeper = document.getElementById('gatekeeper');
+    if (gatekeeper) {
+        gatekeeper.classList.remove('active');
+        gatekeeper.classList.add('hidden');
+    }
+    
+    // Show video container
+    const videoContainer = document.getElementById('video-container');
+    if (videoContainer) {
+        videoContainer.classList.remove('hidden');
+    }
+    
+    // Start the call with Phase 1 token
+    startCall(true);
+};

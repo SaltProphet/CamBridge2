@@ -14,18 +14,24 @@ export default async function handler(req, res) {
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_name IN ('users', 'rooms', 'sessions')
+        AND table_name IN ('users', 'rooms', 'sessions', 'login_tokens', 'creators', 'join_requests', 'bans')
       `;
 
       const existingTables = tablesResult.rows.map(row => row.table_name);
-      const initialized = existingTables.length === 3;
+      const coreInitialized = ['users', 'rooms', 'sessions'].every(t => existingTables.includes(t));
+      const phase1Initialized = ['login_tokens', 'creators', 'join_requests', 'bans'].every(t => existingTables.includes(t));
 
       return res.status(200).json({
-        initialized,
+        initialized: coreInitialized,
+        phase1Initialized,
         tables: {
           users: existingTables.includes('users'),
           rooms: existingTables.includes('rooms'),
-          sessions: existingTables.includes('sessions')
+          sessions: existingTables.includes('sessions'),
+          login_tokens: existingTables.includes('login_tokens'),
+          creators: existingTables.includes('creators'),
+          join_requests: existingTables.includes('join_requests'),
+          bans: existingTables.includes('bans')
         },
         configured: !!INIT_SECRET
       });
