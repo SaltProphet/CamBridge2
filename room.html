@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Room - CamBridge</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <style>
+        .room-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .room-header {
+            background: var(--bg-section);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .room-header h1 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .room-link {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+        }
+        
+        .room-link:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+        
+        .room-info {
+            background: var(--bg-section);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        
+        .room-info h2 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .room-info p {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .copy-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-light);
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+        
+        .copy-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .logout-btn {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+    </style>
+</head>
+<body>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    
+    <div class="room-container">
+        <div class="room-header">
+            <h1>Welcome to Your Room</h1>
+            <p style="color: var(--text);">Your room: <strong id="room-slug" style="color: var(--accent);">Loading...</strong></p>
+        </div>
+        
+        <div class="room-info">
+            <h2>Your Room Link</h2>
+            <p>Share this link to invite people to your room:</p>
+            <p>
+                <strong id="room-url" style="color: var(--accent);">Loading...</strong>
+                <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+            </p>
+        </div>
+        
+        <div class="room-info">
+            <h2>Room Status</h2>
+            <p id="status-text">Checking room status...</p>
+        </div>
+    </div>
+
+    <script>
+        const roomSlug = window.location.pathname.split('/').pop();
+        
+        // Display room info
+        document.getElementById('room-slug').textContent = roomSlug;
+        const roomUrl = `${window.location.origin}/room/${roomSlug}`;
+        document.getElementById('room-url').textContent = roomUrl;
+        document.getElementById('status-text').textContent = `Your room "${roomSlug}" is ready! Share the link above to invite people.`;
+        
+        function copyLink() {
+            const url = roomUrl;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Room link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                prompt('Copy this link:', url);
+            });
+        }
+        
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) {
+                console.error('Logout error:', e);
+            }
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

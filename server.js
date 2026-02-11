@@ -65,6 +65,11 @@ console.log('  DB:', process.env.POSTGRES_URL ? '✓ Connected' : '⚠ Mock mode
       res.sendFile(path.join(__dirname, 'index.html'));
     });
 
+    // Serve room.html for /room/* routes
+    app.get('/room/:slug', (req, res) => {
+      res.sendFile(path.join(__dirname, 'room.html'));
+    });
+
     // Start server
     app.listen(PORT, () => {
       console.log(`\n🚀 CamBridge Development Server`);

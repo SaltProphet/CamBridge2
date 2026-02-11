@@ -225,36 +225,51 @@ async function handleRegister(e) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating your account and room...';
 
-    const result = await register(email, password);
-    
-    if (result.ok) {
-        // Now create the room
-        const loginResult = await login(email, password);
-        if (loginResult.ok) {
-            currentUser = loginResult.data.user;
-            
-            // Create room with the chosen slug
-            const roomResult = await createRoom(roomSlug);
-            
-            if (roomResult.ok) {
-                rooms.push(roomResult.data.room);
-                successEl.textContent = `Success! Your room "${roomSlug}" is ready.`;
-                
-                // Wait a moment then show dashboard
-                setTimeout(() => {
-                    showDashboard();
-                }, 1500);
-            } else {
-                errorEl.textContent = 'Account created but room creation failed: ' + roomResult.error;
-                setTimeout(() => {
-                    showDashboard();
-                }, 2000);
-            }
+    try {
+        // Step 1: Register
+        const result = await register(email, password);
+        
+        if (!result.ok) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            errorEl.textContent = result.error;
+            return;
         }
-    } else {
+
+        // Step 2: Login
+        const loginResult = await login(email, password);
+        if (!loginResult.ok) {
+            errorEl.textContent = 'Account created but login failed. Please try logging in.';
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        currentUser = loginResult.data.user;
+
+        // Step 3: Create room
+        const roomResult = await createRoom(roomSlug);
+        
+        if (!roomResult.ok) {
+            errorEl.textContent = 'Account created but room creation failed: ' + roomResult.error;
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        // SUCCESS! Go directly to the room
+        const room = roomResult.data.room;
+        successEl.textContent = `Success! Taking you to your room...`;
+        
+        // Go to room immediately (no dashboard/profile)
+        setTimeout(() => {
+            window.location.href = `/room/${roomSlug}`;
+        }, 500);
+
+    } catch (error) {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
-        errorEl.textContent = result.error;
+        errorEl.textContent = 'Registration failed: ' + error.message;
     }
 }
 
@@ -270,8 +285,16 @@ async function handleLogin(e) {
     if (result.ok) {
         errorEl.textContent = '';
         currentUser = result.data.user;
-        form.reset();
-        showDashboard();
+        
+        // Get user's rooms
+        if (result.data.rooms && result.data.rooms.length > 0) {
+            // Go directly to their first room
+            const room = result.data.rooms[0];
+            window.location.href = `/room/${room.slug}`;
+        } else {
+            // No room yet, show dashboard to create one
+            showDashboard();
+        }
     } else {
         errorEl.textContent = result.error;
     }
