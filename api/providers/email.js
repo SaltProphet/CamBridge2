@@ -1,5 +1,6 @@
 // Phase 0: Email Provider Abstraction
 // Allows swapping email providers (Resend, SendGrid, Mailgun, etc.) via configuration
+import { assertProviderSecrets } from '../env.js';
 
 /**
  * EmailProvider Interface
@@ -174,6 +175,7 @@ export class ConsoleEmailProvider extends EmailProvider {
  */
 export function getEmailProvider() {
   const provider = process.env.EMAIL_PROVIDER || 'resend';
+  assertProviderSecrets('email', provider);
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
 

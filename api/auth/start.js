@@ -6,6 +6,8 @@ import { createLoginToken } from '../db.js';
 import { validateEmail, consumeRateLimit, buildRateLimitKey } from '../middleware.js';
 import { getEmailProvider } from '../providers/email.js';
 import { PolicyGates } from '../policies/gates.js';
+import { getRequestId, logPolicyDecision } from '../logging.js';
+import { assertProviderSecrets } from '../env.js';
 
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 
@@ -19,11 +21,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    const requestId = getRequestId(req);
+    const endpoint = '/api/auth/start';
     const { email, returnTo } = req.body;
 
     // Phase 0: Check signup policy (kill switch)
     const signupCheck = PolicyGates.checkSignupPolicies();
     if (!signupCheck.allowed) {
+      logPolicyDecision({ requestId, endpoint, actorId: null, decision: 'deny', reason: signupCheck.reason || 'signup policy blocked' });
       return res.status(403).json({ error: signupCheck.reason });
     }
 
@@ -34,6 +39,7 @@ export default async function handler(req, res) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const actorId = normalizedEmail;
 
     // Rate limit check (per email)
     const rateLimitCheck = await consumeRateLimit({
@@ -42,7 +48,7 @@ export default async function handler(req, res) {
       windowMs: ONE_HOUR_MS
     });
     if (!rateLimitCheck.allowed) {
-      console.log(`Rate limit exceeded for email: ${normalizedEmail}`);
+      logPolicyDecision({ requestId, endpoint, actorId, decision: 'deny', reason: 'rate limit exceeded' });
       return res.status(429).json({ 
         error: 'Too many login attempts. Please try again in an hour.' 
       });
@@ -69,10 +75,13 @@ export default async function handler(req, res) {
     const magicLinkUrl = `${APP_BASE_URL}/api/auth/callback?token=${token}&returnTo=${encodeURIComponent(returnPath)}`;
 
     // Phase 0: Send email via provider abstraction
+    const emailProviderName = process.env.EMAIL_PROVIDER || 'resend';
+    assertProviderSecrets('email', emailProviderName);
     const emailProvider = getEmailProvider();
     const emailResult = await emailProvider.sendMagicLink(normalizedEmail, magicLinkUrl);
 
     if (!emailResult.success) {
+      logPolicyDecision({ requestId, endpoint, actorId, decision: 'deny', reason: `email send failed: ${emailResult.error || 'unknown error'}` });
       console.error('Email sending error:', emailResult.error);
       
       // For development, log the magic link
@@ -88,7 +97,7 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log(`Magic link sent to ${normalizedEmail} (messageId: ${emailResult.messageId})`);
+    logPolicyDecision({ requestId, endpoint, actorId, decision: 'allow', reason: 'magic link sent' });
     
     return res.status(200).json({
       success: true,
@@ -97,7 +106,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Magic link start error:', error);
+    console.error('Magic link start error:', { requestId: getRequestId(req), endpoint: '/api/auth/start', error: error.message });
     return res.status(500).json({ 
       error: 'An error occurred. Please try again.' 
     });

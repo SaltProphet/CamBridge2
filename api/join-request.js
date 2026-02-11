@@ -11,7 +11,8 @@ import {
 } from './db.js';
 import { authenticate, consumeRateLimit, buildRateLimitKey } from './middleware.js';
 import { getPaymentsProvider } from './providers/payments.js';
-import { PolicyGates, killSwitch } from './policies/gates.js';
+import { PolicyGates } from './policies/gates.js';
+import { getRequestId, logPolicyDecision } from './logging.js';
 
 const JOIN_REQUEST_MAX_REQUESTS = 10;
 const ONE_HOUR_MS = 3600000;
@@ -111,12 +112,14 @@ export async function processJoinRequest(req, deps = {}) {
     return { status: 405, body: errorPayload('Method not allowed', 'METHOD_NOT_ALLOWED') };
   }
 
-  const auth = await authenticateFn(req);
+  const requestId = getRequestId(req);
+  const endpoint = '/api/join-request';
+
+  // Authenticate user
+  const auth = await authenticate(req);
   if (!auth.authenticated) {
-    return {
-      status: 401,
-      body: errorPayload(auth.error || 'Unauthorized', 'UNAUTHORIZED')
-    };
+    logPolicyDecision({ requestId, endpoint, actorId: null, decision: 'deny', reason: auth.error || 'Unauthorized' });
+    return res.status(401).json({ error: auth.error || 'Unauthorized' });
   }
 
   const userId = auth.user.id;
@@ -141,59 +144,15 @@ export async function processJoinRequest(req, deps = {}) {
     return { status: 404, body: errorPayload('Creator not found', 'CREATOR_NOT_FOUND') };
   }
 
-  const user = await getUserByIdFn(userId);
-  if (!user) {
-    return { status: 404, body: errorPayload('User not found', 'USER_NOT_FOUND') };
-  }
-
-  // 1) creator active + subscription active
-  const paymentsProvider = getPaymentsProviderFn();
-  const creatorCheck = await checkCreatorStatusFn(creator, paymentsProvider);
-  if (!creatorCheck.allowed) {
-    return {
-      status: 403,
-      body: errorPayload(creatorCheck.reason, 'CREATOR_NOT_ELIGIBLE')
-    };
-  }
-
-  // 2) user compliance (age + ToS)
-  const complianceCheck = checkUserComplianceFn(user);
-  if (!complianceCheck.allowed) {
-    return {
-      status: 403,
-      body: errorPayload(complianceCheck.reason, 'USER_COMPLIANCE_REQUIRED', {
-        requiresAcceptance: true
-      })
-    };
-  }
-
-  // 3) ban checks
-  const banCheck = await checkBanStatusFn(creator.id, userId, user.email, req);
-  if (!banCheck.allowed) {
-    return {
-      status: 403,
-      body: errorPayload(banCheck.reason, 'BANNED', {
-        banned: true
-      })
-    };
-  }
-
-  // Existing endpoint-level rate-limit remains as protection for spam bursts
-  const rateLimitCheck = checkRateLimitFn(userId, creator.id);
-  if (!rateLimitCheck.allowed) {
-    return {
-      status: 429,
-      body: errorPayload('Too many join requests. Please try again later.', 'RATE_LIMITED')
-    };
-  }
-
-  let room = null;
-  if (roomSlug) {
-    const roomName = `${creatorSlug}-${roomSlug}`;
-    room = await getRoomByNameFn(roomName);
-
-    if (!room) {
-      return { status: 404, body: errorPayload('Room not found', 'ROOM_NOT_FOUND') };
+    if (!policyCheck.allowed) {
+      logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: policyCheck.reason || 'join request policy blocked', metadata: { creatorId: creator.id } });
+      const isBanned = policyCheck.reason?.includes('banned');
+      return res.status(403).json({ 
+        error: policyCheck.reason,
+        requiresAcceptance: policyCheck.reason?.includes('attestation') || policyCheck.reason?.includes('Terms'),
+        banned: isBanned,
+        reason: isBanned ? policyCheck.reason : undefined
+      });
     }
 
     // Rate limit check
@@ -203,6 +162,7 @@ export async function processJoinRequest(req, deps = {}) {
       windowMs: ONE_HOUR_MS
     });
     if (!rateLimitCheck.allowed) {
+      logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'deny', reason: 'join request rate limit exceeded', metadata: { creatorId: creator.id } });
       return res.status(429).json({ 
         error: 'Too many join requests. Please try again later.',
         remaining: rateLimitCheck.remaining
@@ -261,47 +221,9 @@ export async function processJoinRequest(req, deps = {}) {
 
   const { ipHash, deviceHash } = generateTrackingHashes(req, userId);
 
-  const requestResult = await createJoinRequestFn(
-    creator.id,
-    room ? room.id : null,
-    userId,
-    ipHash,
-    deviceHash
-  );
+    logPolicyDecision({ requestId, endpoint, actorId: userId, decision: 'allow', reason: 'join request created', metadata: { creatorId: creator.id, joinRequestId: requestResult.request.id } });
 
-  if (!requestResult.success) {
-    console.error('Failed to create join request:', requestResult.error);
-    return {
-      status: 500,
-      body: errorPayload('Failed to create join request', 'JOIN_REQUEST_CREATE_FAILED')
-    };
-  }
-
-  const joinMode = room?.join_mode || 'knock';
-  if (joinMode === 'open') {
-    const approvalResult = await updateJoinRequestStatusFn(requestResult.request.id, 'approved');
-    if (!approvalResult.success) {
-      return {
-        status: 500,
-        body: errorPayload('Failed to auto-approve open room join request', 'JOIN_REQUEST_AUTO_APPROVE_FAILED')
-      };
-    }
-
-    return {
-      status: 201,
-      body: {
-        success: true,
-        message: 'Join request approved',
-        requestId: approvalResult.request.id,
-        status: approvalResult.request.status,
-        createdAt: approvalResult.request.created_at
-      }
-    };
-  }
-
-  return {
-    status: 201,
-    body: {
+    return res.status(201).json({
       success: true,
       message: 'Join request created. Waiting for creator approval.',
       requestId: requestResult.request.id,
@@ -316,7 +238,9 @@ export default async function handler(req, res) {
     const result = await processJoinRequest(req);
     return res.status(result.status).json(result.body);
   } catch (error) {
-    console.error('Join request error:', error);
-    return res.status(500).json(errorPayload('An error occurred while creating join request', 'JOIN_REQUEST_INTERNAL_ERROR'));
+    console.error('Join request error:', { requestId, endpoint, error: error.message });
+    return res.status(500).json({ 
+      error: 'An error occurred while creating join request' 
+    });
   }
 }

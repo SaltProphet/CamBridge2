@@ -11,6 +11,8 @@ import { authenticate } from './middleware.js';
 import { getVideoProvider } from './providers/video.js';
 import { getPaymentsProvider } from './providers/payments.js';
 import { PolicyGates, killSwitch } from './policies/gates.js';
+import { getRequestId, logPolicyDecision } from './logging.js';
+import { assertProviderSecrets } from './env.js';
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -18,23 +20,28 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const traceId = getRequestId(req);
+  const endpoint = '/api/join-approve';
+
   // Phase 0: Check kill switch
   if (!killSwitch.isJoinApprovalsEnabled()) {
+    logPolicyDecision({ requestId: traceId, endpoint, actorId: null, decision: 'deny', reason: 'join approvals kill switch active' });
     return res.status(403).json({ error: 'Join approvals are temporarily disabled' });
   }
 
   // Authenticate user
   const auth = await authenticate(req);
   if (!auth.authenticated) {
+    logPolicyDecision({ requestId: traceId, endpoint, actorId: null, decision: 'deny', reason: auth.error || 'Unauthorized' });
     return res.status(401).json({ error: auth.error || 'Unauthorized' });
   }
 
   try {
     const userId = auth.user.id;
-    const { requestId } = req.body;
+    const { requestId: joinRequestId } = req.body;
 
     // Validate requestId
-    if (!requestId || typeof requestId !== 'string') {
+    if (!joinRequestId || typeof joinRequestId !== 'string') {
       return res.status(400).json({ error: 'Request ID is required' });
     }
 
@@ -48,11 +55,12 @@ export default async function handler(req, res) {
     const paymentsProvider = getPaymentsProvider();
     const creatorCheck = await PolicyGates.checkCreatorStatus(creator, paymentsProvider);
     if (!creatorCheck.allowed) {
+      logPolicyDecision({ requestId: traceId, endpoint, actorId: userId, decision: 'deny', reason: creatorCheck.reason || 'creator policy blocked' });
       return res.status(403).json({ error: creatorCheck.reason });
     }
 
     // Get join request
-    const request = await getJoinRequestById(requestId);
+    const request = await getJoinRequestById(joinRequestId);
     
     if (!request) {
       return res.status(404).json({ error: 'Join request not found' });
@@ -60,11 +68,13 @@ export default async function handler(req, res) {
 
     // Verify ownership
     if (request.creator_id !== creator.id) {
+      logPolicyDecision({ requestId: traceId, endpoint, actorId: userId, decision: 'deny', reason: 'join request ownership mismatch', metadata: { joinRequestId } });
       return res.status(403).json({ error: 'You do not own this join request' });
     }
 
     // Check if already decided
     if (request.status !== 'pending') {
+      logPolicyDecision({ requestId: traceId, endpoint, actorId: userId, decision: 'deny', reason: `join request already ${request.status}`, metadata: { joinRequestId } });
       return res.status(409).json({ 
         error: `Join request already ${request.status}`,
         status: request.status
@@ -84,6 +94,8 @@ export default async function handler(req, res) {
 
     // Mint Daily token (15 minute TTL)
     // Phase 0: Use video provider abstraction
+    const videoProviderName = process.env.VIDEO_PROVIDER || 'daily';
+    assertProviderSecrets('video', videoProviderName);
     const videoProvider = getVideoProvider();
     const tokenResult = await videoProvider.mintToken(
       roomName, 
@@ -92,6 +104,7 @@ export default async function handler(req, res) {
     );
 
     if (!tokenResult.success) {
+      logPolicyDecision({ requestId: traceId, endpoint, actorId: userId, decision: 'deny', reason: `video token mint failed: ${tokenResult.error || 'unknown error'}`, metadata: { joinRequestId } });
       console.error('Failed to mint video token:', tokenResult.error);
       return res.status(500).json({ 
         error: 'Failed to generate access token',
@@ -104,7 +117,7 @@ export default async function handler(req, res) {
 
     // Update join request status
     const updateResult = await updateJoinRequestStatus(
-      requestId,
+      joinRequestId,
       'approved',
       tokenResult.token,
       tokenExpiresAt,
@@ -115,6 +128,8 @@ export default async function handler(req, res) {
       console.error('Failed to update join request:', updateResult.error);
       return res.status(500).json({ error: 'Failed to update join request status' });
     }
+
+    logPolicyDecision({ requestId: traceId, endpoint, actorId: userId, decision: 'allow', reason: 'join request approved', metadata: { joinRequestId } });
 
     return res.status(200).json({
       success: true,
@@ -127,7 +142,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Join approve error:', error);
+    console.error('Join approve error:', { requestId: traceId, endpoint, error: error.message });
     return res.status(500).json({ 
       error: 'An error occurred while approving join request' 
     });
