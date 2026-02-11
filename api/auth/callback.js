@@ -5,6 +5,18 @@ import { getLoginToken, markLoginTokenUsed, getUserByEmail, createUserByEmail, c
 import { generateToken } from '../middleware.js';
 import { getRequestId, logPolicyDecision } from '../logging.js';
 
+function safeRedirectPath(returnTo) {
+  if (typeof returnTo !== 'string') {
+    return '/dashboard';
+  }
+
+  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    return '/dashboard';
+  }
+
+  return returnTo;
+}
+
 export default async function handler(req, res) {
   // Only allow GET
   if (req.method !== 'GET') {

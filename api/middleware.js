@@ -1,5 +1,6 @@
 // Authentication middleware for Vercel serverless functions
 import jwt from 'jsonwebtoken';
+import { sql } from '@vercel/postgres';
 import { getSessionByToken } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -9,31 +10,86 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required but not set. Please configure it in your environment.');
 }
 
-// Rate limiting storage (in-memory, will reset on cold starts)
-const rateLimitStore = new Map();
+let rateLimitTableReady;
+
+async function ensureRateLimitTable() {
+  if (!rateLimitTableReady) {
+    rateLimitTableReady = sql`
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        key TEXT PRIMARY KEY,
+        count INTEGER NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+  }
+
+  return rateLimitTableReady;
+}
+
+function getRequestIp(req) {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.length > 0) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  return req.headers['x-real-ip'] || 'unknown';
+}
+
+export function buildRateLimitKey(endpoint, actor) {
+  return `${endpoint}:${actor}`;
+}
+
+export async function consumeRateLimit({ key, maxRequests = 10, windowMs = 60000 }) {
+  try {
+    await ensureRateLimitTable();
+
+    const result = await sql`
+      INSERT INTO rate_limits (key, count, expires_at, updated_at)
+      VALUES (${key}, 1, NOW() + (${windowMs} * INTERVAL '1 millisecond'), NOW())
+      ON CONFLICT (key) DO UPDATE
+      SET
+        count = CASE
+          WHEN rate_limits.expires_at <= NOW() THEN 1
+          ELSE rate_limits.count + 1
+        END,
+        expires_at = CASE
+          WHEN rate_limits.expires_at <= NOW() THEN NOW() + (${windowMs} * INTERVAL '1 millisecond')
+          ELSE rate_limits.expires_at
+        END,
+        updated_at = NOW()
+      RETURNING count,
+        GREATEST(EXTRACT(EPOCH FROM (expires_at - NOW())), 0)::INTEGER AS retry_after_seconds
+    `;
+
+    const currentCount = result.rows[0]?.count ?? 1;
+    const retryAfter = result.rows[0]?.retry_after_seconds ?? Math.ceil(windowMs / 1000);
+    const remaining = Math.max(maxRequests - currentCount, 0);
+
+    return {
+      allowed: currentCount <= maxRequests,
+      remaining,
+      retryAfter
+    };
+  } catch (error) {
+    console.error('Rate limit storage error:', error);
+    // Fail open to avoid accidental auth outages when storage is unavailable.
+    return {
+      allowed: true,
+      remaining: maxRequests - 1,
+      retryAfter: Math.ceil(windowMs / 1000)
+    };
+  }
+}
 
 // Rate limiting middleware
 export function rateLimit(maxRequests = 10, windowMs = 60000) {
-  return (req) => {
-    const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
-    const key = `${ip}:${req.url}`;
-    const now = Date.now();
-    
-    // Get or create rate limit entry
-    let entry = rateLimitStore.get(key);
-    if (!entry || now - entry.resetTime > windowMs) {
-      entry = { count: 0, resetTime: now };
-      rateLimitStore.set(key, entry);
-    }
-    
-    // Check limit
-    if (entry.count >= maxRequests) {
-      return { allowed: false, remaining: 0 };
-    }
-    
-    // Increment counter
-    entry.count++;
-    return { allowed: true, remaining: maxRequests - entry.count };
+  return async (req) => {
+    const endpoint = (req.url || 'unknown').split('?')[0];
+    const actor = `ip:${getRequestIp(req)}`;
+    const key = buildRateLimitKey(endpoint, actor);
+
+    return consumeRateLimit({ key, maxRequests, windowMs });
   };
 }
 

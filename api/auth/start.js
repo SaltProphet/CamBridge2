@@ -3,7 +3,7 @@
 // Phase 0: Uses email provider abstraction and policy gates
 import crypto from 'crypto';
 import { createLoginToken } from '../db.js';
-import { validateEmail } from '../middleware.js';
+import { validateEmail, consumeRateLimit, buildRateLimitKey } from '../middleware.js';
 import { getEmailProvider } from '../providers/email.js';
 import { PolicyGates } from '../policies/gates.js';
 import { getRequestId, logPolicyDecision } from '../logging.js';
@@ -11,28 +11,8 @@ import { assertProviderSecrets } from '../env.js';
 
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 
-// Email-based rate limiting storage
-const emailRateLimitStore = new Map();
-
-// Rate limit: 5 requests per hour per email
-function checkEmailRateLimit(email) {
-  const now = Date.now();
-  const windowMs = 3600000; // 1 hour
-  const maxRequests = 5;
-  
-  let entry = emailRateLimitStore.get(email);
-  if (!entry || now - entry.resetTime > windowMs) {
-    entry = { count: 0, resetTime: now };
-    emailRateLimitStore.set(email, entry);
-  }
-  
-  if (entry.count >= maxRequests) {
-    return { allowed: false, remaining: 0 };
-  }
-  
-  entry.count++;
-  return { allowed: true, remaining: maxRequests - entry.count };
-}
+const MAGIC_LINK_MAX_REQUESTS = 5;
+const ONE_HOUR_MS = 3600000;
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -62,7 +42,11 @@ export default async function handler(req, res) {
     const actorId = normalizedEmail;
 
     // Rate limit check (per email)
-    const rateLimitCheck = checkEmailRateLimit(normalizedEmail);
+    const rateLimitCheck = await consumeRateLimit({
+      key: buildRateLimitKey('auth:start', `email:${normalizedEmail}`),
+      maxRequests: MAGIC_LINK_MAX_REQUESTS,
+      windowMs: ONE_HOUR_MS
+    });
     if (!rateLimitCheck.allowed) {
       logPolicyDecision({ requestId, endpoint, actorId, decision: 'deny', reason: 'rate limit exceeded' });
       return res.status(429).json({ 

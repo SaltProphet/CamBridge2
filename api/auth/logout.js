@@ -19,8 +19,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No token provided' });
     }
 
-    // Delete session from database
-    await deleteSession(token);
+    // Clear auth cookie with matching attributes
+    const isProduction = process.env.NODE_ENV === 'production';
+    const clearCookie = [
+      'auth_token=',
+      'Path=/',
+      'Max-Age=0',
+      'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+      'HttpOnly',
+      'SameSite=Strict',
+      ...(isProduction ? ['Secure'] : [])
+    ].join('; ');
+
+    res.setHeader('Set-Cookie', clearCookie);
 
     const isProduction = process.env.NODE_ENV === 'production';
     const clearCookieOptions = [
