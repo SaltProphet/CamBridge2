@@ -598,5 +598,71 @@
         // Initialize on page load
         initDashboard();
     </script>
+
+    <!-- Debug Panel (temporary) -->
+    <div id="debug-panel" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.95); border-top: 1px solid #00ff88; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #00ff88; z-index: 10000;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <strong style="color: #ffffff;">DEBUG PANEL</strong>
+            <button id="toggle-debug" style="background: transparent; border: 1px solid #00ff88; color: #00ff88; padding: 2px 8px; cursor: pointer; font-size: 0.7rem;">HIDE</button>
+        </div>
+        <div id="debug-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.7rem;">
+            <div><strong>Route:</strong> <span id="debug-route">-</span></div>
+            <div><strong>Creator Slug:</strong> <span id="debug-creator-slug">-</span></div>
+            <div><strong>User ID:</strong> <span id="debug-user-id">-</span></div>
+            <div style="grid-column: 1 / -1;"><strong>Last Error:</strong> <span id="debug-last-error" style="color: #ff4444;">-</span></div>
+        </div>
+    </div>
+
+    <script>
+        // Debug Panel Control for Dashboard
+        const debugPanel = document.getElementById('debug-panel');
+        const toggleDebugBtn = document.getElementById('toggle-debug');
+        let debugVisible = true;
+        
+        // Toggle debug panel
+        if (toggleDebugBtn) {
+            toggleDebugBtn.addEventListener('click', () => {
+                debugVisible = !debugVisible;
+                const debugContent = document.getElementById('debug-content');
+                if (debugVisible) {
+                    debugContent.style.display = 'grid';
+                    toggleDebugBtn.textContent = 'HIDE';
+                } else {
+                    debugContent.style.display = 'none';
+                    toggleDebugBtn.textContent = 'SHOW';
+                }
+            });
+        }
+        
+        // Update debug panel with current state
+        function updateDebugPanel() {
+            document.getElementById('debug-route').textContent = window.location.pathname;
+            
+            // Get creator slug from page if available
+            const creatorSlugEl = document.getElementById('creator-slug');
+            if (creatorSlugEl) {
+                document.getElementById('debug-creator-slug').textContent = creatorSlugEl.textContent || '-';
+            }
+            
+            // Try to get user ID from auth token
+            const token = getAuthToken();
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    document.getElementById('debug-user-id').textContent = payload.userId || payload.id || '-';
+                } catch (e) {
+                    document.getElementById('debug-user-id').textContent = 'token-parse-error';
+                }
+            } else {
+                document.getElementById('debug-user-id').textContent = 'not-authenticated';
+            }
+        }
+        
+        // Update debug panel immediately and periodically
+        if (debugPanel) {
+            setTimeout(updateDebugPanel, 1000); // Wait for profile to load
+            setInterval(updateDebugPanel, 3000);
+        }
+    </script>
 </body>
 </html>

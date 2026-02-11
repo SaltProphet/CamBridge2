@@ -210,10 +210,77 @@
         </div>
     </div>
 
+    <!-- Debug Panel (temporary) -->
+    <div id="debug-panel" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.95); border-top: 1px solid #00ff88; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #00ff88; z-index: 10000; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <strong style="color: #ffffff;">DEBUG PANEL</strong>
+            <button id="toggle-debug" style="background: transparent; border: 1px solid #00ff88; color: #00ff88; padding: 2px 8px; cursor: pointer; font-size: 0.7rem;">HIDE</button>
+        </div>
+        <div id="debug-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.7rem;">
+            <div><strong>Route:</strong> <span id="debug-route">-</span></div>
+            <div><strong>Creator Slug:</strong> <span id="debug-creator-slug">-</span></div>
+            <div><strong>Room Slug:</strong> <span id="debug-room-slug">-</span></div>
+            <div><strong>User ID:</strong> <span id="debug-user-id">-</span></div>
+            <div><strong>Request ID:</strong> <span id="debug-request-id">-</span></div>
+            <div><strong>Join Status:</strong> <span id="debug-join-status">-</span></div>
+            <div style="grid-column: 1 / -1;"><strong>Last Error:</strong> <span id="debug-last-error" style="color: #ff4444;">-</span></div>
+        </div>
+    </div>
+
     <script src="phase1-auth.js"></script>
     <script src="room.js"></script>
     <script>
         window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+        
+        // Debug Panel Control
+        const debugPanel = document.getElementById('debug-panel');
+        const toggleDebugBtn = document.getElementById('toggle-debug');
+        let debugVisible = true;
+        
+        // Show debug panel by default
+        if (debugPanel) {
+            debugPanel.style.display = 'block';
+        }
+        
+        // Toggle debug panel
+        if (toggleDebugBtn) {
+            toggleDebugBtn.addEventListener('click', () => {
+                debugVisible = !debugVisible;
+                if (debugVisible) {
+                    debugPanel.style.display = 'block';
+                    toggleDebugBtn.textContent = 'HIDE';
+                } else {
+                    debugPanel.style.display = 'none';
+                    toggleDebugBtn.textContent = 'SHOW';
+                }
+            });
+        }
+        
+        // Update debug panel with current state
+        function updateDebugPanel() {
+            document.getElementById('debug-route').textContent = window.location.pathname;
+            document.getElementById('debug-creator-slug').textContent = window.creatorSlug || modelName || '-';
+            document.getElementById('debug-room-slug').textContent = window.roomSlug || '-';
+            
+            // Try to get user ID from auth token or phase1Auth
+            let userId = '-';
+            if (typeof phase1Auth !== 'undefined' && phase1Auth.user) {
+                userId = phase1Auth.user.id || phase1Auth.user.user_id || '-';
+            }
+            document.getElementById('debug-user-id').textContent = userId;
+            
+            // Join request ID
+            if (typeof phase1Auth !== 'undefined' && phase1Auth.joinRequestId) {
+                document.getElementById('debug-request-id').textContent = phase1Auth.joinRequestId;
+            }
+        }
+        
+        // Update debug panel immediately and on page changes
+        if (debugPanel) {
+            updateDebugPanel();
+            // Update every 2 seconds
+            setInterval(updateDebugPanel, 2000);
+        }
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
 </body>
