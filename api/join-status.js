@@ -2,7 +2,7 @@
 // Get join request status (can be used by authenticated users to see their pending requests)
 
 import jwt from 'jsonwebtoken';
-import { getJoinRequestsByOwnerId, getJoinRequestsByEmail } from './db-simple.js';
+import { getJoinRequestsByOwnerId } from './db-simple.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
@@ -23,18 +23,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { status, email } = req.query;
+    const { status } = req.query;
 
-    // If email is provided (public lookup)
-    if (email) {
-      const requests = await getJoinRequestsByEmail(email, status || null);
-      return res.status(200).json({
-        ok: true,
-        requests
-      });
-    }
-
-    // Otherwise, require authentication to see room owner's requests
+    // Require authentication - no public lookups allowed
     const token = getTokenFromCookie(req.headers.cookie);
     
     if (!token) {
