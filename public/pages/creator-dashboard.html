@@ -401,7 +401,7 @@
         async function checkAuth() {
             const token = getAuthToken();
             if (!token) {
-                window.location.href = '/login.html?tab=creator';
+                window.location.href = '../login.html?tab=creator';
                 return null;
             }
             return token;
@@ -419,7 +419,7 @@
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '/login.html?tab=creator';
+                        window.location.href = '../login.html?tab=creator';
                         return null;
                     }
                     throw new Error(`Failed to load profile: ${response.statusText}`);
