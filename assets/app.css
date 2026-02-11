@@ -43,6 +43,34 @@ body {
     margin-bottom: 2rem;
 }
 
+.landing-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+
+.landing-links {
+    position: absolute;
+    bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.landing-links a {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.landing-links a:hover {
+    color: var(--accent);
+}
+
+.landing-links span {
+    color: var(--text);
+}
+
 /* Buttons */
 .btn, button[type="submit"], .btn-secondary {
     display: inline-block;
@@ -146,6 +174,14 @@ input[type="text"]:focus {
     border-color: var(--accent);
 }
 
+.hint {
+    display: block;
+    color: var(--text);
+    font-size: 0.75rem;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+}
+
 /* Sections */
 .section {
     background: var(--bg-section);
@@ -201,6 +237,132 @@ input[type="text"]:focus {
     font-size: 0.875rem;
     margin-top: 0.5rem;
     min-height: 1.2rem;
+}
+
+/* Success Messages */
+.success {
+    color: var(--accent);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    min-height: 1.2rem;
+}
+
+/* Checkbox Groups */
+.checkbox-group {
+    margin: 1rem 0;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: var(--text);
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-top: 0.25rem;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.checkbox-group a {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.checkbox-group a:hover {
+    color: var(--text-light);
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    color: var(--text-light);
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: var(--text-light);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    color: var(--text);
+}
+
+.modal-body h3 {
+    color: var(--text-light);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.modal-body h3:first-child {
+    margin-top: 0;
+}
+
+.modal-body p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
 }
 
 /* Responsive */

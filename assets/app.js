@@ -196,22 +196,64 @@ function renderJoinRequests() {
 async function handleRegister(e) {
     e.preventDefault();
     const form = e.target;
+    const roomSlug = form.roomSlug.value.toLowerCase().trim();
     const email = form.email.value;
     const password = form.password.value;
+    const ageVerified = form.age_verified.checked;
+    const tosAccepted = form.tos_accepted.checked;
     const errorEl = document.getElementById('register-error');
+    const successEl = document.getElementById('register-success');
+
+    // Clear previous messages
+    errorEl.textContent = '';
+    successEl.textContent = '';
+
+    // Validate age and ToS
+    if (!ageVerified) {
+        errorEl.textContent = 'You must be 18 or older to register';
+        return;
+    }
+
+    if (!tosAccepted) {
+        errorEl.textContent = 'You must accept the Terms of Service';
+        return;
+    }
+
+    // Show loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating your account and room...';
 
     const result = await register(email, password);
     
     if (result.ok) {
-        errorEl.textContent = '';
-        form.reset();
-        // Auto-login after successful registration
+        // Now create the room
         const loginResult = await login(email, password);
         if (loginResult.ok) {
             currentUser = loginResult.data.user;
-            showDashboard();
+            
+            // Create room with the chosen slug
+            const roomResult = await createRoom(roomSlug);
+            
+            if (roomResult.ok) {
+                rooms.push(roomResult.data.room);
+                successEl.textContent = `Success! Your room "${roomSlug}" is ready.`;
+                
+                // Wait a moment then show dashboard
+                setTimeout(() => {
+                    showDashboard();
+                }, 1500);
+            } else {
+                errorEl.textContent = 'Account created but room creation failed: ' + roomResult.error;
+                setTimeout(() => {
+                    showDashboard();
+                }, 2000);
+            }
         }
     } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
         errorEl.textContent = result.error;
     }
 }
@@ -266,6 +308,15 @@ async function handleApprove(requestId) {
     }
 }
 
+// ToS Modal Handlers
+function showTosModal() {
+    document.getElementById('tos-modal').classList.remove('hidden');
+}
+
+function hideTosModal() {
+    document.getElementById('tos-modal').classList.add('hidden');
+}
+
 // Initialize
 async function init() {
     // Check if already authenticated
@@ -287,6 +338,14 @@ async function init() {
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('create-room-form').addEventListener('submit', handleCreateRoom);
     document.getElementById('logout-btn').addEventListener('click', logout);
+    
+    // ToS modal event listeners
+    document.getElementById('tos-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        showTosModal();
+    });
+    document.getElementById('tos-close').addEventListener('click', hideTosModal);
+    document.getElementById('tos-accept').addEventListener('click', hideTosModal);
 }
 
 // Make handleApprove global
