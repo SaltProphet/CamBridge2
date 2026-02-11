@@ -41,7 +41,7 @@ DEEPGRAM_KEY=your-deepgram-api-key-optional
 2. **Configure Build Settings**
    - Build Command: `echo 'Static site'` (specified in vercel.json)
    - Output Directory: `.` (root directory, specified in vercel.json)
-   - Install Command: `npm install` (required for API dependencies)
+   - Install Command: `npm install` (auto-detected by Vercel from package.json)
 
 3. **Set Environment Variables**
    - Go to Project Settings → Environment Variables
