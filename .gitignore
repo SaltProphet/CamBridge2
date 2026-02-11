@@ -31,3 +31,4 @@ temp/
 # After Hours Assets
 /assets/sounds/*.mp3
 .vercel
+index.old.html
