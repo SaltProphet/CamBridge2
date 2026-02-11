@@ -1,6 +1,7 @@
 // API endpoint to initialize database tables
 // This should be called once during setup
-import { initializeTables, sql } from './db.js';
+import { initializeTables } from './db.js';
+import { sql } from '@vercel/postgres';
 
 export default async function handler(req, res) {
   const INIT_SECRET = process.env.DB_INIT_SECRET;

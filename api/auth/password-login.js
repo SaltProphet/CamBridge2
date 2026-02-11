@@ -4,7 +4,6 @@ import bcrypt from 'bcryptjs';
 import { generateToken, validateEmail, consumeRateLimit, buildRateLimitKey } from '../middleware.js';
 import { killSwitch } from '../policies/gates.js';
 import { getRequestId, logPolicyDecision } from '../logging.js';
-import { createSession } from '../db.js';
 
 // Try to load real database, fall back to mock
 let sqlApi = null;
@@ -47,13 +46,7 @@ export default async function handler(req, res) {
 
     // Check if BETA_MODE is enabled
     if (!killSwitch.isBetaMode()) {
-      console.log('❌ Login blocked: BETA_MODE is not enabled');
-      return res.status(403).json({ 
-        ok: false,
-        code: 'BETA_MODE_DISABLED',
-        error: 'BETA_MODE is not enabled. Registration and login are currently disabled.',
-        message: 'The platform is not currently accepting new logins. Please contact support.'
-      });
+      return res.status(403).json({ error: 'BETA_MODE is not enabled' });
     }
 
     const requestId = getRequestId(req);
@@ -114,13 +107,7 @@ export default async function handler(req, res) {
 
     // Create session record with 7-day expiration
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    try {
-      await createSession(user.id, jwtToken, expiresAt);
-      console.log('✓ Session created');
-    } catch (sessionError) {
-      console.warn('⚠️  Session creation failed (non-fatal):', sessionError.message);
-      // Don't fail login if session creation fails - user still gets token
-    }
+    await createSession(user.id, jwtToken, expiresAt);
 
     logPolicyDecision({ 
       requestId, 
@@ -143,26 +130,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Password login error:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('Error code:', error.code);
-    
-    // Return detailed error information
-    const errorResponse = {
-      ok: false,
-      code: error.code || 'LOGIN_ERROR',
-      message: error.message || 'Login failed. Please try again.',
-      error: error.message || 'Login failed. Please try again.'
-    };
-    
-    // Add more details in development
-    if (process.env.NODE_ENV === 'development') {
-      errorResponse.details = {
-        stack: error.stack,
-        code: error.code
-      };
-    }
-    
-    return res.status(500).json(errorResponse);
+    console.error('Password login error:', error);
+    return res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 }

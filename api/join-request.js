@@ -1,7 +1,7 @@
 // API endpoint to create a join request
 // Phase 1: Client requests to join a creator's room with policy-enforced join modes
 import crypto from 'crypto';
-import { sql } from './db.js';
+import { sql } from '@vercel/postgres';
 import {
   getCreatorBySlug,
   getRoomByName,

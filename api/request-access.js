@@ -1,4 +1,4 @@
-import { sql } from './db.js';
+import { sql } from '@vercel/postgres';
 import { withCORS } from './middleware.js';
 
 /**

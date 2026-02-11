@@ -1,21 +1,9 @@
 // Database utility functions
 // Using Vercel Postgres (migrating to Neon)
-// Use POSTGRES_PRISMA_URL (pooled connection) if available, otherwise fall back to POSTGRES_URL
-import { createPool } from '@vercel/postgres';
-
-// Create connection pool with proper connection string
-const connectionString = process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
-const pool = connectionString ? createPool({ connectionString }) : null;
-
-// Export sql template tag from pool
-export const sql = pool ? pool.sql : null;
+import { sql } from '@vercel/postgres';
 
 // Initialize database tables
 export async function initializeTables() {
-  if (!sql) {
-    throw new Error('Database not configured. Set POSTGRES_PRISMA_URL or POSTGRES_URL environment variable.');
-  }
-  
   try {
     // Users table for model accounts
     await sql`

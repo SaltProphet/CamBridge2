@@ -312,25 +312,6 @@
         const errorMsg = document.getElementById('error-message');
         const errorMsgP = errorMsg.querySelector('p');
 
-        // Helper to read response body (JSON or text)
-        async function readResponse(response) {
-            const contentType = response.headers.get('content-type');
-            console.log('Response Content-Type:', contentType);
-            
-            try {
-                if (contentType && contentType.includes('application/json')) {
-                    return await response.json();
-                } else {
-                    const text = await response.text();
-                    console.log('Non-JSON response:', text.substring(0, 500));
-                    return { error: text.substring(0, 500) };
-                }
-            } catch (e) {
-                console.error('Error reading response:', e);
-                return { error: 'Failed to parse server response' };
-            }
-        }
-
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -401,21 +382,7 @@
             loadingMsg.classList.add('show');
 
             try {
-                // Log request details
-                const requestUrl = '/api/auth/password-register';
-                console.group('🔵 REGISTRATION REQUEST');
-                console.log('URL:', requestUrl);
-                console.log('Method:', 'POST');
-                console.log('Payload (no password):', {
-                    email: data.email,
-                    displayName: data.displayName,
-                    desiredSlug: data.desiredSlug,
-                    ageConfirm: data.ageConfirm,
-                    tosAccept: data.tosAccept
-                });
-                console.groupEnd();
-
-                const response = await fetch(requestUrl, {
+                const response = await fetch('/api/auth/password-register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -423,33 +390,16 @@
                     body: JSON.stringify(data)
                 });
 
-                // Log response details
-                console.group('🔵 REGISTRATION RESPONSE');
-                console.log('Status:', response.status, response.statusText);
-                console.log('Headers Content-Type:', response.headers.get('content-type'));
-                console.groupEnd();
-
-                const result = await readResponse(response);
-                
-                console.group('🔵 REGISTRATION RESPONSE BODY');
-                console.log('Body:', result);
-                console.groupEnd();
+                const result = await response.json();
 
                 if (!response.ok) {
-                    // Build detailed error message
-                    const errorDetails = result.error || result.message || 'Registration failed';
-                    const httpStatus = `HTTP ${response.status}`;
-                    const detailedError = `${httpStatus}: ${errorDetails}`;
-                    
-                    throw new Error(detailedError);
+                    throw new Error(result.error || 'Registration failed');
                 }
 
                 // Store token in localStorage and set cookie
                 localStorage.setItem('auth_token', result.token);
                 document.cookie = `auth_token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Strict`;
 
-                console.log('✅ Registration successful!');
-                
                 // Show success message
                 loadingMsg.classList.remove('show');
                 successMsg.classList.add('show');
@@ -460,15 +410,9 @@
                 }, 1500);
 
             } catch (error) {
-                console.group('❌ REGISTRATION ERROR');
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
-                console.groupEnd();
-                
+                console.error('Signup error:', error);
                 signupBtn.disabled = false;
                 loadingMsg.classList.remove('show');
-                
-                // Show detailed error to user
                 errorMsgP.textContent = error.message;
                 errorMsg.classList.add('show');
             }
