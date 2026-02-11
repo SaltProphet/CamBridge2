@@ -1,8 +1,8 @@
 # CamBridge: Development Roadmap
 
 **Updated:** February 11, 2026  
-**Current Status:** Pre-launch Beta → Manual Payments Only  
-**Overall MVP Completion:** 96% (Manual Payments Ready, Hardening Underway)
+**Current Status:** Pre-launch Beta → Payments/Email/Domain Pending  
+**Overall MVP Completion:** 92% (Payments + Email Pending, Hardening Underway)
 
 ---
 
@@ -114,7 +114,7 @@
 - ✅ Database schema created and indexed
 - ✅ Admin endpoints authenticated and functional
 - ✅ Dashboard UI integrated with form handling
-- **Production Ready:** YES
+- **Production Ready:** PENDING (payments/email/domain on hold for beta)
 
 ---
 
@@ -297,8 +297,9 @@ Add CCBill as alternative payment processor for creators who prefer monthly recu
 Harden application for production deployment with monitoring, logging, and scaling.
 
 ### Pre-launch Beta Focus
-- Manual payments only for beta onboarding
-- Stripe checkout available but optional
+- Payments (manual + Stripe) held pending for beta
+- Email sending held pending for beta
+- Domain registration held pending for beta
 - CCBill integration remains planned post-beta
 
 ### Key Items
