@@ -314,3 +314,357 @@ export async function cleanExpiredSessions() {
     return { success: false, error: error.message };
   }
 }
+
+// ==================================================
+// PHASE 1: Magic-Link Token Operations
+// ==================================================
+
+export async function createLoginToken(email, tokenHash, expiresAt) {
+  try {
+    const result = await sql`
+      INSERT INTO login_tokens (email, token_hash, expires_at)
+      VALUES (${email}, ${tokenHash}, ${expiresAt})
+      RETURNING id, email, created_at, expires_at
+    `;
+    return { success: true, token: result.rows[0] };
+  } catch (error) {
+    console.error('Create login token error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getLoginToken(tokenHash) {
+  try {
+    const result = await sql`
+      SELECT * FROM login_tokens 
+      WHERE token_hash = ${tokenHash} 
+        AND expires_at > NOW() 
+        AND used_at IS NULL
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get login token error:', error);
+    return null;
+  }
+}
+
+export async function markLoginTokenUsed(tokenHash) {
+  try {
+    await sql`
+      UPDATE login_tokens 
+      SET used_at = NOW() 
+      WHERE token_hash = ${tokenHash}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error('Mark token used error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function cleanExpiredLoginTokens() {
+  try {
+    await sql`DELETE FROM login_tokens WHERE expires_at < NOW()`;
+    return { success: true };
+  } catch (error) {
+    console.error('Clean login tokens error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ==================================================
+// PHASE 1: User Operations (Extended)
+// ==================================================
+
+export async function createUserByEmail(email, displayName = null) {
+  try {
+    // Generate a placeholder username from email
+    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    
+    const result = await sql`
+      INSERT INTO users (username, email, password_hash, display_name)
+      VALUES (${username}, ${email}, '', ${displayName || username})
+      RETURNING id, username, email, display_name, created_at
+    `;
+    return { success: true, user: result.rows[0] };
+  } catch (error) {
+    // If username conflict, try with random suffix
+    if (error.code === '23505') { // unique violation
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const uniqueUsername = `${email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_')}_${randomSuffix}`;
+      
+      try {
+        const result = await sql`
+          INSERT INTO users (username, email, password_hash, display_name)
+          VALUES (${uniqueUsername}, ${email}, '', ${displayName || uniqueUsername})
+          RETURNING id, username, email, display_name, created_at
+        `;
+        return { success: true, user: result.rows[0] };
+      } catch (retryError) {
+        console.error('Create user retry error:', retryError);
+        return { success: false, error: retryError.message };
+      }
+    }
+    console.error('Create user error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
+  try {
+    const setClauses = [];
+    const values = [userId];
+    let paramIndex = 2;
+    
+    if (ageAttested) {
+      setClauses.push(`age_attested_at = CURRENT_TIMESTAMP`);
+    }
+    
+    if (tosAccepted) {
+      setClauses.push(`tos_accepted_at = CURRENT_TIMESTAMP`);
+    }
+    
+    if (setClauses.length === 0) {
+      return { success: false, error: 'No acceptance flags provided' };
+    }
+    
+    const query = `
+      UPDATE users
+      SET ${setClauses.join(', ')}
+      WHERE id = $1
+      RETURNING id, username, email, role, age_attested_at, tos_accepted_at
+    `;
+    
+    const result = await sql.query(query, values);
+    return { success: true, user: result.rows[0] };
+  } catch (error) {
+    console.error('Update user acceptance error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateUserRole(userId, role) {
+  try {
+    const result = await sql`
+      UPDATE users
+      SET role = ${role}
+      WHERE id = ${userId}
+      RETURNING id, username, email, role
+    `;
+    return { success: true, user: result.rows[0] };
+  } catch (error) {
+    console.error('Update user role error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ==================================================
+// PHASE 1: Creator Operations
+// ==================================================
+
+export async function createCreator(userId, slug, displayName, referralCode = null) {
+  try {
+    const result = await sql`
+      INSERT INTO creators (user_id, slug, display_name, referral_code)
+      VALUES (${userId}, ${slug}, ${displayName}, ${referralCode})
+      RETURNING *
+    `;
+    return { success: true, creator: result.rows[0] };
+  } catch (error) {
+    console.error('Create creator error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getCreatorBySlug(slug) {
+  try {
+    const result = await sql`
+      SELECT c.*, u.username, u.email, u.display_name as user_display_name
+      FROM creators c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.slug = ${slug} AND c.status = 'active'
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get creator by slug error:', error);
+    return null;
+  }
+}
+
+export async function getCreatorByUserId(userId) {
+  try {
+    const result = await sql`
+      SELECT * FROM creators WHERE user_id = ${userId}
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get creator by user ID error:', error);
+    return null;
+  }
+}
+
+export async function getCreatorById(creatorId) {
+  try {
+    const result = await sql`
+      SELECT * FROM creators WHERE id = ${creatorId}
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get creator by ID error:', error);
+    return null;
+  }
+}
+
+// ==================================================
+// PHASE 1: Join Request Operations
+// ==================================================
+
+export async function createJoinRequest(creatorId, roomId, userId, ipHash, deviceHash) {
+  try {
+    const result = await sql`
+      INSERT INTO join_requests (creator_id, room_id, user_id, ip_hash, device_hash)
+      VALUES (${creatorId}, ${roomId}, ${userId}, ${ipHash}, ${deviceHash})
+      RETURNING *
+    `;
+    return { success: true, request: result.rows[0] };
+  } catch (error) {
+    console.error('Create join request error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getJoinRequestById(requestId) {
+  try {
+    const result = await sql`
+      SELECT jr.*, u.username, u.email, c.slug as creator_slug
+      FROM join_requests jr
+      JOIN users u ON jr.user_id = u.id
+      JOIN creators c ON jr.creator_id = c.id
+      WHERE jr.id = ${requestId}
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get join request error:', error);
+    return null;
+  }
+}
+
+export async function updateJoinRequestStatus(requestId, status, dailyToken = null, tokenExpiresAt = null, decisionReason = null) {
+  try {
+    const result = await sql`
+      UPDATE join_requests
+      SET status = ${status},
+          daily_token = ${dailyToken},
+          token_expires_at = ${tokenExpiresAt},
+          decided_at = NOW(),
+          decision_reason = ${decisionReason}
+      WHERE id = ${requestId}
+      RETURNING *
+    `;
+    return { success: true, request: result.rows[0] };
+  } catch (error) {
+    console.error('Update join request status error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getJoinRequestsByCreator(creatorId, status = null) {
+  try {
+    let result;
+    if (status) {
+      result = await sql`
+        SELECT jr.*, u.username, u.email, u.display_name,
+               r.room_name, r.room_slug
+        FROM join_requests jr
+        JOIN users u ON jr.user_id = u.id
+        LEFT JOIN rooms r ON jr.room_id = r.id
+        WHERE jr.creator_id = ${creatorId} AND jr.status = ${status}
+        ORDER BY jr.created_at DESC
+      `;
+    } else {
+      result = await sql`
+        SELECT jr.*, u.username, u.email, u.display_name,
+               r.room_name, r.room_slug
+        FROM join_requests jr
+        JOIN users u ON jr.user_id = u.id
+        LEFT JOIN rooms r ON jr.room_id = r.id
+        WHERE jr.creator_id = ${creatorId}
+        ORDER BY jr.created_at DESC
+      `;
+    }
+    return result.rows;
+  } catch (error) {
+    console.error('Get join requests by creator error:', error);
+    return [];
+  }
+}
+
+// ==================================================
+// PHASE 1: Ban Operations
+// ==================================================
+
+export async function createBan(creatorId, userId = null, email = null, ipHash = null, deviceHash = null, reason = null) {
+  try {
+    const result = await sql`
+      INSERT INTO bans (creator_id, user_id, email, ip_hash, device_hash, reason)
+      VALUES (${creatorId}, ${userId}, ${email}, ${ipHash}, ${deviceHash}, ${reason})
+      RETURNING *
+    `;
+    return { success: true, ban: result.rows[0] };
+  } catch (error) {
+    console.error('Create ban error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function checkBan(creatorId, userId = null, email = null, ipHash = null, deviceHash = null) {
+  try {
+    const result = await sql`
+      SELECT * FROM bans 
+      WHERE creator_id = ${creatorId} 
+        AND active = true
+        AND (
+          (user_id IS NOT NULL AND user_id = ${userId})
+          OR (email IS NOT NULL AND email = ${email})
+          OR (ip_hash IS NOT NULL AND ip_hash = ${ipHash})
+          OR (device_hash IS NOT NULL AND device_hash = ${deviceHash})
+        )
+      LIMIT 1
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Check ban error:', error);
+    return null;
+  }
+}
+
+export async function deleteBan(banId, creatorId) {
+  try {
+    const result = await sql`
+      UPDATE bans
+      SET active = false
+      WHERE id = ${banId} AND creator_id = ${creatorId}
+      RETURNING *
+    `;
+    return { success: true, ban: result.rows[0] };
+  } catch (error) {
+    console.error('Delete ban error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getBansByCreator(creatorId) {
+  try {
+    const result = await sql`
+      SELECT b.*, u.username, u.email as user_email
+      FROM bans b
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE b.creator_id = ${creatorId} AND b.active = true
+      ORDER BY b.created_at DESC
+    `;
+    return result.rows;
+  } catch (error) {
+    console.error('Get bans by creator error:', error);
+    return [];
+  }
+}
