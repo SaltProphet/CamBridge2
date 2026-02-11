@@ -1,13 +1,1 @@
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/room/:modelname/:roomslug", "destination": "/room.html" },
-    { "source": "/room/:modelname", "destination": "/room.html" },
-    { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/register", "destination": "/register.html" },
-    { "source": "/setup", "destination": "/setup.html" },
-    { "source": "/app", "destination": "/app.html" },
-    { "source": "/landing.html", "destination": "/landing.html" }
-  ]
-}
+{\n  "buildCommand": "echo 'Static site'",\n  "outputDirectory": ".",\n  "rewrites": [\n    { "source": "/", "destination": "/landing.html" },\n    { "source": "/register", "destination": "/register.html" },\n    { "source": "/dashboard", "destination": "/dashboard.html" },\n    { "source": "/room/:creator", "destination": "/room.html" },\n    { "source": "/room/:creator/:room", "destination": "/room.html" }\n  ]\n}
