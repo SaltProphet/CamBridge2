@@ -40,6 +40,9 @@ export const sql = async (strings, ...values) => {
         }]
       };
     }
+    
+    // INSERT INTO users
+    if (query.includes('INSERT INTO users')) {
       const [email, username, hash, displayName, isActive, role, ageAt, tosAt, createdAt, updatedAt] = values;
       const id = generateId();
       mockDb.users.push({
@@ -68,6 +71,14 @@ export const sql = async (strings, ...values) => {
       const user = mockDb.users.find(u => u.email === email);
       console.log('  ✓ User lookup:', email, user ? 'found' : 'not found');
       return { rows: user ? [{ id: user.id }] : [] };
+    }
+    
+    // SELECT full user for login
+    if (query.includes('SELECT id, username, email, password_hash, display_name, role')) {
+      const [email] = values;
+      const user = mockDb.users.find(u => u.email === email);
+      console.log('  ✓ User login lookup:', email, user ? 'found' : 'not found');
+      return { rows: user ? [user] : [] };
     }
     
     // INSERT INTO creators
