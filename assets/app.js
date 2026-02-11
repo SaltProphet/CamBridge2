@@ -1,19 +1,23 @@
 // CamBridge App
 // Minimal authentication and room management
 
-// Debug utilities
+// Debug utilities (optional - elements may not exist in production)
 const DEBUG = {
     setAuth: (value) => {
-        document.getElementById('debug-auth').textContent = value;
+        const el = document.getElementById('debug-auth');
+        if (el) el.textContent = value;
     },
     setUserId: (value) => {
-        document.getElementById('debug-user-id').textContent = value || '-';
+        const el = document.getElementById('debug-user-id');
+        if (el) el.textContent = value || '-';
     },
     setStatus: (value) => {
-        document.getElementById('debug-status').textContent = value;
+        const el = document.getElementById('debug-status');
+        if (el) el.textContent = value;
     },
     setError: (value) => {
-        document.getElementById('debug-error').textContent = value || '-';
+        const el = document.getElementById('debug-error');
+        if (el) el.textContent = value || '-';
     }
 };
 
@@ -34,11 +38,22 @@ async function apiCall(endpoint, options = {}) {
             credentials: 'include', // Include cookies
         });
 
-        const data = await response.json();
         DEBUG.setStatus(response.status);
 
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            // Not JSON, likely an error page
+            const text = await response.text();
+            data = { error: `Server error: ${response.statusText || 'Unknown error'}` };
+        }
+
         if (!response.ok) {
-            DEBUG.setError(data.error || 'Unknown error');
+            DEBUG.setError(data.error || 'Request failed');
             throw new Error(data.error || 'Request failed');
         }
 
