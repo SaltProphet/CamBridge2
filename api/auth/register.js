@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   }
 
   // Rate limiting: 5 registration attempts per hour
-  const rateLimitCheck = rateLimit(5, 3600000)(req);
+  const rateLimitCheck = await rateLimit(5, 3600000)(req);
   if (!rateLimitCheck.allowed) {
     return res.status(429).json({ 
       error: 'Too many registration attempts. Please try again later.' 

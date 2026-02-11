@@ -8,36 +8,12 @@ import {
   createJoinRequest, 
   getUserById
 } from './db.js';
-import { authenticate, rateLimit } from './middleware.js';
+import { authenticate, consumeRateLimit, buildRateLimitKey } from './middleware.js';
 import { getPaymentsProvider } from './providers/payments.js';
 import { PolicyGates } from './policies/gates.js';
 
-// Rate limit: 10 requests per hour per user per creator
-const joinRequestRateLimit = new Map();
-
-function getJoinRequestRateLimitKey(userId, creatorId) {
-  return `${userId}:${creatorId}`;
-}
-
-function checkJoinRequestRateLimit(userId, creatorId) {
-  const key = getJoinRequestRateLimitKey(userId, creatorId);
-  const now = Date.now();
-  const windowMs = 3600000; // 1 hour
-  const maxRequests = 10;
-  
-  let entry = joinRequestRateLimit.get(key);
-  if (!entry || now - entry.resetTime > windowMs) {
-    entry = { count: 0, resetTime: now };
-    joinRequestRateLimit.set(key, entry);
-  }
-  
-  if (entry.count >= maxRequests) {
-    return { allowed: false, remaining: 0 };
-  }
-  
-  entry.count++;
-  return { allowed: true, remaining: maxRequests - entry.count };
-}
+const JOIN_REQUEST_MAX_REQUESTS = 10;
+const ONE_HOUR_MS = 3600000;
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -87,7 +63,11 @@ export default async function handler(req, res) {
     }
 
     // Rate limit check
-    const rateLimitCheck = checkJoinRequestRateLimit(userId, creator.id);
+    const rateLimitCheck = await consumeRateLimit({
+      key: buildRateLimitKey('join-request', `user:${userId}:creator:${creator.id}`),
+      maxRequests: JOIN_REQUEST_MAX_REQUESTS,
+      windowMs: ONE_HOUR_MS
+    });
     if (!rateLimitCheck.allowed) {
       return res.status(429).json({ 
         error: 'Too many join requests. Please try again later.',

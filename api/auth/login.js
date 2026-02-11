@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   // Rate limiting: 10 login attempts per 15 minutes
-  const rateLimitCheck = rateLimit(10, 900000)(req);
+  const rateLimitCheck = await rateLimit(10, 900000)(req);
   if (!rateLimitCheck.allowed) {
     return res.status(429).json({ 
       error: 'Too many login attempts. Please try again later.' 
