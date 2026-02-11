@@ -140,7 +140,7 @@ export default async function handler(req, res) {
     // Redirect to return URL or dashboard
     const redirectUrl = returnTo || '/dashboard';
     
-    return res.redirect(302, redirectUrl);
+    return res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Magic link callback error:', error);

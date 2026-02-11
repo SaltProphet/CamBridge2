@@ -3,14 +3,34 @@
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import { createLoginToken } from '../db.js';
-import { validateEmail, rateLimit } from '../middleware.js';
+import { validateEmail } from '../middleware.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@cambridge.app';
 
+// Email-based rate limiting storage
+const emailRateLimitStore = new Map();
+
 // Rate limit: 5 requests per hour per email
-const emailRateLimit = rateLimit(5, 3600000); // 1 hour in ms
+function checkEmailRateLimit(email) {
+  const now = Date.now();
+  const windowMs = 3600000; // 1 hour
+  const maxRequests = 5;
+  
+  let entry = emailRateLimitStore.get(email);
+  if (!entry || now - entry.resetTime > windowMs) {
+    entry = { count: 0, resetTime: now };
+    emailRateLimitStore.set(email, entry);
+  }
+  
+  if (entry.count >= maxRequests) {
+    return { allowed: false, remaining: 0 };
+  }
+  
+  entry.count++;
+  return { allowed: true, remaining: maxRequests - entry.count };
+}
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -30,7 +50,7 @@ export default async function handler(req, res) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Rate limit check (per email)
-    const rateLimitCheck = emailRateLimit(req);
+    const rateLimitCheck = checkEmailRateLimit(normalizedEmail);
     if (!rateLimitCheck.allowed) {
       console.log(`Rate limit exceeded for email: ${normalizedEmail}`);
       return res.status(429).json({ 

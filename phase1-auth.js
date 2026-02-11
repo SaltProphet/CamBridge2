@@ -236,9 +236,16 @@ class Phase1Auth {
     result.classList.add('hidden');
 
     try {
-      // Extract creator slug from URL (modelName in this case)
-      const creatorSlug = modelName; // modelName from room.js context
-      const roomSlugParam = roomSlug !== 'main' ? roomSlug : null;
+      // Extract creator slug and room slug from URL path
+      const urlPath = window.location.pathname;
+      const roomMatch = urlPath.match(/\/room\/([a-z0-9-_]+)(?:\/([a-z0-9-_]+))?/);
+      
+      if (!roomMatch) {
+        throw new Error('Invalid room URL');
+      }
+      
+      const creatorSlug = roomMatch[1];
+      const roomSlugParam = roomMatch[2] || null; // null for main room
 
       const response = await fetch('/api/join-request', {
         method: 'POST',

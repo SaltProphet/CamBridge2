@@ -102,8 +102,8 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Room not found' });
       }
 
-      // Check if room is enabled
-      if (!room.is_active) {
+      // Check if room is enabled (check both old and new columns for compatibility)
+      if (!room.is_active && room.enabled === false) {
         return res.status(403).json({ error: 'This room is not currently available' });
       }
     }

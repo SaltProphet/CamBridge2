@@ -202,6 +202,18 @@ export async function getRoomByName(roomName) {
   }
 }
 
+export async function getRoomById(roomId) {
+  try {
+    const result = await sql`
+      SELECT * FROM rooms WHERE id = ${roomId} AND is_active = true
+    `;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Get room by ID error:', error);
+    return null;
+  }
+}
+
 // Access code format constant
 const ACCESS_CODE_REGEX = /^[A-Z0-9]{8}$/;
 
@@ -379,7 +391,12 @@ export async function cleanExpiredLoginTokens() {
 export async function createUserByEmail(email, displayName = null) {
   try {
     // Generate a placeholder username from email
-    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    
+    // Ensure username is not empty after sanitization
+    if (!username || username.length < 3) {
+      username = `user_${Math.random().toString(36).substring(2, 8)}`;
+    }
     
     const result = await sql`
       INSERT INTO users (username, email, password_hash, display_name)
@@ -391,7 +408,12 @@ export async function createUserByEmail(email, displayName = null) {
     // If username conflict, try with random suffix
     if (error.code === '23505') { // unique violation
       const randomSuffix = Math.random().toString(36).substring(2, 8);
-      const uniqueUsername = `${email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_')}_${randomSuffix}`;
+      let uniqueUsername = `${email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_')}_${randomSuffix}`;
+      
+      // Ensure username is valid
+      if (uniqueUsername.length < 3 || uniqueUsername.startsWith('_')) {
+        uniqueUsername = `user_${randomSuffix}`;
+      }
       
       try {
         const result = await sql`
@@ -412,30 +434,36 @@ export async function createUserByEmail(email, displayName = null) {
 
 export async function updateUserAcceptance(userId, ageAttested, tosAccepted) {
   try {
-    const setClauses = [];
-    const values = [userId];
-    let paramIndex = 2;
-    
-    if (ageAttested) {
-      setClauses.push(`age_attested_at = CURRENT_TIMESTAMP`);
-    }
-    
-    if (tosAccepted) {
-      setClauses.push(`tos_accepted_at = CURRENT_TIMESTAMP`);
-    }
-    
-    if (setClauses.length === 0) {
+    // Build update query dynamically
+    if (!ageAttested && !tosAccepted) {
       return { success: false, error: 'No acceptance flags provided' };
     }
     
-    const query = `
-      UPDATE users
-      SET ${setClauses.join(', ')}
-      WHERE id = $1
-      RETURNING id, username, email, role, age_attested_at, tos_accepted_at
-    `;
+    // Use template literal syntax consistently
+    let result;
+    if (ageAttested && tosAccepted) {
+      result = await sql`
+        UPDATE users
+        SET age_attested_at = CURRENT_TIMESTAMP, tos_accepted_at = CURRENT_TIMESTAMP
+        WHERE id = ${userId}
+        RETURNING id, username, email, role, age_attested_at, tos_accepted_at
+      `;
+    } else if (ageAttested) {
+      result = await sql`
+        UPDATE users
+        SET age_attested_at = CURRENT_TIMESTAMP
+        WHERE id = ${userId}
+        RETURNING id, username, email, role, age_attested_at, tos_accepted_at
+      `;
+    } else {
+      result = await sql`
+        UPDATE users
+        SET tos_accepted_at = CURRENT_TIMESTAMP
+        WHERE id = ${userId}
+        RETURNING id, username, email, role, age_attested_at, tos_accepted_at
+      `;
+    }
     
-    const result = await sql.query(query, values);
     return { success: true, user: result.rows[0] };
   } catch (error) {
     console.error('Update user acceptance error:', error);

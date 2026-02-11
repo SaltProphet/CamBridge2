@@ -4,7 +4,7 @@ import {
   getJoinRequestById, 
   updateJoinRequestStatus, 
   getCreatorByUserId,
-  getRoomByName
+  getRoomById
 } from './db.js';
 import { authenticate } from './middleware.js';
 
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
     
     if (request.room_id) {
       // Get the actual room
-      const room = await getRoomByName(request.room_id);
+      const room = await getRoomById(request.room_id);
       if (room && room.room_name) {
         roomName = room.room_name;
       }

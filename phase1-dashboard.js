@@ -93,7 +93,7 @@ class Phase1Dashboard {
     }
 
     container.innerHTML = requests.map(request => `
-      <div class="request-item" data-request-id="${request.id}" style="
+      <div class="request-item" data-request-id="${this.escapeHTML(request.id)}" style="
         background: rgba(212, 175, 55, 0.05);
         border: 1px solid rgba(212, 175, 55, 0.2);
         padding: 1rem;
@@ -112,15 +112,24 @@ class Phase1Dashboard {
           </div>
         ` : ''}
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-          <button class="btn btn-primary" onclick="phase1Dashboard.approveRequest('${request.id}')" style="flex: 1; padding: 0.5rem;">
+          <button class="btn btn-primary approve-request-btn" style="flex: 1; padding: 0.5rem;">
             <i class="fas fa-check"></i> Approve
           </button>
-          <button class="btn btn-secondary" onclick="phase1Dashboard.denyRequest('${request.id}')" style="flex: 1; padding: 0.5rem;">
+          <button class="btn btn-secondary deny-request-btn" style="flex: 1; padding: 0.5rem;">
             <i class="fas fa-times"></i> Deny
           </button>
         </div>
       </div>
     `).join('');
+    
+    // Add event listeners using event delegation
+    container.querySelectorAll('.approve-request-btn').forEach((btn, index) => {
+      btn.addEventListener('click', () => this.approveRequest(requests[index].id));
+    });
+    
+    container.querySelectorAll('.deny-request-btn').forEach((btn, index) => {
+      btn.addEventListener('click', () => this.denyRequest(requests[index].id));
+    });
   }
 
   // Approve join request
@@ -210,7 +219,7 @@ class Phase1Dashboard {
     }
 
     container.innerHTML = bans.map(ban => `
-      <div class="ban-item" data-ban-id="${ban.id}" style="
+      <div class="ban-item" data-ban-id="${this.escapeHTML(ban.id)}" style="
         background: rgba(255, 68, 68, 0.05);
         border: 1px solid rgba(255, 68, 68, 0.2);
         padding: 1rem;
@@ -229,12 +238,17 @@ class Phase1Dashboard {
           </div>
         ` : ''}
         <div style="margin-top: 1rem;">
-          <button class="btn btn-secondary" onclick="phase1Dashboard.unbanUser('${ban.id}')" style="padding: 0.5rem 1rem;">
+          <button class="btn btn-secondary unban-user-btn" style="padding: 0.5rem 1rem;">
             <i class="fas fa-undo"></i> Unban
           </button>
         </div>
       </div>
     `).join('');
+    
+    // Add event listeners using event delegation
+    container.querySelectorAll('.unban-user-btn').forEach((btn, index) => {
+      btn.addEventListener('click', () => this.unbanUser(bans[index].id));
+    });
   }
 
   // Unban user
