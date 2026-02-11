@@ -1,44 +1,116 @@
-// API endpoint to get creator info for authenticated user
-// Phase 1: Dashboard support
-import { getCreatorByUserId } from '../db.js';
-import { authenticate } from '../middleware.js';
+// API endpoint to get and update creator info
+// Phase 1: Returns creator profile for authenticated user
+// Phase 2: Supports PUT method to update bio and displayName
+import { getCreatorByUserId, updateCreatorInfo } from '../db.js';
+import { authenticate, sanitizeInput } from '../middleware.js';
 
 export default async function handler(req, res) {
-  // Only allow GET
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   // Authenticate user
   const auth = await authenticate(req);
   if (!auth.authenticated) {
     return res.status(401).json({ error: auth.error || 'Unauthorized' });
   }
 
-  try {
-    const userId = auth.user.id;
-
-    // Get creator info
-    const creator = await getCreatorByUserId(userId);
-    
-    if (!creator) {
-      return res.status(404).json({ error: 'Creator not found' });
-    }
-
-    return res.status(200).json({
-      id: creator.id,
-      userId: creator.user_id,
-      slug: creator.slug,
-      displayName: creator.display_name,
-      plan: creator.plan,
-      status: creator.status,
-      createdAt: creator.created_at
-    });
-
-  } catch (error) {
-    console.error('Get creator info error:', error);
-    return res.status(500).json({ 
-      error: 'An error occurred while fetching creator info' 
+  const userId = auth.user.id;
+  
+  // Get creator info
+  const creator = await getCreatorByUserId(userId);
+  
+  if (!creator) {
+    return res.status(404).json({ 
+      error: 'Creator not found. Use /api/creator/onboard to create a creator account.' 
     });
   }
+
+  // GET - Return creator info
+  if (req.method === 'GET') {
+    try {
+      return res.status(200).json({
+        id: creator.id,
+        userId: creator.user_id,
+        slug: creator.slug,
+        displayName: creator.display_name,
+        bio: creator.bio,
+        plan: creator.plan,
+        status: creator.status,
+        referralCode: creator.referral_code,
+        createdAt: creator.created_at
+      });
+    } catch (error) {
+      console.error('Get creator info error:', error);
+      return res.status(500).json({ 
+        error: 'An error occurred while fetching creator info' 
+      });
+    }
+  }
+
+  // PUT - Update creator info
+  if (req.method === 'PUT') {
+    try {
+      const { bio, displayName } = req.body;
+      
+      const updates = {};
+      
+      // Validate and sanitize bio if provided
+      if (bio !== undefined) {
+        if (typeof bio !== 'string') {
+          return res.status(400).json({ error: 'Bio must be a string' });
+        }
+        const sanitizedBio = sanitizeInput(bio);
+        if (sanitizedBio.length > 1000) {
+          return res.status(400).json({ error: 'Bio must be 1000 characters or less' });
+        }
+        updates.bio = sanitizedBio;
+      }
+      
+      // Validate and sanitize displayName if provided
+      if (displayName !== undefined) {
+        if (typeof displayName !== 'string' || displayName.trim().length === 0) {
+          return res.status(400).json({ error: 'Display name is required' });
+        }
+        const sanitizedDisplayName = sanitizeInput(displayName);
+        if (sanitizedDisplayName.length < 2 || sanitizedDisplayName.length > 200) {
+          return res.status(400).json({ error: 'Display name must be between 2 and 200 characters' });
+        }
+        updates.displayName = sanitizedDisplayName;
+      }
+      
+      // Check if there are any updates
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
+      }
+      
+      // Update creator info
+      const result = await updateCreatorInfo(creator.id, updates);
+      
+      if (!result.success) {
+        console.error('Failed to update creator info:', result.error);
+        return res.status(500).json({ error: 'Failed to update creator info' });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Creator info updated successfully',
+        creator: {
+          id: result.creator.id,
+          userId: result.creator.user_id,
+          slug: result.creator.slug,
+          displayName: result.creator.display_name,
+          bio: result.creator.bio,
+          plan: result.creator.plan,
+          status: result.creator.status,
+          referralCode: result.creator.referral_code,
+          createdAt: result.creator.created_at
+        }
+      });
+    } catch (error) {
+      console.error('Update creator info error:', error);
+      return res.status(500).json({ 
+        error: 'An error occurred while updating creator info' 
+      });
+    }
+  }
+
+  // Method not allowed
+  return res.status(405).json({ error: 'Method not allowed' });
 }

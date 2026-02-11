@@ -85,6 +85,7 @@ export async function initializeTables() {
         user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
         slug VARCHAR(100) NOT NULL UNIQUE,
         display_name VARCHAR(200),
+        bio TEXT,
         plan VARCHAR(50) DEFAULT 'free',
         status VARCHAR(20) DEFAULT 'active',
         referral_code VARCHAR(20) UNIQUE,
@@ -94,6 +95,9 @@ export async function initializeTables() {
     await sql`CREATE INDEX IF NOT EXISTS idx_creators_slug ON creators(slug)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_creators_user_id ON creators(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`;
+
+    // Add bio column if it doesn't exist (for existing databases)
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS bio TEXT`;
 
     // Extend rooms table with Phase 1 fields
     await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS creator_id UUID REFERENCES creators(id) ON DELETE CASCADE`;
@@ -635,6 +639,62 @@ export async function getCreatorById(creatorId) {
   }
 }
 
+export async function updateCreatorStatus(creatorId, status) {
+  try {
+    const result = await sql`
+      UPDATE creators
+      SET status = ${status}
+      WHERE id = ${creatorId}
+      RETURNING *
+    `;
+    return { success: true, creator: result.rows[0] };
+  } catch (error) {
+    console.error('Update creator status error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateCreatorInfo(creatorId, updates) {
+  try {
+    const { bio, displayName } = updates;
+    
+    // Build dynamic SET clause only for provided fields
+    const setClauses = [];
+    const values = [creatorId];
+    let paramIndex = 2;
+    
+    if (bio !== undefined) {
+      setClauses.push(`bio = $${paramIndex}`);
+      values.push(bio);
+      paramIndex++;
+    }
+    
+    if (displayName !== undefined) {
+      setClauses.push(`display_name = $${paramIndex}`);
+      values.push(displayName);
+      paramIndex++;
+    }
+    
+    if (setClauses.length === 0) {
+      // No fields to update
+      return getCreatorById(creatorId).then(creator => ({ success: true, creator }));
+    }
+    
+    const query = `
+      UPDATE creators
+      SET ${setClauses.join(', ')}
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await sql.query(query, values);
+    return { success: true, creator: result.rows[0] };
+  } catch (error) {
+    console.error('Update creator info error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // ==================================================
 // PHASE 1: Join Request Operations
 // ==================================================
@@ -715,6 +775,37 @@ export async function getJoinRequestsByCreator(creatorId, status = null) {
     return result.rows;
   } catch (error) {
     console.error('Get join requests by creator error:', error);
+    return [];
+  }
+}
+
+export async function getUserJoinRequests(userId, status = null) {
+  try {
+    let result;
+    if (status) {
+      result = await sql`
+        SELECT jr.*, c.slug as creator_slug, c.display_name as creator_display_name,
+               r.room_name, r.room_slug
+        FROM join_requests jr
+        JOIN creators c ON jr.creator_id = c.id
+        LEFT JOIN rooms r ON jr.room_id = r.id
+        WHERE jr.user_id = ${userId} AND jr.status = ${status}
+        ORDER BY jr.created_at DESC
+      `;
+    } else {
+      result = await sql`
+        SELECT jr.*, c.slug as creator_slug, c.display_name as creator_display_name,
+               r.room_name, r.room_slug
+        FROM join_requests jr
+        JOIN creators c ON jr.creator_id = c.id
+        LEFT JOIN rooms r ON jr.room_id = r.id
+        WHERE jr.user_id = ${userId}
+        ORDER BY jr.created_at DESC
+      `;
+    }
+    return result.rows;
+  } catch (error) {
+    console.error('Get user join requests error:', error);
     return [];
   }
 }
