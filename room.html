@@ -2,286 +2,308 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CAMBRIDGE - Private Room</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/@daily-co/daily-js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
-</head>
-<body>
-    <!-- Phase 1: Age Gate Modal -->
-    <div id="age-gate-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2 class="modal-title">AGE VERIFICATION</h2>
-            <p class="modal-text">You must be 18 years or older to access this content.</p>
-            <div class="checkbox-group">
-                <input type="checkbox" id="age-checkbox" />
-                <label for="age-checkbox">I am 18 years of age or older</label>
-            </div>
-            <button id="age-confirm-btn" class="btn-primary" disabled>CONFIRM</button>
-        </div>
-    </div>
-
-    <!-- Phase 1: Terms of Service Modal -->
-    <div id="tos-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2 class="modal-title">TERMS OF SERVICE</h2>
-            <div class="modal-scroll">
-                <p>By accessing CamBridge, you agree to:</p>
-                <ul>
-                    <li>Be at least 18 years old</li>
-                    <li>Not record, screenshot, or redistribute any content</li>
-                    <li>Respect all performers and users</li>
-                    <li>Follow all applicable laws</li>
-                    <li>Accept that sessions may be monitored for safety</li>
-                </ul>
-                <p>Violations may result in permanent bans.</p>
-            </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="tos-checkbox" />
-                <label for="tos-checkbox">I accept the Terms of Service</label>
-            </div>
-            <button id="tos-confirm-btn" class="btn-primary" disabled>ACCEPT</button>
-        </div>
-    </div>
-
-    <!-- Phase 1: Email Login Modal -->
-    <div id="email-login-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2 class="modal-title">SIGN IN</h2>
-            <p class="modal-text">Enter your email to receive a magic link</p>
-            <div class="input-group">
-                <label for="email-input">EMAIL</label>
-                <input type="email" id="email-input" placeholder="your@email.com" autocomplete="email" />
-                <div id="email-error" class="error-message"></div>
-            </div>
-            <button id="email-send-btn" class="btn-primary">SEND MAGIC LINK</button>
-            <div id="email-sent-message" class="success-message hidden">
-                Check your email for the login link!
-            </div>
-        </div>
-    </div>
-
-    <!-- Phase 1: Join Request Status Modal -->
-    <div id="join-request-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2 class="modal-title">ACCESS REQUEST</h2>
-            <p class="modal-text" id="join-status-text">Requesting access to room...</p>
-            <div id="join-loading" class="loading-spinner"></div>
-            <div id="join-result" class="hidden">
-                <p id="join-result-text"></p>
-                <button id="join-enter-btn" class="btn-primary hidden">ENTER ROOM</button>
-                <button id="join-retry-btn" class="btn-secondary hidden">TRY AGAIN</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Access Key Landing Page -->
-    <div id="gatekeeper" class="active">
-        <div class="access-container">
-            <h1 class="app-title">CAMBRIDGE</h1>
-            <p class="room-name" id="room-display-name" style="font-size: 1rem; color: #555; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 0.2rem;"></p>
-            <div class="input-group">
-                <label id="access-label" for="access-key">ACCESS_CODE</label>
-                <input type="password" id="access-key" placeholder="••••••••••••" autocomplete="off">
-                <div id="error-message" class="error-message"></div>
-            </div>
-            <button id="unlock-btn" class="btn-primary">ESTABLISH_LINK</button>
-
-            <!-- BETA MODE: Payment Links Section -->
-            <div id="payment-links" class="payment-links" style="display: none; margin-top: 30px; padding-top: 30px; border-top: 1px solid #222;">
-                <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.05rem;">SUPPORT</p>
-                <div id="payment-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <!-- Populated by room.js -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Full-Screen Video Container -->
-    <div id="video-container" class="hidden">
-        <!-- Watermark Overlay -->
-        <div id="watermark" class="watermark"></div>
-
-        <!-- Session Timer Warning -->
-        <div id="session-warning" class="session-warning" style="display: none;">
-            <i class="fas fa-clock"></i> Session ending in <span id="warning-time">10:00</span>
-        </div>
-
-        <!-- Session Ended Screen -->
-        <div id="session-ended" class="session-ended" style="display: none;">
-            <div class="session-ended-content">
-                <i class="fas fa-stopwatch"></i>
-                <h2>SESSION ENDED</h2>
-                <p>Maximum session duration reached (2 hours)</p>
-                <button id="reconnect-btn" class="btn-primary">RECONNECT</button>
-            </div>
-        </div>
-
-        <!-- Tip Alert Overlay -->
-        <div id="tip-alert" class="tip-alert" style="display: none;"></div>
-
-        <!-- Transcription Toggle Button -->
-        <button id="stt-toggle" class="stt-toggle hidden" title="Toggle Speech-to-Text">
-            <span id="stt-icon">📝</span>
-        </button>
-        
-        <!-- Transcription Feed -->
-        <div id="transcript-feed" class="transcript-feed hidden">
-            <div class="transcript-header">
-                <span>TRANSCRIPTION</span>
-                <button id="clear-transcript" class="clear-btn">CLEAR</button>
-            </div>
-            <div id="transcript-content" class="transcript-content"></div>
-        </div>
-
-        <!-- Chat Widget -->
-        <div id="chat-widget" class="widget chat-widget hidden">
-            <div class="widget-header">
-                <i class="fas fa-comments"></i>
-                <span>CHAT</span>
-                <button class="widget-close" data-widget="chat-widget"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="widget-content">
-                <div id="chat-messages" class="chat-messages"></div>
-                <div class="chat-input-container">
-                    <input type="text" id="chat-input" placeholder="Type message..." />
-                    <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ledger Widget -->
-        <div id="ledger-widget" class="widget ledger-widget hidden">
-            <div class="widget-header">
-                <i class="fas fa-dollar-sign"></i>
-                <span>TIP LEDGER</span>
-                <button class="widget-close" data-widget="ledger-widget"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="widget-content">
-                <div class="ledger-balance">
-                    <span>Balance:</span>
-                    <span id="balance-val" class="balance-value">$0</span>
-                </div>
-                <div id="ledger-history" class="ledger-history"></div>
-                <div class="tip-controls">
-                    <input type="number" id="tip-amount" placeholder="Amount" min="1" step="1" />
-                    <button id="send-tip" class="btn-tip">Send Tip</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Controls Widget -->
-        <div id="controls-widget" class="widget controls-widget hidden">
-            <div class="widget-header">
-                <i class="fas fa-cog"></i>
-                <span>CONTROLS</span>
-                <button class="widget-close" data-widget="controls-widget"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="widget-content">
-                <div class="control-group">
-                    <label>Audio Alerts:</label>
-                    <button id="audio-toggle" class="toggle-btn active">
-                        <i class="fas fa-volume-up"></i> Enabled
-                    </button>
-                </div>
-                <div class="control-group">
-                    <label>Theme Color:</label>
-                    <input type="color" id="theme-color" value="#00ff88" />
-                </div>
-                <div class="control-group">
-                    <label>Glass Opacity:</label>
-                    <input type="range" id="glass-opacity" min="50" max="95" value="85" />
-                    <span id="opacity-value">85%</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Widget Toggle Menu -->
-        <div id="widget-menu" class="widget-menu">
-            <button id="toggle-chat" title="Toggle Chat"><i class="fas fa-comments"></i></button>
-            <button id="toggle-ledger" title="Toggle Tip Ledger"><i class="fas fa-dollar-sign"></i></button>
-            <button id="toggle-controls" title="Toggle Controls"><i class="fas fa-cog"></i></button>
-        </div>
-    </div>
-
-    <!-- Debug Panel (temporary) -->
-    <div id="debug-panel" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.95); border-top: 1px solid #00ff88; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #00ff88; z-index: 10000; display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <strong style="color: #ffffff;">DEBUG PANEL</strong>
-            <button id="toggle-debug" style="background: transparent; border: 1px solid #00ff88; color: #00ff88; padding: 2px 8px; cursor: pointer; font-size: 0.7rem;">HIDE</button>
-        </div>
-        <div id="debug-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.7rem;">
-            <div><strong>Route:</strong> <span id="debug-route">-</span></div>
-            <div><strong>Creator Slug:</strong> <span id="debug-creator-slug">-</span></div>
-            <div><strong>Room Slug:</strong> <span id="debug-room-slug">-</span></div>
-            <div><strong>User ID:</strong> <span id="debug-user-id">-</span></div>
-            <div><strong>Request ID:</strong> <span id="debug-request-id">-</span></div>
-            <div><strong>Join Status:</strong> <span id="debug-join-status">-</span></div>
-            <div style="grid-column: 1 / -1;"><strong>Last Error:</strong> <span id="debug-last-error" style="color: #ff4444;">-</span></div>
-        </div>
-    </div>
-
-    <script src="phase1-auth.js"></script>
-    <script src="room.js"></script>
-    <script>
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-        
-        // Debug Panel Control
-        const debugPanel = document.getElementById('debug-panel');
-        const toggleDebugBtn = document.getElementById('toggle-debug');
-        let debugVisible = true;
-        
-        // Show debug panel by default
-        if (debugPanel) {
-            debugPanel.style.display = 'block';
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Room - CamBridge</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <style>
+        .room-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
         }
         
-        // Toggle debug panel
-        if (toggleDebugBtn) {
-            toggleDebugBtn.addEventListener('click', () => {
-                debugVisible = !debugVisible;
-                if (debugVisible) {
-                    debugPanel.style.display = 'block';
-                    toggleDebugBtn.textContent = 'HIDE';
-                } else {
-                    debugPanel.style.display = 'none';
-                    toggleDebugBtn.textContent = 'SHOW';
+        .room-header {
+            background: var(--bg-section);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .room-header h1 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .user-info {
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .user-info strong {
+            color: var(--accent);
+        }
+        
+        .room-info {
+            background: var(--bg-section);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        
+        .room-info h2 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .room-info p {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .room-url-display {
+            background: var(--bg-dark);
+            padding: 1rem;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        
+        .copy-btn:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+        
+        .logout-btn {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+        
+        .loading {
+            color: var(--text);
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+    </style>
+</head>
+<body>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    
+    <div id="loading" class="loading">
+        <p>Loading your room...</p>
+    </div>
+    
+    <div id="room-content" class="room-container" style="display: none;">
+        <div class="room-header">
+            <h1>Welcome to Your Room</h1>
+            <p style="color: var(--text);">Your room: <strong id="room-slug" style="color: var(--accent);">Loading...</strong></p>
+            <div class="user-info">
+                Logged in as: <strong id="user-email">Loading...</strong>
+            </div>
+        </div>
+        
+        <div class="room-info">
+            <h2>Your Room Link</h2>
+            <p>Share this link to invite people to your room:</p>
+            <div class="room-url-display" id="room-url">Loading...</div>
+            <button class="copy-btn" onclick="copyLink()">Copy Link to Clipboard</button>
+        </div>
+        
+        <div class="room-info">
+            <h2>Room Status</h2>
+            <p id="status-text">Loading...</p>
+        </div>
+        
+        <div class="room-info">
+            <h2>Account Settings</h2>
+            <p><a href="/forgot-password.html" style="color: var(--accent);">Change Password</a></p>
+        </div>
+    </div>
+
+    <script>
+        const roomSlug = window.location.pathname.split('/').pop();
+        let roomUrl = '';
+        
+        // Check authentication and load user data
+        async function loadRoomData() {
+            try {
+                const response = await fetch('/api/me', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/login.html';
+                    return;
                 }
+                
+                const data = await response.json();
+                
+                // Display user info
+                document.getElementById('user-email').textContent = data.user.email;
+                document.getElementById('room-slug').textContent = roomSlug;
+                
+                // Display room URL
+                roomUrl = `${window.location.origin}/room/${roomSlug}`;
+                document.getElementById('room-url').textContent = roomUrl;
+                document.getElementById('status-text').textContent = `Your room "${roomSlug}" is active and ready! Share the link above to invite people.`;
+                
+                // Show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('room-content').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading room data:', error);
+                document.getElementById('loading').innerHTML = '<p style="color: var(--error);">Error loading room. Please try logging in again.</p><p><a href="/login.html" style="color: var(--accent);">Go to Login</a></p>';
+            }
+        }
+        
+        function copyLink() {
+            navigator.clipboard.writeText(roomUrl).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.background = 'var(--accent)';
+                btn.style.color = 'var(--bg-dark)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--accent)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                prompt('Copy this link:', roomUrl);
             });
         }
         
-        // Update debug panel with current state
-        function updateDebugPanel() {
-            document.getElementById('debug-route').textContent = window.location.pathname;
-            document.getElementById('debug-creator-slug').textContent = window.creatorSlug || modelName || '-';
-            document.getElementById('debug-room-slug').textContent = window.roomSlug || '-';
-            
-            // Try to get user ID from auth token or phase1Auth
-            let userId = '-';
-            if (typeof phase1Auth !== 'undefined' && phase1Auth.user) {
-                userId = phase1Auth.user.id || phase1Auth.user.user_id || '-';
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) {
+                console.error('Logout error:', e);
             }
-            document.getElementById('debug-user-id').textContent = userId;
-            
-            // Join request ID
-            if (typeof phase1Auth !== 'undefined' && phase1Auth.joinRequestId) {
-                document.getElementById('debug-request-id').textContent = phase1Auth.joinRequestId;
-            }
+            window.location.href = '/';
         }
         
-        // Update debug panel immediately and on page changes
-        if (debugPanel) {
-            updateDebugPanel();
-            // Update every 2 seconds
-            setInterval(updateDebugPanel, 2000);
+        // Load room data on page load
+        loadRoomData();
+    </script>
+</body>
+</html>
+        .room-info h2 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .room-info p {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .copy-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-light);
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+        
+        .copy-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .logout-btn {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+    </style>
+</head>
+<body>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    
+    <div class="room-container">
+        <div class="room-header">
+            <h1>Welcome to Your Room</h1>
+            <p style="color: var(--text);">Your room: <strong id="room-slug" style="color: var(--accent);">Loading...</strong></p>
+        </div>
+        
+        <div class="room-info">
+            <h2>Your Room Link</h2>
+            <p>Share this link to invite people to your room:</p>
+            <p>
+                <strong id="room-url" style="color: var(--accent);">Loading...</strong>
+                <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+            </p>
+        </div>
+        
+        <div class="room-info">
+            <h2>Room Status</h2>
+            <p id="status-text">Checking room status...</p>
+        </div>
+    </div>
+
+    <script>
+        const roomSlug = window.location.pathname.split('/').pop();
+        
+        // Display room info
+        document.getElementById('room-slug').textContent = roomSlug;
+        const roomUrl = `${window.location.origin}/room/${roomSlug}`;
+        document.getElementById('room-url').textContent = roomUrl;
+        document.getElementById('status-text').textContent = `Your room "${roomSlug}" is ready! Share the link above to invite people.`;
+        
+        function copyLink() {
+            const url = roomUrl;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Room link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                prompt('Copy this link:', url);
+            });
+        }
+        
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) {
+                console.error('Logout error:', e);
+            }
+            window.location.href = '/';
         }
     </script>
-    <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
-// GET /api/join-status
-// Get join request status (can be used by authenticated users to see their pending requests)
+// GET /api/me
+// Get current authenticated user from JWT cookie
 
 import jwt from 'jsonwebtoken';
-import { getJoinRequestsByOwnerId } from './db-simple.js';
+import { getUserById, getRoomsByOwnerId } from './db-simple.js';
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
 
@@ -20,7 +20,7 @@ function getTokenFromCookie(cookieHeader) {
   
   if (!tokenCookie) return null;
   
-  return tokenCookie.substring(6);
+  return tokenCookie.substring(6); // Remove 'token=' prefix
 }
 
 export default async function handler(req, res) {
@@ -29,15 +29,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { status } = req.query;
-
-    // Require authentication - no public lookups allowed
+    // Get token from cookie
     const token = getTokenFromCookie(req.headers.cookie);
     
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    // Verify JWT token
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET);
@@ -45,15 +44,28 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // Get join requests for rooms owned by this user
-    const requests = await getJoinRequestsByOwnerId(decoded.userId, status || null);
+    // Get user from database
+    const user = await getUserById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
 
+    // Get user's rooms
+    const rooms = await getRoomsByOwnerId(user.id);
+
+    // Return user data
     return res.status(200).json({
       ok: true,
-      requests
+      user: {
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at
+      },
+      rooms
     });
   } catch (error) {
-    console.error('Join status error:', error);
+    console.error('Auth check error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

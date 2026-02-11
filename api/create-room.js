@@ -1,8 +1,8 @@
-// GET /api/join-status
-// Get join request status (can be used by authenticated users to see their pending requests)
+// POST /api/create-room
+// Create a new room (authenticated users only)
 
 import jwt from 'jsonwebtoken';
-import { getJoinRequestsByOwnerId } from './db-simple.js';
+import { createRoom } from './db-simple.js';
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
 
@@ -24,14 +24,12 @@ function getTokenFromCookie(cookieHeader) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
+  if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { status } = req.query;
-
-    // Require authentication - no public lookups allowed
+    // Verify authentication
     const token = getTokenFromCookie(req.headers.cookie);
     
     if (!token) {
@@ -45,15 +43,35 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // Get join requests for rooms owned by this user
-    const requests = await getJoinRequestsByOwnerId(decoded.userId, status || null);
+    const { slug } = req.body;
 
-    return res.status(200).json({
-      ok: true,
-      requests
-    });
+    // Validate slug
+    if (!slug) {
+      return res.status(400).json({ error: 'Room slug is required' });
+    }
+
+    // Validate slug format
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return res.status(400).json({ error: 'Slug can only contain lowercase letters, numbers, and hyphens' });
+    }
+
+    if (slug.length < 3) {
+      return res.status(400).json({ error: 'Slug must be at least 3 characters' });
+    }
+
+    // Create room
+    const result = await createRoom(decoded.userId, slug);
+
+    if (result.success) {
+      return res.status(200).json({
+        ok: true,
+        room: result.room
+      });
+    } else {
+      return res.status(400).json({ error: result.error });
+    }
   } catch (error) {
-    console.error('Join status error:', error);
+    console.error('Create room error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

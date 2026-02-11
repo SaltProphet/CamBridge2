@@ -1,6 +1,5 @@
-// API endpoint to initialize database tables
-// This should be called once during setup
-import { initializeTables, sql } from './db.js';
+// API endpoint to initialize simplified database tables
+import { initializeTables, sql } from './db-simple.js';
 
 export default async function handler(req, res) {
   const INIT_SECRET = process.env.DB_INIT_SECRET;
@@ -8,29 +7,38 @@ export default async function handler(req, res) {
   // GET method - Return status without requiring secret
   if (req.method === 'GET') {
     try {
+      // In mock DB mode, sql is intentionally null. Treat this as a healthy,
+      // initialized mock state so status checks succeed without Postgres.
+      if (!sql) {
+        return res.status(200).json({
+          initialized: true,
+          mock: true,
+          tables: {
+            users: true,
+            rooms: true,
+            join_requests: true
+          },
+          configured: !!INIT_SECRET
+        });
+      }
+
       // Check if database is already initialized
       const tablesResult = await sql`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_name IN ('users', 'rooms', 'sessions', 'login_tokens', 'creators', 'join_requests', 'bans')
+        AND table_name IN ('users', 'rooms', 'join_requests')
       `;
 
       const existingTables = tablesResult.rows.map(row => row.table_name);
-      const coreInitialized = ['users', 'rooms', 'sessions'].every(t => existingTables.includes(t));
-      const phase1Initialized = ['login_tokens', 'creators', 'join_requests', 'bans'].every(t => existingTables.includes(t));
+      const initialized = ['users', 'rooms', 'join_requests'].every(t => existingTables.includes(t));
 
       return res.status(200).json({
-        initialized: coreInitialized,
-        phase1Initialized,
+        initialized,
         tables: {
           users: existingTables.includes('users'),
           rooms: existingTables.includes('rooms'),
-          sessions: existingTables.includes('sessions'),
-          login_tokens: existingTables.includes('login_tokens'),
-          creators: existingTables.includes('creators'),
-          join_requests: existingTables.includes('join_requests'),
-          bans: existingTables.includes('bans')
+          join_requests: existingTables.includes('join_requests')
         },
         configured: !!INIT_SECRET
       });

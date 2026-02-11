@@ -3,66 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CamBridge - Commission-Free Private Video Sessions</title>
-    <meta name="description" content="Commission-free private video sessions. Private link. Controlled entry. Direct session.">
-    <link rel="stylesheet" href="/public/styles.css">
+    <title>CamBridge</title>
+    <link rel="stylesheet" href="/assets/app.css">
 </head>
-<body class="bg-bg-dark text-text-primary min-h-screen flex flex-col">
-    <!-- Hero Section -->
-    <main class="flex-1 flex items-center justify-center px-6 py-20">
-        <div class="w-full max-w-2xl mx-auto text-center space-y-12">
-            <!-- Logo Mark -->
-            <div class="flex justify-center mb-8">
-                <img src="/assets/mark.svg" alt="CamBridge" class="w-20 h-20">
-            </div>
-            
-            <!-- Headline -->
-            <h1 class="text-5xl md:text-7xl font-light tracking-tighter-custom leading-tight">
-                COMMISSION-FREE<br>
-                PRIVATE VIDEO SESSIONS
-            </h1>
-            
-            <!-- Primary CTA -->
-            <div class="space-y-4">
-                <a href="./public/pages/request-access.html" 
-                   class="inline-block px-8 py-4 border border-border-normal hover:border-border-hover text-text-primary text-sm font-medium tracking-wider transition-colors duration-200">
-                    REQUEST ACCESS
-                </a>
-                
-                <!-- Secondary Link -->
-                <div>
-                    <a href="./public/pages/creator-login.html" 
-                       class="text-text-muted hover:text-text-primary text-sm underline transition-colors duration-200">
-                        Creator Login
-                    </a>
-                </div>
-            </div>
+<body>
+    <div class="landing">
+        <h1>CamBridge</h1>
+        <p>Secure P2P video rooms for creators</p>
+        <div class="landing-buttons">
+            <button id="show-register" class="btn">Register</button>
+            <button id="show-login" class="btn btn-secondary">Login</button>
         </div>
-    </main>
-    
-    <!-- Below Fold Section -->
-    <section class="border-t border-border-normal py-20 px-6">
-        <div class="max-w-4xl mx-auto">
-            <!-- How It Works -->
-            <div class="mb-16">
-                <h2 class="text-xs font-medium tracking-widest text-text-muted mb-6 uppercase">
-                    How It Works
-                </h2>
-                <div class="space-y-3 text-text-primary text-sm">
-                    <p>Private link.</p>
-                    <p>Controlled entry.</p>
-                    <p>Direct session.</p>
-                </div>
-            </div>
-            
-            <!-- Pricing -->
-            <div>
-                <h2 class="text-xs font-medium tracking-widest text-text-muted mb-6 uppercase">
-                    Pricing
-                </h2>
-                <p class="text-text-primary text-sm">Flat monthly.</p>
-            </div>
+        <div class="landing-links">
+            <a href="#" id="landing-tos-link">Terms of Service</a>
+            <span>•</span>
+            <a href="#" id="privacy-link">Privacy Policy</a>
         </div>
-    </section>
+    </div>
+
+    <script src="/assets/landing.js"></script>
 </body>
 </html>
