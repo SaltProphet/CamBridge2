@@ -16,12 +16,9 @@
     "create:test-user": "node scripts/create-test-user.js"
   },
   "dependencies": {
-    "@vercel/postgres": "^0.10.0",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^17.2.4",
-    "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
-    "resend": "^6.9.2"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.24",
