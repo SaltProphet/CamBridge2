@@ -1,0 +1,58 @@
+{
+  "dailyDomainPrefix": "cambridge",
+  "subscriptionPrice": 30,
+  "maxSessionDuration": 7200,
+  "sessionWarningTime": 6600,
+  "maxRoomsPerModel": 8,
+  "beta": {
+    "paymentsPaused": true,
+    "emailPaused": true,
+    "domainPending": true,
+    "message": "Pre-release beta: payments and email are pending. We'll notify you when billing opens."
+  },
+  "models": {
+    "testmodel": {
+      "active": true,
+      "rooms": {
+        "main": {
+          "name": "Main Room",
+          "type": "public",
+          "slug": "main",
+          "active": true,
+          "createdAt": "2024-01-01T00:00:00Z"
+        },
+        "vip": {
+          "name": "VIP Lounge",
+          "type": "private",
+          "slug": "vip",
+          "active": true,
+          "createdAt": "2024-01-01T00:00:00Z"
+        }
+      }
+    },
+    "demo": {
+      "active": true,
+      "rooms": {
+        "public1": {
+          "name": "Public Room",
+          "type": "public",
+          "slug": "public1",
+          "active": true,
+          "createdAt": "2024-01-01T00:00:00Z"
+        }
+      }
+    },
+    "saltprophet": {
+      "active": true,
+      "rooms": {
+        "studio": {
+          "name": "Studio",
+          "type": "public",
+          "slug": "studio",
+          "active": true,
+          "createdAt": "2024-01-01T00:00:00Z"
+        }
+      }
+    }
+  }
+}
