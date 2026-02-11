@@ -27,49 +27,67 @@ console.log('  BETA_MODE:', process.env.BETA_MODE ? '✓ Set' : '✗ Not set');
 
 // Start server in async IIFE to support dynamic imports
 (async () => {
-  const app = express();
-  const PORT = process.env.PORT || 3000;
+  console.log('📦 Starting module imports...');
+  
+  try {
+    console.log('  Importing password-register handler...');
+    const { default: passwordRegisterHandler } = await import('./api/auth/password-register.js');
+    console.log('    ✓ password-register loaded');
+    
+    console.log('  Importing password-login handler...');
+    const { default: passwordLoginHandler } = await import('./api/auth/password-login.js');
+    console.log('    ✓ password-login loaded');
+    
+    console.log('  Importing creator public-info handler...');
+    const { default: creatorPublicInfoHandler } = await import('./api/creator/public-info.js');
+    console.log('    ✓ public-info loaded');
+    
+    console.log('✓ All handlers loaded successfully\n');
+    
+    const app = express();
+    const PORT = process.env.PORT || 3000;
 
-  // Middleware
-  app.use(express.json());
-  app.use(express.static(path.join(__dirname)));
-  app.use(express.static(path.join(__dirname, 'public')));
+    // Middleware
+    app.use(express.json());
+    app.use(express.static(path.join(__dirname)));
+    app.use(express.static(path.join(__dirname, 'public')));
 
-  // Import API handlers dynamically (after dotenv.config())
-  const { default: passwordRegisterHandler } = await import('./api/auth/password-register.js');
-  const { default: passwordLoginHandler } = await import('./api/auth/password-login.js');
-  const { default: creatorPublicInfoHandler } = await import('./api/creator/public-info.js');
+    // API Routes
+    app.post('/api/auth/password-register', (req, res) => passwordRegisterHandler(req, res));
+    app.post('/api/auth/password-login', (req, res) => passwordLoginHandler(req, res));
+    app.get('/api/creator/public-info', (req, res) => creatorPublicInfoHandler(req, res));
 
-  // API Routes
-  app.post('/api/auth/password-register', (req, res) => passwordRegisterHandler(req, res));
-  app.post('/api/auth/password-login', (req, res) => passwordLoginHandler(req, res));
-  app.get('/api/creator/public-info', (req, res) => creatorPublicInfoHandler(req, res));
+    // Serve index.html for SPA routes
+    app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, 'index.html'));
+    });
 
-  // Serve index.html for SPA routes
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-  });
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`\n🚀 CamBridge Development Server`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`✓ HTTP Server: http://localhost:${PORT}`);
+      console.log(`✓ API: http://localhost:${PORT}/api/`);
+      console.log(`✓ Static Files: Served from root + /public`);
+      console.log(`✓ BETA_MODE: ${process.env.BETA_MODE === 'true' ? '✅ ENABLED' : '❌ DISABLED'}`);
+      console.log(`\n📍 Quick Links:`);
+      console.log(`  - Home: http://localhost:${PORT}`);
+      console.log(`  - Creator Login: http://localhost:${PORT}/public/pages/creator-login.html`);
+      console.log(`  - Creator Signup: http://localhost:${PORT}/public/pages/creator-signup.html`);
+      console.log(`\n💡 Test Credentials:`);
+      console.log(`  - Email: test@cambridge.app`);
+      console.log(`  - Password: TestPassword123!`);
+      console.log(`\n✅ Ready to accept requests...\n`);
+    });
 
-  // Start server
-  app.listen(PORT, () => {
-    console.log(`\n🚀 CamBridge Development Server`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`✓ HTTP Server: http://localhost:${PORT}`);
-    console.log(`✓ API: http://localhost:${PORT}/api/`);
-    console.log(`✓ Static Files: Served from root + /public`);
-    console.log(`✓ BETA_MODE: ${process.env.BETA_MODE === 'true' ? '✅ ENABLED' : '❌ DISABLED'}`);
-    console.log(`\n📍 Quick Links:`);
-    console.log(`  - Home: http://localhost:${PORT}`);
-    console.log(`  - Creator Login: http://localhost:${PORT}/public/pages/creator-login.html`);
-    console.log(`  - Creator Signup: http://localhost:${PORT}/public/pages/creator-signup.html`);
-    console.log(`\n💡 Test Credentials:`);
-    console.log(`  - Email: test@cambridge.app`);
-    console.log(`  - Password: TestPassword123!`);
-    console.log(`\n✅ Ready to accept requests...\n`);
-  });
-
-  process.on('SIGINT', () => {
-    console.log('\n\n👋 Server stopped');
-    process.exit(0);
-  });
+    process.on('SIGINT', () => {
+      console.log('\n\n👋 Server stopped');
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    console.error('\n❌ Failed to start server:', error.message);
+    console.error(error.stack);
+    process.exit(1);
+  }
 })();
