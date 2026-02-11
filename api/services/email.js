@@ -9,22 +9,6 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
  * Uses Resend in production, console in development
  */
 
-function getResendClient() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-
-  // Resend SDK is available when RESEND_API_KEY is set
-  try {
-    const { Resend } = await import('resend');
-    return new Resend(apiKey);
-  } catch (err) {
-    console.warn('Resend SDK not available, will fall back to console logging');
-    return null;
-  }
-}
-
 /**
  * Load and render an email template
  * @param {string} templateName - Name of template in api/templates/
@@ -32,7 +16,9 @@ function getResendClient() {
  * @returns {string} Rendered HTML
  */
 export function renderEmailTemplate(templateName, variables = {}) {
-  const templatePath = join(__dirname, `${templateName}.html`);
+  // Template is in api/templates/, service is in api/services/
+  // So we go up one level from services/
+  const templatePath = join(__dirname, '..', 'templates', `${templateName}.html`);
   let html = '';
 
   try {
@@ -114,7 +100,7 @@ export async function sendInvoiceEmail(options) {
   // Try to send via Resend if configured
   if (process.env.RESEND_API_KEY) {
     try {
-      // Dynamic import to avoid dependency issues if not installed
+      // Import Resend and send email
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
 

@@ -171,6 +171,29 @@ export async function authenticate(req) {
   };
 }
 
+// Admin access check
+export async function requireAdmin(userId, queryfn = null) {
+  if (!queryfn) {
+    queryfn = sql;
+  }
+
+  try {
+    const result = await queryfn`
+      SELECT role FROM users WHERE id = ${userId}
+    `;
+
+    const user = result.rows?.[0];
+    if (!user) {
+      return false;
+    }
+
+    return user.role === 'admin';
+  } catch (err) {
+    console.error('Admin check error:', err);
+    return false;
+  }
+}
+
 // Input validation
 export function validateUsername(username) {
   if (!username || typeof username !== 'string') {
