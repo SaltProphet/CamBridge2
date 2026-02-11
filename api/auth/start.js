@@ -1,13 +1,13 @@
 // API endpoint to initiate magic-link authentication
 // Phase 1: Email-based passwordless login
+// Phase 0: Uses email provider abstraction and policy gates
 import crypto from 'crypto';
-import { Resend } from 'resend';
 import { createLoginToken } from '../db.js';
 import { validateEmail } from '../middleware.js';
+import { getEmailProvider } from '../providers/email.js';
+import { PolicyGates } from '../policies/gates.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@cambridge.app';
 
 // Email-based rate limiting storage
 const emailRateLimitStore = new Map();
@@ -40,6 +40,12 @@ export default async function handler(req, res) {
 
   try {
     const { email, returnTo } = req.body;
+
+    // Phase 0: Check signup policy (kill switch)
+    const signupCheck = PolicyGates.checkSignupPolicies();
+    if (!signupCheck.allowed) {
+      return res.status(403).json({ error: signupCheck.reason });
+    }
 
     // Validate email
     const emailValidation = validateEmail(email);
@@ -78,65 +84,15 @@ export default async function handler(req, res) {
     const returnPath = returnTo || '/dashboard';
     const magicLinkUrl = `${APP_BASE_URL}/api/auth/callback?token=${token}&returnTo=${encodeURIComponent(returnPath)}`;
 
-    // Send email via Resend
-    try {
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: normalizedEmail,
-        subject: 'Your CamBridge Login Link',
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: 'JetBrains Mono', monospace; background: #000; color: #fff; }
-              .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
-              .header { color: #00ff88; font-size: 24px; letter-spacing: 0.2rem; margin-bottom: 20px; }
-              .content { line-height: 1.6; color: #ccc; }
-              .button { 
-                display: inline-block; 
-                background: #00ff88; 
-                color: #000; 
-                padding: 12px 24px; 
-                text-decoration: none; 
-                font-weight: bold;
-                margin: 20px 0;
-                letter-spacing: 0.1rem;
-              }
-              .footer { color: #555; font-size: 12px; margin-top: 40px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">CAMBRIDGE</div>
-              <div class="content">
-                <p>Click the button below to log in to your CamBridge account:</p>
-                <a href="${magicLinkUrl}" class="button">LOG IN TO CAMBRIDGE</a>
-                <p>This link will expire in 15 minutes.</p>
-                <p>If you didn't request this login link, you can safely ignore this email.</p>
-              </div>
-              <div class="footer">
-                <p>CamBridge - Privacy-First Video Bridge</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `,
-      });
+    // Phase 0: Send email via provider abstraction
+    const emailProvider = getEmailProvider();
+    const emailResult = await emailProvider.sendMagicLink(normalizedEmail, magicLinkUrl);
 
-      console.log(`Magic link sent to ${normalizedEmail}`);
-      
-      return res.status(200).json({
-        success: true,
-        message: 'Login link sent to your email',
-        email: normalizedEmail
-      });
-
-    } catch (emailError) {
-      console.error('Email sending error:', emailError);
+    if (!emailResult.success) {
+      console.error('Email sending error:', emailResult.error);
       
       // For development, log the magic link
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development' || process.env.EMAIL_PROVIDER === 'console') {
         console.log('\n=== DEVELOPMENT MODE ===');
         console.log('Magic Link:', magicLinkUrl);
         console.log('========================\n');
@@ -147,6 +103,14 @@ export default async function handler(req, res) {
         ...(process.env.NODE_ENV === 'development' && { magicLink: magicLinkUrl })
       });
     }
+
+    console.log(`Magic link sent to ${normalizedEmail} (messageId: ${emailResult.messageId})`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Login link sent to your email',
+      email: normalizedEmail
+    });
 
   } catch (error) {
     console.error('Magic link start error:', error);

@@ -33,6 +33,190 @@ CamBridge now includes a complete passwordless authentication system with creato
 
 See [PHASE1.md](PHASE1.md) for complete Phase 1 documentation.
 
+## 🛡️ Phase 0: Survivability Rails (Provider Abstractions & Kill Switch)
+
+CamBridge now includes a robust provider abstraction layer and centralized policy gates for operational flexibility and emergency controls:
+
+### Provider Abstractions
+
+**Why**: Vendor lock-in is dangerous. If a provider goes down, changes pricing, or drops support, you can swap to alternatives without code changes.
+
+**What**: Four pluggable provider interfaces that abstract external dependencies:
+
+1. **VideoProvider** - WebRTC video conferencing
+   - Current: Daily.co (default)
+   - Future: Twilio, Agora, Jitsi, custom WebRTC
+   - Switch via: `VIDEO_PROVIDER=daily` env var
+
+2. **EmailProvider** - Transactional email delivery
+   - Current: Resend (default), Console (dev mode)
+   - Future: SendGrid, Mailgun, AWS SES
+   - Switch via: `EMAIL_PROVIDER=resend` env var
+
+3. **PaymentsProvider** - Creator subscription management
+   - Current: Manual (off-platform), Database
+   - Future: CCBill, Segpay, Stripe
+   - Switch via: `PAYMENTS_PROVIDER=manual` env var
+
+4. **StorageProvider** - File storage for receipts/legal docs
+   - Current: NoOp (privacy-first, no storage)
+   - Future: S3, Cloudflare R2, local filesystem
+   - Switch via: `STORAGE_PROVIDER=noop` env var
+
+### Centralized Policy Gates
+
+**Why**: Security policies scattered across endpoints = maintenance nightmare and security holes.
+
+**What**: All auth/authorization checks go through `PolicyGates` class:
+
+- **Age Attestation**: User must attest to being 18+
+- **ToS Acceptance**: User must accept Terms of Service
+- **Creator Status**: Creator account must be active with valid subscription
+- **Ban Enforcement**: Multi-factor ban checking (user ID, email, IP hash, device hash)
+- **Rate Limiting**: Consistent rate limit enforcement
+
+Every join request, creator action, and signup goes through these gates. Change policy once, enforced everywhere.
+
+### Kill Switch
+
+**Why**: When things go wrong (abuse, legal issues, vendor outages), you need instant control without deploying code.
+
+**What**: Environment variables to disable operations platform-wide:
+
+```bash
+KILL_SWITCH_SIGNUPS=false          # Block new user registrations
+KILL_SWITCH_NEW_ROOMS=false        # Block new room creation
+KILL_SWITCH_JOIN_APPROVALS=false   # Block join request approvals
+KILL_SWITCH_NEW_CREATORS=false     # Block creator onboarding
+```
+
+Existing sessions continue working. Only new operations are blocked.
+
+### Swapping Providers
+
+**Example**: Switch from Resend to console logging for development:
+
+```bash
+# In .env file
+EMAIL_PROVIDER=console
+```
+
+That's it. No code changes needed.
+
+**Example**: Switch from Daily.co to future Twilio provider:
+
+```bash
+# In .env file
+VIDEO_PROVIDER=twilio
+TWILIO_API_KEY=your-key
+TWILIO_API_SECRET=your-secret
+```
+
+Add TwilioVideoProvider class implementation in `api/providers/video.js`, update factory function. All endpoints automatically use new provider.
+
+### Data Retention Policy
+
+**What We Store** (Privacy-First):
+- User accounts: email, username, role, ToS/age acceptance timestamps
+- Login tokens: SHA-256 hashed, single-use, 15-min TTL (auto-cleaned)
+- Join requests: status, timestamps, decision reasons
+- Bans: user ID, email hash, IP hash, device hash, reason
+- Sessions: JWT tokens (7-day expiration)
+
+**What We DON'T Store**:
+- Passwords (passwordless auth only)
+- Video/call recordings (never stored)
+- Chat messages (P2P only, never persisted)
+- Payment details (handled by external providers)
+- User activity logs (minimal logging)
+
+**Why**: Privacy-first design. Minimal data = minimal liability = minimal breach risk.
+
+### Provider Implementation Guide
+
+**Location**: `api/providers/`
+
+**Interface Pattern**:
+```javascript
+export class VideoProvider {
+  async createRoom(roomName, options) { }
+  async mintToken(roomName, userName, ttlMinutes) { }
+  async deleteRoom(roomName) { }
+  async getRoomInfo(roomName) { }
+}
+```
+
+**Adding New Provider**:
+1. Create class extending base provider interface
+2. Implement all required methods
+3. Update factory function in provider file
+4. Add environment variable for configuration
+5. Document in .env.example
+
+**Example**: See `api/providers/email.js` for ConsoleEmailProvider (simple dev provider).
+
+### Policy Gates Usage
+
+**In Your Endpoints**:
+```javascript
+import { PolicyGates } from './policies/gates.js';
+
+// Check all join request policies at once
+const policyCheck = await PolicyGates.checkJoinRequestPolicies({
+  userId,
+  creatorId,
+  creator,
+  paymentsProvider,
+  req
+});
+
+if (!policyCheck.allowed) {
+  return res.status(403).json({ error: policyCheck.reason });
+}
+```
+
+**Master Gates**:
+- `checkJoinRequestPolicies()` - All checks for join requests
+- `checkCreatorOnboardingPolicies()` - All checks for becoming a creator
+- `checkSignupPolicies()` - All checks for new signups
+- `checkNewRoomPolicies()` - All checks for creating rooms
+
+Use master gates for consistency. Don't write custom policy checks.
+
+### Emergency Response
+
+**Scenario**: Abuse wave from specific region
+
+**Response**:
+```bash
+# Disable new signups immediately
+KILL_SWITCH_SIGNUPS=false
+```
+
+Redeploy or restart serverless functions. New signups blocked instantly. Existing users unaffected.
+
+**Scenario**: Email provider (Resend) is down
+
+**Response**:
+```bash
+# Switch to console logging temporarily
+EMAIL_PROVIDER=console
+```
+
+Magic links logged to console. Copy-paste to users via support channel. Or switch to backup provider.
+
+**Scenario**: Daily.co rate limit hit
+
+**Response**:
+```bash
+# Disable join approvals temporarily
+KILL_SWITCH_JOIN_APPROVALS=false
+```
+
+Existing sessions continue. New approvals queued manually or disabled until resolved.
+
+---
+
 ## 🔐 Legacy: Password-Based Authentication
 
 CamBridge still supports the original authentication system for existing users:

@@ -1,14 +1,16 @@
 // API endpoint to create a join request
 // Phase 1: Client requests to join a creator's room with ban checking
+// Phase 0: Uses centralized policy gates
 import crypto from 'crypto';
 import { 
   getCreatorBySlug, 
   getRoomByName, 
   createJoinRequest, 
-  checkBan,
   getUserById
 } from './db.js';
 import { authenticate, rateLimit } from './middleware.js';
+import { getPaymentsProvider } from './providers/payments.js';
+import { PolicyGates } from './policies/gates.js';
 
 // Rate limit: 10 requests per hour per user per creator
 const joinRequestRateLimit = new Map();
@@ -58,29 +60,30 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Creator slug is required' });
     }
 
-    // Get full user details to check ToS/age acceptance
-    const user = await getUserById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Enforce ToS and age acceptance
-    if (!user.tos_accepted_at || !user.age_attested_at) {
-      return res.status(403).json({ 
-        error: 'You must accept the Terms of Service and age attestation before requesting access',
-        requiresAcceptance: true
-      });
-    }
-
     // Get creator
     const creator = await getCreatorBySlug(creatorSlug);
     if (!creator) {
       return res.status(404).json({ error: 'Creator not found' });
     }
 
-    // Check creator status
-    if (creator.status !== 'active') {
-      return res.status(403).json({ error: 'This creator is not currently accepting join requests' });
+    // Phase 0: Use centralized policy gates for all checks
+    const paymentsProvider = getPaymentsProvider();
+    const policyCheck = await PolicyGates.checkJoinRequestPolicies({
+      userId,
+      creatorId: creator.id,
+      creator,
+      paymentsProvider,
+      req
+    });
+
+    if (!policyCheck.allowed) {
+      const isBanned = policyCheck.reason?.includes('banned');
+      return res.status(403).json({ 
+        error: policyCheck.reason,
+        requiresAcceptance: policyCheck.reason?.includes('attestation') || policyCheck.reason?.includes('Terms'),
+        banned: isBanned,
+        reason: isBanned ? policyCheck.reason : undefined
+      });
     }
 
     // Rate limit check
@@ -108,22 +111,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // Hash IP and device fingerprint for ban checking
+    // Hash IP and device fingerprint for tracking (already done in policy gates, but needed for storage)
     const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
     const ipHash = crypto.createHash('sha256').update(ip).digest('hex');
     
     const userAgent = req.headers['user-agent'] || '';
     const deviceHash = crypto.createHash('sha256').update(`${userAgent}:${userId}`).digest('hex');
-
-    // Check for bans
-    const ban = await checkBan(creator.id, userId, user.email, ipHash, deviceHash);
-    if (ban) {
-      return res.status(403).json({ 
-        error: 'You are banned from this creator\'s rooms',
-        banned: true,
-        reason: ban.reason || 'No reason provided'
-      });
-    }
 
     // Create join request
     const requestResult = await createJoinRequest(

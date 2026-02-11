@@ -1,5 +1,6 @@
 // API endpoint for creators to approve join requests
 // Phase 1: Mint Daily token server-side and approve request
+// Phase 0: Uses video provider abstraction and policy gates
 import { 
   getJoinRequestById, 
   updateJoinRequestStatus, 
@@ -7,50 +8,19 @@ import {
   getRoomById
 } from './db.js';
 import { authenticate } from './middleware.js';
-
-// Mint Daily.co meeting token
-async function mintDailyToken(roomName, userName, ttlMinutes = 15) {
-  const apiKey = process.env.DAILY_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('DAILY_API_KEY not configured');
-  }
-
-  try {
-    const response = await fetch('https://api.daily.co/v1/meeting-tokens', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        properties: {
-          room_name: roomName,
-          user_name: userName,
-          exp: Math.floor(Date.now() / 1000) + (ttlMinutes * 60) // Unix timestamp
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Daily API error:', errorText);
-      throw new Error(`Daily API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return { success: true, token: data.token };
-    
-  } catch (error) {
-    console.error('Mint Daily token error:', error);
-    return { success: false, error: error.message };
-  }
-}
+import { getVideoProvider } from './providers/video.js';
+import { getPaymentsProvider } from './providers/payments.js';
+import { PolicyGates, killSwitch } from './policies/gates.js';
 
 export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Phase 0: Check kill switch
+  if (!killSwitch.isJoinApprovalsEnabled()) {
+    return res.status(403).json({ error: 'Join approvals are temporarily disabled' });
   }
 
   // Authenticate user
@@ -72,6 +42,13 @@ export default async function handler(req, res) {
     const creator = await getCreatorByUserId(userId);
     if (!creator) {
       return res.status(403).json({ error: 'Only creators can approve join requests' });
+    }
+
+    // Phase 0: Check creator status with payments provider
+    const paymentsProvider = getPaymentsProvider();
+    const creatorCheck = await PolicyGates.checkCreatorStatus(creator, paymentsProvider);
+    if (!creatorCheck.allowed) {
+      return res.status(403).json({ error: creatorCheck.reason });
     }
 
     // Get join request
@@ -106,14 +83,16 @@ export default async function handler(req, res) {
     }
 
     // Mint Daily token (15 minute TTL)
-    const tokenResult = await mintDailyToken(
+    // Phase 0: Use video provider abstraction
+    const videoProvider = getVideoProvider();
+    const tokenResult = await videoProvider.mintToken(
       roomName, 
       request.username || 'Guest',
       15
     );
 
     if (!tokenResult.success) {
-      console.error('Failed to mint Daily token:', tokenResult.error);
+      console.error('Failed to mint video token:', tokenResult.error);
       return res.status(500).json({ 
         error: 'Failed to generate access token',
         details: tokenResult.error
@@ -121,7 +100,7 @@ export default async function handler(req, res) {
     }
 
     // Calculate token expiration
-    const tokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const tokenExpiresAt = tokenResult.expiresAt || new Date(Date.now() + 15 * 60 * 1000);
 
     // Update join request status
     const updateResult = await updateJoinRequestStatus(

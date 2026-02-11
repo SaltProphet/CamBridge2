@@ -1,7 +1,9 @@
 // API endpoint for creator onboarding
 // Phase 1: Convert user to creator with slug and default rooms
+// Phase 0: Uses centralized policy gates and kill switch
 import { createCreator, createRoom, getUserById, getCreatorByUserId, updateUserRole } from '../db.js';
 import { authenticate, sanitizeInput } from '../middleware.js';
+import { PolicyGates } from '../policies/gates.js';
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -18,17 +20,12 @@ export default async function handler(req, res) {
   try {
     const userId = auth.user.id;
     
-    // Get full user details to check ToS/age acceptance
-    const user = await getUserById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Enforce ToS and age acceptance
-    if (!user.tos_accepted_at || !user.age_attested_at) {
+    // Phase 0: Use centralized policy gates
+    const policyCheck = await PolicyGates.checkCreatorOnboardingPolicies({ userId });
+    if (!policyCheck.allowed) {
       return res.status(403).json({ 
-        error: 'You must accept the Terms of Service and age attestation before becoming a creator',
-        requiresAcceptance: true
+        error: policyCheck.reason,
+        requiresAcceptance: policyCheck.reason?.includes('attestation') || policyCheck.reason?.includes('Terms')
       });
     }
 
