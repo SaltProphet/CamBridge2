@@ -4,11 +4,32 @@
 import { createPool } from '@vercel/postgres';
 
 // Create connection pool with proper connection string
-const connectionString = process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
-const pool = connectionString ? createPool({ connectionString }) : null;
+// POSTGRES_PRISMA_URL is the pooled connection string (for createPool)
+// POSTGRES_URL is the direct connection string (would need createClient)
+// We prioritize the pooled connection for serverless functions
+const pooledConnectionString = process.env.POSTGRES_PRISMA_URL;
+const directConnectionString = process.env.POSTGRES_URL;
+
+let pool = null;
+let sql = null;
+
+if (pooledConnectionString) {
+  // Use pooled connection (preferred for serverless)
+  pool = createPool({ connectionString: pooledConnectionString });
+  sql = pool.sql;
+} else if (directConnectionString) {
+  // If only direct connection is available, we can't use createPool
+  // Fall back to mock database and log a warning
+  console.warn('⚠️  Only POSTGRES_URL (direct connection) is available. Please set POSTGRES_PRISMA_URL for pooled connections in serverless environments.');
+  console.warn('⚠️  Using mock database instead.');
+  sql = null;
+} else {
+  // No database configured
+  sql = null;
+}
 
 // Export sql template tag from pool
-export const sql = pool ? pool.sql : null;
+export { sql };
 
 // In-memory mock database for testing when no Postgres is available
 const mockDb = {
