@@ -1,6 +1,7 @@
 import { getCreatorByUserId, updateCreatorSubscription } from '../db.js';
 import { authenticate } from '../middleware.js';
 import { getPaymentsProvider } from '../providers/payments.js';
+import { sendInvoiceEmail } from '../services/email.js';
 
 function errorPayload(error, code, extras = {}) {
   return { error, code, ...extras };
@@ -32,6 +33,14 @@ function normalizeProvider(provider) {
   // Validate provider is in allowed list
   const ALLOWED_PROVIDERS = ['manual', 'stripe', 'ccbill'];
   return ALLOWED_PROVIDERS.includes(cleaned) ? cleaned : 'manual';
+}
+
+function getPlanPrice(plan) {
+  const prices = {
+    pro: 30,
+    enterprise: 99
+  };
+  return prices[plan] || 0;
 }
 
 export async function processCreatorSubscribe(req, deps = {}) {
@@ -79,6 +88,20 @@ export async function processCreatorSubscribe(req, deps = {}) {
         subscription_started_at: new Date(),
       });
 
+      // Generate invoice ID
+      const invoiceId = `inv_${creator.id}_${Date.now()}`;
+
+      // Send invoice email
+      const emailResult = await sendInvoiceEmail({
+        to: auth.user.email,
+        creatorId: creator.id,
+        invoiceId,
+        plan: plan,
+        amount: getPlanPrice(plan)
+      });
+
+      console.log('Invoice email sent for subscription:', { invoiceId, creator: creator.id, result: emailResult });
+
       return {
         status: 200,
         body: {
@@ -86,7 +109,8 @@ export async function processCreatorSubscribe(req, deps = {}) {
           creatorId: creator.id,
           plan,
           provider: 'manual',
-          message: 'Invoice created. Check your email for payment details.'
+          invoiceId: invoiceId,
+          message: 'Invoice created and sent to your email. Check your inbox for payment details.'
         }
       };
     } catch (err) {

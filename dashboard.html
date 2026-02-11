@@ -653,6 +653,50 @@
                 <div class="button-group subscription-actions" id="subscription-actions"></div>
             </div>
 
+            <!-- Payment Status Card (Manual Billing) -->
+            <div class="card" id="payment-status-card" style="display: none;">
+                <h2><i class="fas fa-credit-card"></i> Payment Communications</h2>
+                <div class="info-row">
+                    <span class="info-label">Provider</span>
+                    <span class="info-value" id="payment-provider">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status</span>
+                    <span class="info-value" id="payment-status-badge">-</span>
+                </div>
+                <div style="margin: 20px 0; padding: 15px; background-color: rgba(0, 255, 136, 0.05); border-radius: 6px; display: none;" id="manual-payment-section">
+                    <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">
+                        Share payment details with us - we'll process your subscription promptly.
+                    </p>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-size: 12px; color: var(--text); text-transform: uppercase; letter-spacing: 0.05rem; margin-bottom: 8px;">
+                            Payment Method
+                        </label>
+                        <select id="payment-method-select" style="width: 100%; padding: 10px; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 255, 136, 0.3); color: var(--text-light); border-radius: 4px; font-family: inherit;">
+                            <option value="">-- Please select --</option>
+                            <option value="credit-card">Credit/Debit Card</option>
+                            <option value="bank-transfer">Bank Transfer</option>
+                            <option value="crypto">Cryptocurrency</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-size: 12px; color: var(--text); text-transform: uppercase; letter-spacing: 0.05rem; margin-bottom: 8px;">
+                            Additional Details
+                        </label>
+                        <textarea id="payment-details-input" placeholder="E.g., I'll send payment on [date], or account info for bank transfer..." style="width: 100%; min-height: 80px; padding: 10px; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 255, 136, 0.3); color: var(--text-light); border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    <button id="submit-payment-note-btn" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-paper-plane"></i> Send Payment Details
+                    </button>
+                    <div id="payment-note-error" class="error-message"></div>
+                    <div id="payment-note-success" class="success-message"></div>
+                </div>
+                <div id="payment-notes-history" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
+                    <!-- Payment notes will be listed here -->
+                </div>
+            </div>
+
             <!-- Room Management Card -->
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -1050,6 +1094,7 @@
             subscriptionNextBilling.textContent = formatDate(subscription?.nextBillingDate);
             subscriptionExpiration.textContent = formatDate(subscription?.expiresAt);
             updateSubscriptionActions(subscription);
+            showPaymentStatusCard(subscription);
         }
 
         async function loadSubscription() {
@@ -1151,6 +1196,132 @@
                     updateSubscriptionActions(currentSubscription);
                 }
             }
+        }
+
+        async function loadPaymentNotes() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/creator/payment-notes', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to load payment notes');
+                    return;
+                }
+
+                const data = await response.json();
+                const notesDiv = document.getElementById('payment-notes-history');
+                
+                if (!data.notes || data.notes.length === 0) {
+                    notesDiv.innerHTML = '<p style="color: var(--text); font-size: 13px; text-align: center;">No payment communications yet.</p>';
+                    return;
+                }
+
+                notesDiv.innerHTML = data.notes.map(note => `
+                    <div style="padding: 12px; margin-bottom: 10px; background-color: rgba(0, 255, 136, 0.05); border-left: 3px solid rgba(0, 255, 136, 0.3); border-radius: 4px;">
+                        <div style="font-size: 11px; color: var(--text); text-transform: uppercase; letter-spacing: 0.05rem; margin-bottom: 5px;">
+                            ${new Date(note.created_at).toLocaleDateString()} • ${note.payment_method ? '<strong>' + note.payment_method.replace('-', ' ') + '</strong>' : 'General note'}
+                        </div>
+                        <div style="color: var(--text-light); font-size: 13px;">${note.note}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Payment notes load error:', err);
+            }
+        }
+
+        async function submitPaymentNote(e) {
+            e.preventDefault();
+            
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                redirectToLogin();
+                return;
+            }
+
+            const paymentMethod = document.getElementById('payment-method-select').value;
+            const paymentDetails = document.getElementById('payment-details-input').value.trim();
+            const noteError = document.getElementById('payment-note-error');
+            const noteSuccess = document.getElementById('payment-note-success');
+
+            if (!paymentMethod) {
+                noteError.textContent = 'Please select a payment method.';
+                return;
+            }
+
+            if (!paymentDetails) {
+                noteError.textContent = 'Please provide payment details.';
+                return;
+            }
+
+            noteError.textContent = '';
+            noteSuccess.textContent = '';
+
+            try {
+                const response = await fetch('/api/creator/payment-notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        note: paymentDetails,
+                        paymentMethod: paymentMethod,
+                        paymentDetails: paymentDetails
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    noteError.textContent = data.error || 'Failed to submit payment note.';
+                    return;
+                }
+
+                noteSuccess.textContent = 'Payment details submitted! Our team will review and process shortly.';
+                document.getElementById('payment-method-select').value = '';
+                document.getElementById('payment-details-input').value = '';
+                
+                // Reload payment notes
+                setTimeout(() => {
+                    loadPaymentNotes();
+                    noteSuccess.textContent = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Payment note submit error:', err);
+                noteError.textContent = 'Failed to submit payment note. Please try again.';
+            }
+        }
+
+        function showPaymentStatusCard(subscription) {
+            const card = document.getElementById('payment-status-card');
+            const providerEl = document.getElementById('payment-provider');
+            const statusEl = document.getElementById('payment-status-badge');
+            const manualSection = document.getElementById('manual-payment-section');
+
+            if (!subscription || subscription.status !== 'pending') {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            providerEl.textContent = subscription.provider || 'manual';
+            statusEl.textContent = 'PENDING PAYMENT';
+            statusEl.className = 'status-badge status-warning';
+            manualSection.style.display = subscription.provider === 'manual' ? 'block' : 'none';
+
+            // Set up payment note submission
+            const submitBtn = document.getElementById('submit-payment-note-btn');
+            submitBtn.onclick = submitPaymentNote;
+
+            // Load existing payment notes
+            loadPaymentNotes();
         }
 
         async function checkDatabaseStatus() {
