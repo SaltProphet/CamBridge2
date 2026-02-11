@@ -1,5 +1,10 @@
 import crypto from 'crypto';
-import { updateCreatorStatus } from '../db.js';
+import {
+  updateCreatorSubscription,
+  hasProcessedWebhookEvent,
+  recordProcessedWebhookEvent,
+  getCreatorByExternalSubscriptionId
+} from '../db.js';
 
 function errorPayload(error, code, extras = {}) {
   return { error, code, ...extras };
@@ -41,7 +46,13 @@ function verifyStripeSignature(signatureHeader, rawBody, webhookSecret) {
     .update(signedPayload)
     .digest('hex');
 
-  return crypto.timingSafeEqual(Buffer.from(computedSignature), Buffer.from(expectedSignature));
+  const computedBuffer = Buffer.from(computedSignature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  if (computedBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(computedBuffer, expectedBuffer);
 }
 
 function resolveStripeStatus(eventType, payload) {
@@ -69,9 +80,45 @@ function resolveStripeStatus(eventType, payload) {
   return null;
 }
 
+function resolveSubscriptionId(eventType, payload) {
+  const dataObject = payload?.data?.object || {};
+
+  if (eventType === 'checkout.session.completed') {
+    return dataObject.subscription || null;
+  }
+
+  if (eventType?.startsWith('invoice.')) {
+    return dataObject.subscription || null;
+  }
+
+  if (eventType?.startsWith('customer.subscription.')) {
+    return dataObject.id || null;
+  }
+
+  return dataObject.subscription || null;
+}
+
+function resolveNextBillingAt(payload) {
+  const dataObject = payload?.data?.object || {};
+  const periodEnd = dataObject?.current_period_end;
+  if (periodEnd) {
+    return new Date(periodEnd * 1000);
+  }
+
+  const linePeriodEnd = dataObject?.lines?.data?.[0]?.period?.end;
+  if (linePeriodEnd) {
+    return new Date(linePeriodEnd * 1000);
+  }
+
+  return null;
+}
+
 export async function processStripeWebhook(req, deps = {}) {
   const {
-    updateCreatorStatusFn = updateCreatorStatus,
+    updateCreatorSubscriptionFn = updateCreatorSubscription,
+    hasProcessedWebhookEventFn = hasProcessedWebhookEvent,
+    recordProcessedWebhookEventFn = recordProcessedWebhookEvent,
+    getCreatorByExternalSubscriptionIdFn = getCreatorByExternalSubscriptionId,
     webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
   } = deps;
 
@@ -88,19 +135,77 @@ export async function processStripeWebhook(req, deps = {}) {
 
   const payload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody || '{}');
   const eventType = payload?.type;
-  const creatorId = payload?.data?.object?.metadata?.creatorId || payload?.data?.object?.metadata?.creator_id;
+  const eventId = payload?.id || null;
+  const dataObject = payload?.data?.object || {};
+  const metadata = dataObject?.metadata || {};
+  const creatorIdFromMeta = metadata?.creatorId || metadata?.creator_id || dataObject?.client_reference_id;
+  const subscriptionId = resolveSubscriptionId(eventType, payload);
   const mappedStatus = resolveStripeStatus(eventType, payload);
 
+  if (eventId && hasProcessedWebhookEventFn) {
+    const alreadyProcessed = await hasProcessedWebhookEventFn('stripe', eventId);
+    if (alreadyProcessed) {
+      return { status: 200, body: { received: true, idempotent: true } };
+    }
+  }
+
+  let creatorId = creatorIdFromMeta;
+  if (!creatorId && subscriptionId && getCreatorByExternalSubscriptionIdFn) {
+    const creator = await getCreatorByExternalSubscriptionIdFn('stripe', subscriptionId);
+    creatorId = creator?.id || null;
+  }
+
   if (!creatorId || !mappedStatus) {
+    if (eventId && recordProcessedWebhookEventFn) {
+      await recordProcessedWebhookEventFn('stripe', eventId, subscriptionId, creatorId || null);
+    }
     return { status: 200, body: { received: true, ignored: true } };
   }
 
-  const updateResult = await updateCreatorStatusFn(creatorId, mappedStatus);
+  const patch = {
+    subscription_provider: 'stripe',
+    subscription_status: mappedStatus
+  };
+
+  if (subscriptionId) {
+    patch.subscription_external_id = subscriptionId;
+  }
+
+  if (eventType === 'checkout.session.completed') {
+    patch.subscription_started_at = new Date();
+    const nextBilling = resolveNextBillingAt(payload);
+    patch.subscription_next_billing_at = nextBilling || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  }
+
+  if (eventType === 'invoice.paid') {
+    const nextBilling = resolveNextBillingAt(payload);
+    if (nextBilling) {
+      patch.subscription_next_billing_at = nextBilling;
+    }
+  }
+
+  if (eventType === 'customer.subscription.deleted') {
+    patch.subscription_canceled_at = new Date();
+  }
+
+  const updateResult = await updateCreatorSubscriptionFn(creatorId, patch);
   if (!updateResult?.success) {
     return { status: 500, body: errorPayload('Failed to persist webhook event', 'WEBHOOK_PERSIST_FAILED') };
   }
 
-  return { status: 200, body: { received: true, creatorId, status: mappedStatus } };
+  if (eventId && recordProcessedWebhookEventFn) {
+    await recordProcessedWebhookEventFn('stripe', eventId, subscriptionId, creatorId);
+  }
+
+  return {
+    status: 200,
+    body: {
+      received: true,
+      creatorId,
+      status: mappedStatus,
+      subscriptionId
+    }
+  };
 }
 
 export default async function handler(req, res) {

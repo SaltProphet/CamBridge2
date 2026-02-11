@@ -285,7 +285,7 @@ export function getConfigStatus() {
     status.configured = true;
   }
 
-  if (!STRIPE_TEST_MODE.webhook Secret || STRIPE_TEST_MODE.webhookSecret.includes('placeholder')) {
+  if (!STRIPE_TEST_MODE.webhookSecret || STRIPE_TEST_MODE.webhookSecret.includes('placeholder')) {
     status.warnings.push('STRIPE_WEBHOOK_SECRET not configured');
   }
 

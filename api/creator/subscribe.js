@@ -35,6 +35,16 @@ function normalizeProvider(provider) {
   return ALLOWED_PROVIDERS.includes(cleaned) ? cleaned : 'manual';
 }
 
+function resolveBaseUrl(req) {
+  const proto = req.headers?.['x-forwarded-proto'] || 'http';
+  const host = req.headers?.['x-forwarded-host'] || req.headers?.host;
+  if (!host) {
+    return process.env.PUBLIC_BASE_URL || null;
+  }
+
+  return `${proto}://${host}`;
+}
+
 function getPlanPrice(plan) {
   const prices = {
     pro: 30,
@@ -121,6 +131,15 @@ export async function processCreatorSubscribe(req, deps = {}) {
       };
     }
   } else if (provider === 'stripe' || provider === 'ccbill') {
+    await updateCreatorSubscriptionFn(creator.id, {
+      subscription_provider: provider,
+      subscription_status: 'PENDING'
+    });
+
+    const baseUrl = resolveBaseUrl(req) || 'http://localhost:3000';
+    const successUrl = new URL('/subscribe-success.html', baseUrl).toString();
+    const cancelUrl = new URL('/subscribe.html?status=cancel', baseUrl).toString();
+
     // Stripe/CCBill: delegate to provider's subscription function
     const subscribeFn = paymentProvider?.subscribeCreator || paymentProvider?.createSubscription;
     if (!subscribeFn) {
@@ -131,7 +150,10 @@ export async function processCreatorSubscribe(req, deps = {}) {
       creatorId: creator.id,
       userId: auth.user.id,
       plan,
-      provider
+      provider,
+      creatorEmail: auth.user.email,
+      successUrl,
+      cancelUrl
     });
 
     if (!subscribeResult?.success) {
