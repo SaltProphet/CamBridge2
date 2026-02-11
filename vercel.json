@@ -1,1 +1,5 @@
-{"version":2,"builds":[{"src":"./src/index.js","use":"@vercel/node"}],"routes":[{"src":"/api/(.*)","dest":"/api/$1"}]}
+{
+  "buildCommand": "echo 'Static site'",
+  "outputDirectory": ".",
+  "cleanUrls": true
+}
