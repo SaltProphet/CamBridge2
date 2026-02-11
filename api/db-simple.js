@@ -1,5 +1,5 @@
 // Simplified database functions for minimal auth system
-// Uses Vercel Postgres with pooled connections
+// Uses Vercel Postgres with pooled connections, falls back to in-memory mock
 
 import { createPool } from '@vercel/postgres';
 
@@ -10,10 +10,24 @@ const pool = connectionString ? createPool({ connectionString }) : null;
 // Export sql template tag from pool
 export const sql = pool ? pool.sql : null;
 
+// In-memory mock database for testing when no Postgres is available
+const mockDb = {
+  users: [],
+  rooms: [],
+  join_requests: [],
+  idCounter: 1
+};
+
+function generateUUID() {
+  return `mock-uuid-${mockDb.idCounter++}`;
+}
+
 // Initialize simplified database tables
 export async function initializeTables() {
   if (!sql) {
-    throw new Error('Database not configured. Set POSTGRES_PRISMA_URL or POSTGRES_URL environment variable.');
+    // Mock mode - tables are already "initialized" in memory
+    console.log('Using mock database - tables initialized in memory');
+    return { success: true };
   }
   
   try {
@@ -62,7 +76,23 @@ export async function initializeTables() {
 
 // User operations
 export async function createUser(email, passwordHash) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const existing = mockDb.users.find(u => u.email === email);
+    if (existing) {
+      return { success: false, error: 'Email already registered' };
+    }
+    
+    const user = {
+      id: generateUUID(),
+      email,
+      password_hash: passwordHash,
+      created_at: new Date().toISOString()
+    };
+    mockDb.users.push(user);
+    
+    return { success: true, user: { id: user.id, email: user.email, created_at: user.created_at } };
+  }
   
   try {
     const result = await sql`
@@ -81,7 +111,10 @@ export async function createUser(email, passwordHash) {
 }
 
 export async function getUserByEmail(email) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    return mockDb.users.find(u => u.email === email) || null;
+  }
   
   try {
     const result = await sql`
@@ -95,7 +128,12 @@ export async function getUserByEmail(email) {
 }
 
 export async function getUserById(id) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const user = mockDb.users.find(u => u.id === id);
+    if (!user) return null;
+    return { id: user.id, email: user.email, created_at: user.created_at };
+  }
   
   try {
     const result = await sql`
@@ -110,7 +148,23 @@ export async function getUserById(id) {
 
 // Room operations
 export async function createRoom(ownerId, slug) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const existing = mockDb.rooms.find(r => r.slug === slug);
+    if (existing) {
+      return { success: false, error: 'Room slug already exists' };
+    }
+    
+    const room = {
+      id: generateUUID(),
+      owner_id: ownerId,
+      slug,
+      created_at: new Date().toISOString()
+    };
+    mockDb.rooms.push(room);
+    
+    return { success: true, room };
+  }
   
   try {
     const result = await sql`
@@ -129,7 +183,10 @@ export async function createRoom(ownerId, slug) {
 }
 
 export async function getRoomsByOwnerId(ownerId) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    return mockDb.rooms.filter(r => r.owner_id === ownerId);
+  }
   
   try {
     const result = await sql`
@@ -146,7 +203,10 @@ export async function getRoomsByOwnerId(ownerId) {
 }
 
 export async function getRoomBySlug(slug) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    return mockDb.rooms.find(r => r.slug === slug) || null;
+  }
   
   try {
     const result = await sql`
@@ -161,7 +221,19 @@ export async function getRoomBySlug(slug) {
 
 // Join request operations
 export async function createJoinRequest(roomId, requesterEmail) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const request = {
+      id: generateUUID(),
+      room_id: roomId,
+      requester_email: requesterEmail,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    mockDb.join_requests.push(request);
+    
+    return { success: true, request };
+  }
   
   try {
     const result = await sql`
@@ -177,7 +249,22 @@ export async function createJoinRequest(roomId, requesterEmail) {
 }
 
 export async function getJoinRequestsByOwnerId(ownerId, status = null) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const ownerRooms = mockDb.rooms.filter(r => r.owner_id === ownerId);
+    const roomIds = ownerRooms.map(r => r.id);
+    let requests = mockDb.join_requests.filter(jr => roomIds.includes(jr.room_id));
+    
+    if (status) {
+      requests = requests.filter(jr => jr.status === status);
+    }
+    
+    // Add room_slug
+    return requests.map(jr => {
+      const room = ownerRooms.find(r => r.id === jr.room_id);
+      return { ...jr, room_slug: room?.slug };
+    });
+  }
   
   try {
     let query;
@@ -207,7 +294,16 @@ export async function getJoinRequestsByOwnerId(ownerId, status = null) {
 }
 
 export async function updateJoinRequestStatus(requestId, status) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    const request = mockDb.join_requests.find(jr => jr.id === requestId);
+    if (!request) {
+      return { success: false, error: 'Request not found' };
+    }
+    
+    request.status = status;
+    return { success: true, request };
+  }
   
   try {
     const result = await sql`
@@ -224,7 +320,20 @@ export async function updateJoinRequestStatus(requestId, status) {
 }
 
 export async function getJoinRequestsByEmail(email, status = null) {
-  if (!sql) throw new Error('Database not configured');
+  // Use mock database if no SQL connection
+  if (!sql) {
+    let requests = mockDb.join_requests.filter(jr => jr.requester_email === email);
+    
+    if (status) {
+      requests = requests.filter(jr => jr.status === status);
+    }
+    
+    // Add room_slug
+    return requests.map(jr => {
+      const room = mockDb.rooms.find(r => r.id === jr.room_id);
+      return { ...jr, room_slug: room?.slug };
+    });
+  }
   
   try {
     let query;
