@@ -1,0 +1,31 @@
+# Documentation files
+*.md
+!README.md
+
+# Development files
+.editorconfig
+.eslintrc.json
+.prettierrc.json
+.env.example
+
+# Test files
+test.js
+*.test.js
+
+# Git files
+.git
+.gitignore
+
+# IDE files
+.vscode
+.idea
+
+# Temporary files
+tmp/
+temp/
+
+# Scripts
+scripts/
+
+# Config files
+config.json
