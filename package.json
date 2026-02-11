@@ -1,1 +1,22 @@
-{"name": "cambridge", "version": "1.0.0", "scripts": {"dev": "npx http-server -p 3000 -g", "build": "echo 'Static site - files in root are served as-is'"}, "dependencies": {"@vercel/postgres": "latest", "bcryptjs": "latest", "dotenv": "latest", "express": "latest", "jsonwebtoken": "latest", "resend": "latest"}}
+{
+  "name": "cambridge",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.x"
+  },
+  "scripts": {
+    "dev": "npx http-server -p 3000 -g",
+    "build": "echo 'Static site - files in root are served as-is'",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@vercel/postgres": "^0.12.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "resend": "^4.0.2"
+  },
+  "devDependencies": {}
+}
