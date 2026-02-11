@@ -632,6 +632,32 @@
                 </div>
             </div>
 
+            <!-- Phase 1: Join Requests Card -->
+            <div class="card" id="join-requests-card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0;"><i class="fas fa-user-clock"></i> Join Requests</h2>
+                    <button class="btn btn-secondary" id="refresh-requests-btn" style="padding: 0.5rem 1rem;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div id="join-requests-list">
+                    <p style="color: var(--text); text-align: center; padding: 2rem;">No pending requests</p>
+                </div>
+            </div>
+
+            <!-- Phase 1: Ban Management Card -->
+            <div class="card" id="ban-management-card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0;"><i class="fas fa-ban"></i> Banned Users</h2>
+                    <button class="btn btn-secondary" id="refresh-bans-btn" style="padding: 0.5rem 1rem;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div id="bans-list">
+                    <p style="color: var(--text); text-align: center; padding: 2rem;">No banned users</p>
+                </div>
+            </div>
+
             <!-- Session Stats Card -->
             <div class="card">
                 <h2><i class="fas fa-chart-line"></i> Session Statistics</h2>
@@ -1172,5 +1198,6 @@
             authError.textContent = '';
         });
     </script>
+    <script src="phase1-dashboard.js"></script>
 </body>
 </html>
