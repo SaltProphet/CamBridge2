@@ -142,7 +142,80 @@ export class DatabasePaymentsProvider extends PaymentsProvider {
   }
 
   async handleWebhook(payload, headers) {
-    return { success: true, event: 'ignored' };
+    try {
+      const provider = String(
+        headers?.['x-payments-provider'] ||
+        payload?.provider ||
+        'database'
+      ).toLowerCase();
+
+      const externalEventId = payload?.eventId || payload?.event_id || payload?.id || null;
+      const externalSubscriptionId = payload?.subscriptionId || payload?.subscription_id || payload?.externalSubscriptionId || null;
+
+      if (!externalEventId) {
+        return { success: false, error: 'Missing external event identifier' };
+      }
+
+      if (this.db?.hasProcessedWebhookEvent) {
+        const alreadyProcessed = await this.db.hasProcessedWebhookEvent(provider, externalEventId);
+        if (alreadyProcessed) {
+          return { success: true, event: 'duplicate_ignored', idempotent: true };
+        }
+      }
+
+      let creator = null;
+      if (externalSubscriptionId && this.db?.getCreatorByExternalSubscriptionId) {
+        creator = await this.db.getCreatorByExternalSubscriptionId(provider, externalSubscriptionId);
+      }
+
+      if (!creator && payload?.creatorId && this.db?.getCreatorById) {
+        creator = await this.db.getCreatorById(payload.creatorId);
+      }
+
+      if (!creator) {
+        if (this.db?.recordProcessedWebhookEvent) {
+          await this.db.recordProcessedWebhookEvent(provider, externalEventId, externalSubscriptionId, null);
+        }
+        return { success: true, event: 'ignored_no_creator_match', idempotent: false };
+      }
+
+      const patch = {
+        subscription_provider: provider,
+        subscription_external_id: externalSubscriptionId || creator.subscription_external_id,
+        subscription_status: payload?.subscriptionStatus || payload?.status || creator.subscription_status || 'inactive'
+      };
+
+      if (Object.prototype.hasOwnProperty.call(payload || {}, 'subscriptionStartedAt')) {
+        patch.subscription_started_at = payload.subscriptionStartedAt;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload || {}, 'subscriptionExpiresAt')) {
+        patch.subscription_expires_at = payload.subscriptionExpiresAt;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload || {}, 'subscriptionNextBillingAt')) {
+        patch.subscription_next_billing_at = payload.subscriptionNextBillingAt;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload || {}, 'subscriptionCanceledAt')) {
+        patch.subscription_canceled_at = payload.subscriptionCanceledAt;
+      }
+
+      const updated = await this.db.updateCreatorSubscription(creator.id, patch);
+      if (!updated?.success) {
+        return { success: false, error: updated?.error || 'Failed to update creator subscription' };
+      }
+
+      if (this.db?.recordProcessedWebhookEvent) {
+        await this.db.recordProcessedWebhookEvent(provider, externalEventId, externalSubscriptionId, creator.id);
+      }
+
+      return {
+        success: true,
+        event: payload?.type || payload?.eventType || 'processed',
+        creatorId: creator.id,
+        idempotent: false
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 }
 
