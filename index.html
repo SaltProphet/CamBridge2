@@ -1,155 +1,36 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CamBridge - Private Video Rooms for Adult Creators</title>
-    <meta name="description" content="Private video rooms for adult creators. P2P encrypted, zero logging, keep 100% of tips. No platform, no censorship, no cuts." />
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/@daily-co/daily-js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk@3.0.0/dist/main.js"></script>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CamBridge — Commission-free private video sessions</title>
+  <link rel="stylesheet" href="/public/styles.css" />
 </head>
-<body>
-    <!-- Landing Page with Login/Account Creation -->
-    <div id="landing-page" class="active">
-        <!-- Language Toggle -->
-        <div class="lang-toggle">
-            <button class="lang-btn lang-en active" data-lang="en">EN</button>
-            <button class="lang-btn lang-es" data-lang="es">ES</button>
-            <button class="lang-btn lang-ru" data-lang="ru">RU</button>
-        </div>
+<body class="bg page-font">
+  <main class="min-h-screen flex-col-center">
+    <header class="hero">
+      <img src="/assets/mark.svg" alt="CamBridge mark" class="mark" />
+      <h1 class="headline">COMMISSION-FREE<br/>PRIVATE VIDEO SESSIONS</h1>
+      <div class="hero-actions">
+        <a class="btn-primary" href="/request-access.html">Request Access</a>
+        <a class="link-secondary" href="/creator-login.html">Creator Login</a>
+      </div>
+    </header>
 
-        <!-- Status Bar -->
-        <div class="status-bar"></div>
+    <section class="below-fold" aria-labelledby="how">
+      <div class="info">
+        <h2 id="how" class="section-title">HOW IT WORKS</h2>
+        <p class="muted">Private link. Controlled entry. Direct session.</p>
+      </div>
+      <div class="info">
+        <h2 class="section-title">PRICING</h2>
+        <p class="muted">Flat monthly.</p>
+      </div>
+    </section>
+  </main>
 
-        <!-- Main Content -->
-        <div class="landing-container">
-            <!-- Shield Logo -->
-            <div class="shield-logo">⬡</div>
-
-            <!-- Form Tabs -->
-            <div class="form-tabs">
-                <button id="tab-login" class="tab-btn active" data-tab="login">
-                    <span data-i18n="tab_login">LOGIN</span>
-                </button>
-                <button id="tab-create" class="tab-btn" data-tab="create">
-                    <span data-i18n="tab_create">CREATE ACCOUNT</span>
-                </button>
-            </div>
-
-            <!-- Login Form -->
-            <form id="login-form" class="form-section active">
-                <div class="form-group">
-                    <label data-i18n="label_email">EMAIL</label>
-                    <input type="email" id="login-code" placeholder="user@example.com" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label data-i18n="label_password">PASSWORD</label>
-                    <input type="password" id="login-password" placeholder="••••••••" autocomplete="off">
-                </div>
-                <div id="login-error" class="error-message"></div>
-                <button type="button" id="login-btn" class="btn-primary" data-i18n="btn_enter">ENTER PRIVATE PORTAL</button>
-            </form>
-
-            <!-- Create Account Form -->
-            <form id="create-form" class="form-section">
-                <div class="form-group">
-                    <label data-i18n="label_email">EMAIL</label>
-                    <input type="email" id="create-email" placeholder="user@example.com" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label data-i18n="label_room_name">ROOM NAME</label>
-                    <input type="text" id="room-name" placeholder="roomname" autocomplete="off">
-                    <p class="room-warning" data-i18n="room_name_warning">ROOM NAME CANNOT BE CHANGED LATER</p>
-                </div>
-                <div class="form-group">
-                    <label data-i18n="label_password">PASSWORD</label>
-                    <input type="password" id="create-password" placeholder="••••••••" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label data-i18n="label_confirm_password">CONFIRM PASSWORD</label>
-                    <input type="password" id="confirm-password" placeholder="••••••••" autocomplete="off">
-                </div>
-                <div id="create-error" class="error-message"></div>
-                <button type="button" id="create-btn" class="btn-primary" data-i18n="btn_create">CREATE ACCOUNT</button>
-            </form>
-
-            <!-- Room Display (After Login) -->
-            <div id="room-display" class="room-display hidden">
-                <div class="room-header">
-                    <h2 data-i18n="room_ready">YOUR ROOM IS READY</h2>
-                </div>
-                <div class="room-link-container">
-                    <p data-i18n="room_description">Share this link with your peer:</p>
-                    <div class="room-link-box">
-                        <input type="text" id="room-url" readonly>
-                        <button id="copy-btn" class="copy-btn" data-i18n="btn_copy">COPY</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label data-i18n="label_room_password">ROOM PASSWORD</label>
-                    <input type="password" id="room-password" placeholder="••••••••" autocomplete="off">
-                </div>
-                <div id="room-password-error" class="error-message"></div>
-                <div class="room-actions">
-                    <button id="change-password-btn" class="btn-secondary" data-i18n="btn_change_password">CHANGE PASSWORD</button>
-                </div>
-                <button id="enter-btn" class="btn-primary" data-i18n="btn_enter_call">ENTER VIDEO CALL</button>
-            </div>
-
-            <!-- Change Password Modal -->
-            <div id="change-password-modal" class="modal hidden">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 data-i18n="change_password_title">CHANGE PASSWORD</h3>
-                        <button id="close-password-modal" class="close-btn">✕</button>
-                    </div>
-                    <form id="change-password-form" class="form-section">
-                        <div class="form-group">
-                            <label data-i18n="label_current_password">CURRENT PASSWORD</label>
-                            <input type="password" id="current-password" placeholder="••••••••" autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label data-i18n="label_new_password">NEW PASSWORD</label>
-                            <input type="password" id="new-password" placeholder="••••••••" autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label data-i18n="label_confirm_new_password">CONFIRM NEW PASSWORD</label>
-                            <input type="password" id="confirm-new-password" placeholder="••••••••" autocomplete="off">
-                        </div>
-                        <div id="password-change-error" class="error-message"></div>
-                        <div class="modal-actions">
-                            <button type="button" id="cancel-password-btn" class="btn-secondary" data-i18n="btn_cancel">CANCEL</button>
-                            <button type="button" id="save-password-btn" class="btn-primary" data-i18n="btn_save">SAVE</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Full-Screen Video Container -->
-    <div id="video-container" class="hidden">
-        <!-- Transcription Toggle Button -->
-        <button id="stt-toggle" class="stt-toggle hidden" title="Toggle Speech-to-Text">
-            <span id="stt-icon">📝</span>
-        </button>
-        
-        <!-- Transcription Feed -->
-        <div id="transcript-feed" class="transcript-feed hidden">
-            <div class="transcript-header">
-                <span>TRANSCRIPTION</span>
-                <button id="clear-transcript" class="clear-btn">CLEAR</button>
-            </div>
-            <div id="transcript-content" class="transcript-content"></div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+  <script>
+    // No JS needed on landing. Keep console clean.
+  </script>
 </body>
 </html>
