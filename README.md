@@ -42,11 +42,19 @@ npm run dev
 
 ### Database Schema
 
-The app auto-creates these tables on first use:
+The application code will attempt to auto-create tables on first use when using the mock database or when tables don't exist. For production deployments with Postgres, you can optionally create the required tables manually:
+
+> **Note:** The `gen_random_uuid()` default values require the `pgcrypto` extension or PostgreSQL 13+. On PostgreSQL versions before 13, run:
+>
+> ```sql
+> CREATE EXTENSION IF NOT EXISTS pgcrypto;
+> ```
+>
+> If your deployment uses a migration system or ORM to manage the database, prefer that mechanism over running the DDL below directly.
 
 ```sql
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username VARCHAR(255),
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -61,7 +69,7 @@ CREATE TABLE users (
 );
 
 -- Creators table
-CREATE TABLE creators (
+CREATE TABLE IF NOT EXISTS creators (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id),
   slug VARCHAR(100) UNIQUE NOT NULL,
@@ -72,7 +80,7 @@ CREATE TABLE creators (
 );
 
 -- Rooms table  
-CREATE TABLE rooms (
+CREATE TABLE IF NOT EXISTS rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   creator_id UUID REFERENCES creators(id),
   room_slug VARCHAR(100),
@@ -85,7 +93,7 @@ CREATE TABLE rooms (
 );
 
 -- Sessions table (optional)
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id),
   token TEXT,

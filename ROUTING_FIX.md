@@ -23,14 +23,19 @@ The `vercel.json` file was using the old `routes` syntax which doesn't work prop
 {
   "rewrites": [
     { "source": "/login", "destination": "/login.html" },
-    ...
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/privacy", "destination": "/privacy.html" }
   ]
 }
 ```
 
-### 2. Added room.html
+**Important:** All page routes must have explicit rewrites. A catch-all pattern like `/:slug` would intercept API routes and static files, causing 404 errors. The current configuration uses only explicit rewrites to avoid conflicts.
 
-Created a placeholder room.html file that the routing references.
+### 2. Room routing via dynamic slugs
+
+Room URLs are handled via rewrites to the main app shell. The `room.html` file serves as a placeholder for future video room functionality.
 
 ## What Works Now
 

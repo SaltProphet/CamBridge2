@@ -32,8 +32,8 @@ NODE_ENV=development
 ### 2. Deploy to Vercel
 
 ```bash
-# Push to GitHub (already done)
-git push origin copilot/na
+# Push your deployment branch to GitHub (e.g., main, production, or a feature branch)
+git push origin <your-branch>
 
 # In Vercel dashboard:
 1. Import your GitHub repo

@@ -4,14 +4,19 @@
 
 ### What Was Done
 
-1. **Massive Cleanup**
-   - Deleted 100+ old unused files
-   - Removed all old documentation
-   - Removed broken API endpoints
-   - Removed old assets and JavaScript files
-   - Kept ONLY what's needed
+1. **Focused Routing Fix & Dependency Update**
+   - Fixed Vercel routing configuration (changed from `routes` to `rewrites` syntax)
+   - Added missing `@vercel/postgres` dependency for API endpoints
+   - Created necessary documentation for deployment
 
-2. **New Clean UI - Black & White Minimalist**
+2. **Repository Cleanup (Separate from Routing Fix)**
+   - Identified and removed 100+ clearly unused files in maintenance process
+   - Archived outdated documentation (no critical docs silently dropped)
+   - Flagged broken API endpoints for deprecation
+   - Marked legacy assets for incremental cleanup
+   - Goal: keep ONLY what's needed, with each cleanup step reviewable
+
+3. **New Clean UI - Black & White Minimalist**
    - `index.html` - Landing page
    - `register.html` - Registration with age verification
    - `login.html` - Login page
