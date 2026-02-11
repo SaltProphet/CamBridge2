@@ -12,26 +12,36 @@ const directConnectionString = process.env.POSTGRES_URL;
 
 let pool = null;
 let sql = null;
+let usingMockDb = false;
 
 if (pooledConnectionString) {
   // Use pooled connection (preferred for serverless)
+  console.log('✅ Using REAL Postgres database (pooled connection)');
   pool = createPool({ connectionString: pooledConnectionString });
   sql = pool.sql;
+  usingMockDb = false;
 } else if (directConnectionString) {
   // If only direct connection is available, we can't use createPool
   // Fall back to mock database and log a warning
-  console.warn('⚠️  Only POSTGRES_URL (direct connection) is available. Please set POSTGRES_PRISMA_URL for pooled connections in serverless environments.');
-  console.warn('⚠️  Using mock database instead.');
+  console.error('❌ ERROR: Only POSTGRES_URL (direct connection) is available.');
+  console.error('❌ Please set POSTGRES_PRISMA_URL for pooled connections in serverless environments.');
+  console.error('❌ USING MOCK DATABASE - DATA WILL NOT PERSIST!');
   sql = null;
+  usingMockDb = true;
 } else {
   // No database configured
+  console.warn('⚠️  NO DATABASE CONFIGURED');
+  console.warn('⚠️  Set POSTGRES_PRISMA_URL environment variable to persist data');
+  console.warn('⚠️  USING MOCK DATABASE - DATA WILL NOT PERSIST!');
   sql = null;
+  usingMockDb = true;
 }
 
 // Export sql template tag from pool
-export { sql };
+export { sql, usingMockDb };
 
 // In-memory mock database for testing when no Postgres is available
+// WARNING: This data is LOST on server restart!
 const mockDb = {
   users: [],
   rooms: [],

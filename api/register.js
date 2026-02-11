@@ -2,7 +2,7 @@
 // Register new user with email and password
 
 import bcrypt from 'bcryptjs';
-import { createUser, getUserByEmail } from './db-simple.js';
+import { createUser, getUserByEmail, usingMockDb } from './db-simple.js';
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
 
@@ -43,7 +43,18 @@ export default async function handler(req, res) {
     const result = await createUser(email, passwordHash);
 
     if (result.success) {
-      return res.status(200).json({ ok: true });
+      // Warn if using mock database
+      if (usingMockDb) {
+        console.warn('⚠️  User registered in MOCK database - data will be lost on restart!');
+        console.warn(`⚠️  Email: ${email}`);
+      } else {
+        console.log(`✅ User registered in real database: ${email}`);
+      }
+      
+      return res.status(200).json({ 
+        ok: true,
+        warning: usingMockDb ? 'Using temporary database - data will not persist' : null
+      });
     } else {
       return res.status(500).json({ error: result.error });
     }
