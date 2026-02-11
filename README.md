@@ -111,9 +111,9 @@ When `BETA_MODE=false`:
 - `paid_until TIMESTAMPTZ` - Subscription expiry (for paid plans)
 
 **New Pages**:
-- [creator-signup.html](creator-signup.html) - Password signup form
-- [creator-login.html](creator-login.html) - Password login form
-- [creator-dashboard.html](creator-dashboard.html) - Creator account management
+- [creator-signup.html](public/pages/creator-signup.html) - Password signup form
+- [creator-login.html](public/pages/creator-login.html) - Password login form
+- [creator-dashboard.html](public/pages/creator-dashboard.html) - Creator account management
 
 **New Endpoints**:
 - [api/auth/password-register.js](api/auth/password-register.js)
@@ -128,7 +128,18 @@ When `BETA_MODE=false`:
 
 ---
 
-## 🚀 Phase 1 - Passwordless Auth + Creator System
+## � Documentation
+
+For comprehensive documentation, refer to [docs/INDEX.md](docs/INDEX.md) which includes guides for:
+- **Getting Started**: Deployment, setup, and authentication
+- **Architecture**: System design and project structure
+- **Implementation**: Feature details and test specifications
+- **Roadmap**: Phase tracking and development status
+- **Reference**: Analysis, comparisons, and legacy code
+
+---
+
+## �🚀 Phase 1 - Passwordless Auth + Creator System
 
 CamBridge now includes a complete passwordless authentication system with creator onboarding and join request workflow:
 
