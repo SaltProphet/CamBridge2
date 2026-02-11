@@ -4,7 +4,7 @@ Multi-Tenant Private Video Room Platform - Secure Model Authentication System
 ## Overview
 CamBridge is a multi-tenant "room rental" platform where models can rent private video spaces and keep 100% of their tips. Built with the REAPER design language and optimized for trans-Atlantic connections (e.g., Indiana ↔ South Africa).
 
-**Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and secure database-backed authentication with password hashing and JWT tokens.
+**Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and secure database-backed passwordless authentication with JWT sessions.
 
 ## 🚀 NEW: Phase 1 - Passwordless Auth + Creator System
 
@@ -124,7 +124,7 @@ Add TwilioVideoProvider class implementation in `api/providers/video.js`, update
 - Sessions: JWT tokens (7-day expiration)
 
 **What We DON'T Store**:
-- Passwords (passwordless auth only)
+- Passwords (not used; passwordless auth only)
 - Video/call recordings (never stored)
 - Chat messages (P2P only, never persisted)
 - Payment details (handled by external providers)
@@ -217,26 +217,20 @@ Existing sessions continue. New approvals queued manually or disabled until reso
 
 ---
 
-## 🔐 Legacy: Password-Based Authentication
+## 🔐 MVP Authentication Mode: Passwordless Only
 
-CamBridge still supports the original authentication system for existing users:
+CamBridge now ships with a single MVP auth mode: magic-link passwordless authentication.
 
-### For Models (Performers)
-- **Create Account**: Register at `/register` with username, email, and secure password
-- **Secure Login**: JWT token-based authentication with 7-day sessions
-- **Password Security**: Bcrypt hashing with 12 salt rounds
-- **Profile Management**: Update display name, bio, and avatar
-- **Room Management**: Create and manage multiple private rooms
-- **Access Control**: Generate and change room access codes via dashboard
+### Supported Auth Endpoints
+- `POST /api/auth/start` to request a magic-link email
+- `GET /api/auth/callback` to verify the token, create/login the user, and set `auth_token`
+- `POST /api/auth/logout` to invalidate the DB session and clear the `auth_token` cookie
 
-### For Developers
-- **Database Integration**: Postgres-backed user accounts, rooms, and sessions
-- **API Endpoints**: RESTful API for auth, profile, and room management
-- **Rate Limiting**: Protection against brute force attacks
-- **Input Validation**: Comprehensive sanitization and validation
-- **Session Management**: Secure token storage and expiration
+### Deprecated Endpoints
+- `POST /api/auth/register` → returns `410 Gone`
+- `POST /api/auth/login` → returns `410 Gone`
 
-See [AUTH_SETUP.md](AUTH_SETUP.md) for complete setup instructions.
+Legacy password instructions and flows are intentionally removed.
 
 ## New Multi-Tenant Features
 
@@ -277,7 +271,7 @@ See [AUTH_SETUP.md](AUTH_SETUP.md) for complete setup instructions.
 - `/` or `/landing.html` - Public marketing page
 - `/room/:modelname` - Model's default (main) room with access code gate
 - `/room/:modelname/:roomslug` - Specific room by slug (e.g., `/room/testmodel/vip`)
-- `/dashboard` or `/dashboard.html` - Model dashboard (password protected)
+- `/dashboard` or `/dashboard.html` - Model dashboard (session protected via passwordless auth)
 - `/app` or `/app.html` - Legacy bridge interface (original single-user mode)
 - `/api/*` - RESTful API endpoints for authentication and room management
 
@@ -365,8 +359,8 @@ Quick start:
 1. Set up Postgres database (Vercel Postgres or Neon)
 2. Configure environment variables (see `.env.example`)
 3. Initialize database tables via `/api/init-db`
-4. Models can register at `/register`
-5. Models login at `/dashboard`
+4. Users request a magic link via `POST /api/auth/start`
+5. Users complete login via `GET /api/auth/callback` and are redirected to `/dashboard`
 
 ### Environment Variables
 
@@ -415,9 +409,7 @@ DEEPGRAM_KEY=your-deepgram-key
    }
    ```
 
-2. **Model Dashboard Password**: Edit `dashboard.html` and change the demo password:
-   ```javascript
-   const DEMO_PASSWORD = 'your-secure-password-here';
+2. **Model Dashboard Access**: Use passwordless auth (`/api/auth/start` + `/api/auth/callback`) to access dashboard sessions.
    ```
    *Note: In production, use server-side authentication with a proper backend.*
 
@@ -486,7 +478,6 @@ The configuration:
 - `/landing` or `/landing.html` → Serves landing page
 - `/dashboard` or `/dashboard.html` → Serves dashboard page
 - `/room` or `/room.html` → Serves room page
-- `/register` or `/register.html` → Serves registration page
 
 #### Option 2: Netlify
 Create a `_redirects` file:
@@ -520,9 +511,7 @@ Not recommended for multi-tenant mode due to lack of URL rewriting support. Use 
 ### Multi-Tenant Platform Usage
 
 #### For Models:
-1. **Access Dashboard**: Go to `/dashboard` and login with:
-   - Model Name: Your assigned model name (e.g., "testmodel")
-   - Password: The dashboard password (default: "modelpass")
+1. **Access Dashboard**: Start passwordless auth via `POST /api/auth/start`, then complete `GET /api/auth/callback` to enter `/dashboard`.
 
 2. **Manage Your Rooms**:
    - **View All Rooms**: See list of all your rooms with type indicators (🌐 Public / 🔒 Private Ultra)
@@ -673,11 +662,11 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 ## Security Notes
 
 ### Authentication Security (NEW)
-- **Password Hashing**: Bcrypt with 12 salt rounds - industry standard
-- **JWT Tokens**: 7-day expiration with secure signing
-- **Rate Limiting**: Protection against brute force (5 registrations/hour, 10 logins/15min)
-- **Input Validation**: Comprehensive sanitization and validation
-- **Session Management**: Database-backed session tracking
+- **Passwordless Flow**: Magic-link login via `POST /api/auth/start` and `GET /api/auth/callback`
+- **JWT Sessions**: 7-day expiration with secure signing
+- **Single-Use Tokens**: SHA-256 hashed login tokens with 15-minute TTL
+- **Rate Limiting**: Login request throttling for abuse prevention
+- **Session Management**: Database-backed session tracking + HttpOnly auth cookie
 - **HTTPS Required**: Secure communication for all API calls
 - **Database Integration**: Postgres with parameterized queries (SQL injection prevention)
 
@@ -696,7 +685,7 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 - **Private Ultra Rooms**: Enhanced security with separate Daily.co namespace, ideal for exclusive VIP sessions
 
 ### General Security
-- Change the dashboard password before deployment (`dashboard.html`)
+- Ensure passwordless auth providers/env vars are configured before deployment
 - Configure models and rooms in `config.json` for subscription control
 - Use HTTPS in production (required for camera/microphone access)
 - Keep Daily.co API credentials secure
@@ -711,7 +700,7 @@ CamBridge forces P2P mode in Daily.co to minimize routing lag:
 
 ### Recommended Practices
 - Rotate room access codes regularly via dashboard
-- Use server-side authentication in production (not client-side password check)
+- Use passwordless server-side auth endpoints only (`/api/auth/start` + `/api/auth/callback`)
 - Create separate rooms for different client tiers (public vs private ultra)
 - Monitor active models list for subscription status
 - Implement Stripe or crypto payments for automated subscription management
