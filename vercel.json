@@ -1,6 +1,5 @@
 {
-  "installCommand": "npm install",
-  "buildCommand": "echo 'Static site - no build needed'",
+  "buildCommand": "echo 'No build required'",
   "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false
