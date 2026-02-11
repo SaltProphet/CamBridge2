@@ -1,8 +1,8 @@
 # CamBridge: Development Roadmap
 
 **Updated:** February 11, 2026  
-**Current Status:** Phase 3.2 Complete → Starting Phase 3.3  
-**Overall MVP Completion:** 95% (Stripe Core Complete)
+**Current Status:** Pre-launch Beta → Manual Payments Only  
+**Overall MVP Completion:** 96% (Manual Payments Ready, Hardening Underway)
 
 ---
 
@@ -16,7 +16,7 @@
 | **Phase 3.1** | ✅ COMPLETE | 100% | Manual Payments + Communications |
 | **Phase 3.2** | ✅ COMPLETE | 100% | Stripe Checkout + Webhooks |
 | **Phase 3.3** | ⏳ PLANNED | 0% | CCBill Payment Integration |
-| **Phase 4** | ⏳ PLANNED | 0% | Production Hardening |
+| **Phase 4** | 🔄 IN PROGRESS | 0% | Production Hardening |
 
 ---
 
@@ -295,6 +295,11 @@ Add CCBill as alternative payment processor for creators who prefer monthly recu
 
 ### Objective
 Harden application for production deployment with monitoring, logging, and scaling.
+
+### Pre-launch Beta Focus
+- Manual payments only for beta onboarding
+- Stripe checkout available but optional
+- CCBill integration remains planned post-beta
 
 ### Key Items
 - [ ] Add structured logging for all payment events
