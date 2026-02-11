@@ -89,11 +89,13 @@ DEEPGRAM_KEY=your-deepgram-api-key-optional
 
 3. **Routing**
    - `/` → `index.html` (auto-served by Vercel)
-   - `/landing.html` → `landing.html`
-   - `/register` → `register.html` (Vercel auto-handles `.html` extension)
-   - `/dashboard` → `dashboard.html`
-   - `/room.html` → `room.html`
+   - `/landing` → `landing.html` (cleanUrls enabled)
+   - `/register` → `register.html` (cleanUrls enabled)
+   - `/dashboard` → `dashboard.html` (cleanUrls enabled)
+   - `/room` → `room.html` (cleanUrls enabled)
    - `/api/*` → Serverless functions in `api/` directory
+   
+   Note: With `cleanUrls: true`, both `/page` and `/page.html` work for any HTML file.
 
 ### Troubleshooting
 

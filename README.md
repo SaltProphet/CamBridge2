@@ -481,11 +481,12 @@ vercel --prod
 The configuration:
 - Serves all static files (HTML, JS, CSS) from root directory
 - API functions in `/api/*` are auto-detected and deployed as serverless functions
+- `cleanUrls: true` automatically strips `.html` extensions from URLs
 - `/` → Automatically serves `index.html`
-- `/landing.html` → Serves landing page
-- `/dashboard` → Serves `dashboard.html` (Vercel auto-handles .html extension)
-- `/room.html` → Serves room page
-- `/register` → Serves `register.html`
+- `/landing` or `/landing.html` → Serves landing page
+- `/dashboard` or `/dashboard.html` → Serves dashboard page
+- `/room` or `/room.html` → Serves room page
+- `/register` or `/register.html` → Serves registration page
 
 #### Option 2: Netlify
 Create a `_redirects` file:
