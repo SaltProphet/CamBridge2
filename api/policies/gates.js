@@ -15,6 +15,8 @@ class KillSwitch {
     this.allowNewRooms = process.env.KILL_SWITCH_NEW_ROOMS !== 'false';
     this.allowJoinApprovals = process.env.KILL_SWITCH_JOIN_APPROVALS !== 'false';
     this.allowNewCreators = process.env.KILL_SWITCH_NEW_CREATORS !== 'false';
+    // BETA_MODE: Enable self-serve creator signup without subscription enforcement
+    this.betaMode = process.env.BETA_MODE === 'true';
   }
 
   isSignupsEnabled() {
@@ -33,12 +35,17 @@ class KillSwitch {
     return this.allowNewCreators;
   }
 
+  isBetaMode() {
+    return this.betaMode;
+  }
+
   getStatus() {
     return {
       signups: this.allowNewSignups,
       newRooms: this.allowNewRooms,
       joinApprovals: this.allowJoinApprovals,
-      newCreators: this.allowNewCreators
+      newCreators: this.allowNewCreators,
+      betaMode: this.betaMode
     };
   }
 }
@@ -118,6 +125,11 @@ export class PolicyGates {
     // Check if creator status is active
     if (creator.status !== 'active') {
       return { allowed: false, reason: 'Creator account is not active' };
+    }
+
+    // BETA_MODE: Skip subscription checks for beta creators
+    if (killSwitch.isBetaMode() && creator.plan_status === 'beta') {
+      return { allowed: true };
     }
 
     // Check payment/subscription status if provider is configured

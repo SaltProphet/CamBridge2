@@ -6,7 +6,129 @@ CamBridge is a multi-tenant "room rental" platform where models can rent private
 
 **Platform Features**: Model-first economy with $30/month flat rate per room, zero commissions on tips, P2P encrypted video, and secure database-backed passwordless authentication with JWT sessions.
 
-## 🚀 NEW: Phase 1 - Passwordless Auth + Creator System
+## 🚀 BETA MODE: Creator Self-Signup
+
+CamBridge now supports **BETA MODE** for rapid creator onboarding without payment processing infrastructure.
+
+### Quick Start
+
+**1. Enable BETA MODE**:
+```bash
+BETA_MODE=true
+JWT_SECRET=your-secret-key
+DATABASE_URL=your-database-url
+```
+
+**2. Run Migration**:
+```sql
+-- See scripts/beta-mode-migration.sql
+ALTER TABLE creators ADD COLUMN plan_status VARCHAR(50) DEFAULT 'beta';
+ALTER TABLE creators ADD COLUMN cashapp_handle VARCHAR(255);
+ALTER TABLE creators ADD COLUMN paypal_link VARCHAR(500);
+ALTER TABLE creators ADD COLUMN paid_until TIMESTAMPTZ;
+```
+
+**3. Share With Creators**:
+- Sign up: https://yoursite.com/creator-signup.html
+- Log in: https://yoursite.com/creator-login.html
+- Dashboard: https://yoursite.com/creator-dashboard.html
+
+### What's Included
+
+**Creator Features**:
+- Self-signup with email/password (no magic links)
+- Auto-generated unique creator slug
+- Dashboard with creator URL + rooms
+- Set CashApp handle and PayPal link
+- Room list with share-ready URLs
+
+**Viewer Experience**:
+- See CashApp/PayPal buttons on room access page
+- Open payment links in new tab (no platform tracking)
+- Direct payments to creator
+
+**Security**:
+- Password hashing with bcryptjs
+- JWT tokens (7-day expiration)
+- HttpOnly cookies (SameSite=Strict)
+- Rate limiting: 10 logins/hour per email
+- Input validation on email, password, slugs, handles
+
+**Zero Setup Required**:
+- ❌ No email provider (Resend, SendGrid, etc.)
+- ❌ No payment processor (Stripe, CCBill, etc.)
+- ❌ No outbound email service
+- ❌ No custom domain needed
+- ✅ Just `BETA_MODE=true` + database
+
+### API Endpoints
+
+**Auth**:
+```
+POST /api/auth/password-register
+  {email, password, displayName, desiredSlug, ageConfirm, tosAccept}
+  → {token, user}
+
+POST /api/auth/password-login
+  {email, password}
+  → {token, user}
+```
+
+**Creator Profile** (authenticated):
+```
+GET /api/creator/info
+  → {slug, displayName, cashappHandle, paypalLink, ...}
+
+PUT /api/creator/info
+  {displayName, bio, cashappHandle, paypalLink}
+  → updated creator object
+```
+
+**Public Info** (no auth):
+```
+GET /api/creator/public-info?slug=creator-slug
+  → {slug, displayName, cashappHandle, paypalLink}
+```
+
+### Plan Status & Bypass
+
+When `BETA_MODE=true`:
+- All new creators get `plan_status='beta'`
+- Policy gates skip subscription enforcement for beta creators
+- Age gates + ToS gates + bans still enforced
+- Rate limits still applied
+
+When `BETA_MODE=false`:
+- Reverts to existing plan/subscription model
+- Creators must have valid payment status
+
+### Database Changes
+
+**New Columns** (creators table):
+- `plan_status VARCHAR(50)` - Tracks enrollment state: 'beta' | 'active' | 'suspended'
+- `cashapp_handle VARCHAR(255)` - CashApp $handle
+- `paypal_link VARCHAR(500)` - PayPal donate/money link
+- `paid_until TIMESTAMPTZ` - Subscription expiry (for paid plans)
+
+**New Pages**:
+- [creator-signup.html](creator-signup.html) - Password signup form
+- [creator-login.html](creator-login.html) - Password login form
+- [creator-dashboard.html](creator-dashboard.html) - Creator account management
+
+**New Endpoints**:
+- [api/auth/password-register.js](api/auth/password-register.js)
+- [api/auth/password-login.js](api/auth/password-login.js)
+- [api/creator/public-info.js](api/creator/public-info.js)
+
+**Modified**:
+- [api/policies/gates.js](api/policies/gates.js) - Added BETA_MODE bypass
+- [api/creator/info.js](api/creator/info.js) - Added payment link fields
+- [room.html](room.html) + [room.js](room.js) - Added payment button panel
+- [landing.html](landing.html) - Added creator signup CTAs
+
+---
+
+## 🚀 Phase 1 - Passwordless Auth + Creator System
 
 CamBridge now includes a complete passwordless authentication system with creator onboarding and join request workflow:
 

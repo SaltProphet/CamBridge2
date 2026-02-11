@@ -32,8 +32,12 @@ export default async function handler(req, res) {
         displayName: creator.display_name,
         bio: creator.bio,
         plan: creator.plan,
+        planStatus: creator.plan_status,
         status: creator.status,
         referralCode: creator.referral_code,
+        // BETA MODE: Payment link fields
+        cashappHandle: creator.cashapp_handle,
+        paypalLink: creator.paypal_link,
         createdAt: creator.created_at
       });
     } catch (error) {
@@ -47,7 +51,7 @@ export default async function handler(req, res) {
   // PUT - Update creator info
   if (req.method === 'PUT') {
     try {
-      const { bio, displayName } = req.body;
+      const { bio, displayName, cashappHandle, paypalLink } = req.body;
       
       const updates = {};
       
@@ -74,6 +78,42 @@ export default async function handler(req, res) {
         }
         updates.displayName = sanitizedDisplayName;
       }
+
+      // BETA MODE: Validate and sanitize payment link fields
+      if (cashappHandle !== undefined) {
+        if (cashappHandle === null || cashappHandle === '') {
+          updates.cashappHandle = null; // Allow clearing
+        } else if (typeof cashappHandle !== 'string') {
+          return res.status(400).json({ error: 'CashApp handle must be a string' });
+        } else {
+          const sanitizedHandle = sanitizeInput(cashappHandle.trim());
+          if (sanitizedHandle.length > 255) {
+            return res.status(400).json({ error: 'CashApp handle must be 255 characters or less' });
+          }
+          if (!/^[\w.-]+$/.test(sanitizedHandle)) {
+            return res.status(400).json({ error: 'CashApp handle can only contain letters, numbers, dots, hyphens, and underscores' });
+          }
+          updates.cashappHandle = sanitizedHandle;
+        }
+      }
+
+      if (paypalLink !== undefined) {
+        if (paypalLink === null || paypalLink === '') {
+          updates.paypalLink = null; // Allow clearing
+        } else if (typeof paypalLink !== 'string') {
+          return res.status(400).json({ error: 'PayPal link must be a string' });
+        } else {
+          const sanitizedLink = sanitizeInput(paypalLink.trim());
+          if (sanitizedLink.length > 500) {
+            return res.status(400).json({ error: 'PayPal link must be 500 characters or less' });
+          }
+          // Basic URL validation
+          if (!sanitizedLink.startsWith('https://') && !sanitizedLink.startsWith('http://')) {
+            return res.status(400).json({ error: 'PayPal link must start with http:// or https://' });
+          }
+          updates.paypalLink = sanitizedLink;
+        }
+      }
       
       // Check if there are any updates
       if (Object.keys(updates).length === 0) {
@@ -98,8 +138,12 @@ export default async function handler(req, res) {
           displayName: result.creator.display_name,
           bio: result.creator.bio,
           plan: result.creator.plan,
+          planStatus: result.creator.plan_status,
           status: result.creator.status,
           referralCode: result.creator.referral_code,
+          // BETA MODE: Payment link fields
+          cashappHandle: result.creator.cashapp_handle,
+          paypalLink: result.creator.paypal_link,
           createdAt: result.creator.created_at
         }
       });

@@ -119,6 +119,70 @@ async function initializeRoom() {
     
     // Initialize access key validation
     initializeAccessKeyValidation();
+
+    // BETA MODE: Load and display payment links
+    loadPaymentLinks();
+}
+
+// BETA MODE: Load creator payment links and display them
+async function loadPaymentLinks() {
+    try {
+        // Extract creator slug from URL (modelName is the creator slug)
+        if (!modelName) return;
+
+        // Fetch public creator info using the slug
+        const response = await fetch(`/api/creator/public-info?slug=${encodeURIComponent(modelName)}`);
+        
+        if (!response.ok) {
+            // Creator not found or endpoint not available, silently fail
+            return;
+        }
+
+        const creator = await response.json();
+        
+        // Check if creator has any payment links
+        if (!creator.cashappHandle && !creator.paypalLink) {
+            return; // No payment links to display
+        }
+
+        // Build payment buttons
+        const paymentLinksDiv = document.getElementById('payment-links');
+        const paymentButtonsDiv = document.getElementById('payment-buttons');
+        
+        if (!paymentLinksDiv || !paymentButtonsDiv) return;
+
+        let buttonsHTML = '';
+
+        if (creator.cashappHandle) {
+            const cashappUrl = `https://cash.app/${encodeURIComponent(creator.cashappHandle)}`;
+            buttonsHTML += `
+                <a href="${cashappUrl}" target="_blank" rel="noopener noreferrer" style="flex: 1; min-width: 120px;">
+                    <button style="width: 100%; padding: 12px; background: transparent; border: 1px solid #00ff88; color: #00ff88; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s; font-weight: 500;">
+                        CASHAPP
+                    </button>
+                </a>
+            `;
+        }
+
+        if (creator.paypalLink) {
+            buttonsHTML += `
+                <a href="${creator.paypalLink}" target="_blank" rel="noopener noreferrer" style="flex: 1; min-width: 120px;">
+                    <button style="width: 100%; padding: 12px; background: transparent; border: 1px solid #00ff88; color: #00ff88; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s; font-weight: 500;">
+                        PAYPAL
+                    </button>
+                </a>
+            `;
+        }
+
+        if (buttonsHTML) {
+            paymentButtonsDiv.innerHTML = buttonsHTML;
+            paymentLinksDiv.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.log('Failed to load payment links (this is OK):', error);
+        // Silently fail - payment links are optional
+    }
 }
 
 // Environment variables for Deepgram

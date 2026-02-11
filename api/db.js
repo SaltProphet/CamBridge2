@@ -107,6 +107,14 @@ export async function initializeTables() {
     await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS subscription_canceled_at TIMESTAMPTZ`;
     await sql`CREATE INDEX IF NOT EXISTS idx_creators_subscription_external ON creators(subscription_provider, subscription_external_id)`;
 
+    // BETA MODE: Add columns for self-serve creator signup and manual payments
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS plan_status VARCHAR(50) DEFAULT 'beta'`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS cashapp_handle VARCHAR(255)`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS paypal_link VARCHAR(500)`;
+    await sql`ALTER TABLE creators ADD COLUMN IF NOT EXISTS paid_until TIMESTAMPTZ`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creators_plan_status ON creators(plan_status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_creators_paid_until ON creators(paid_until)`;
+
     // Extend rooms table with Phase 1 fields
     await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS creator_id UUID REFERENCES creators(id) ON DELETE CASCADE`;
     await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_slug VARCHAR(100)`;
@@ -928,7 +936,7 @@ export async function getCreatorByExternalSubscriptionId(provider, externalId) {
 
 export async function updateCreatorInfo(creatorId, updates) {
   try {
-    const { bio, displayName } = updates;
+    const { bio, displayName, cashappHandle, paypalLink } = updates;
     
     // Build dynamic SET clause only for provided fields
     const setClauses = [];
@@ -944,6 +952,19 @@ export async function updateCreatorInfo(creatorId, updates) {
     if (displayName !== undefined) {
       setClauses.push(`display_name = $${paramIndex}`);
       values.push(displayName);
+      paramIndex++;
+    }
+
+    // BETA MODE: Update payment link fields
+    if (cashappHandle !== undefined) {
+      setClauses.push(`cashapp_handle = $${paramIndex}`);
+      values.push(cashappHandle);
+      paramIndex++;
+    }
+
+    if (paypalLink !== undefined) {
+      setClauses.push(`paypal_link = $${paramIndex}`);
+      values.push(paypalLink);
       paramIndex++;
     }
     

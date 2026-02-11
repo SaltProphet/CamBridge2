@@ -217,6 +217,10 @@
             margin-top: 4rem;
         }
 
+        .cta-group.secondary {
+            margin-top: 2rem;
+        }
+
         .btn {
             padding: 1.2rem 2.5rem;
             font-family: 'Montserrat', sans-serif;
@@ -273,6 +277,18 @@
             background-color: rgba(212, 175, 55, 0.1);
             transform: translateY(-3px);
             box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .btn-beta {
+            background: transparent;
+            color: var(--gold);
+            border: 2px solid var(--gold);
+            font-size: 0.85rem;
+            padding: 1rem 2rem;
+        }
+
+        .btn-beta:hover {
+            background: rgba(212, 175, 55, 0.05);
         }
 
         /* Room Entry Modal */
@@ -515,6 +531,19 @@
                 </button>
                 <a href="/dashboard.html" class="btn btn-secondary">
                     Performer Portal
+                </a>
+            </div>
+
+            <!-- BETA MODE: Creator Self-Signup CTAs -->
+            <div class="cta-group secondary">
+                <p style="color: var(--gold); font-size: 0.9rem; margin-bottom: 1.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1rem;">
+                    Start Earning Today
+                </p>
+                <a href="/creator-signup.html" class="btn btn-primary">
+                    Creator Sign Up
+                </a>
+                <a href="/creator-login.html" class="btn btn-beta">
+                    Creator Login
                 </a>
             </div>
         </div>
