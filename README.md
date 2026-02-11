@@ -1,133 +1,139 @@
-# CamBridge - Minimal Auth + Room System
+# CamBridge
 
-A minimal, deterministic authentication and room management system.
+A minimalist video room platform. Create your room, share the link, control who joins.
 
 ## Features
 
-- User registration with email/password and age verification
-- JWT-based authentication with HttpOnly cookies
-- Room creation and management
-- Public room pages
-- Clean URL routing via Vercel
-
-## File Structure
-
-```
-/
-  index.html          - Landing page
-  register.html       - Registration form
-  login.html          - Login form
-  dashboard.html      - Create rooms and view your rooms
-  room.html           - Public room page
-  terms.html          - Terms of service
-  privacy.html        - Privacy policy
-
-/api
-  register.js         - POST /api/register
-  login.js            - POST /api/login
-  logout.js           - POST /api/logout
-  me.js               - GET /api/me
-  rooms-create.js     - POST /api/rooms-create
-  rooms-list.js       - GET /api/rooms-list
-  rooms-public.js     - GET /api/rooms-public
-
-/lib
-  db.js               - PostgreSQL connection pool
-  auth.js             - JWT sign/verify utilities
-```
-
-## Database Schema
-
-Two tables only:
-
-### users
-- id (uuid, primary key)
-- email (text, unique)
-- password_hash (text)
-- age_confirmed_at (timestamp)
-- created_at (timestamp)
-
-### rooms
-- id (uuid, primary key)
-- owner_id (uuid, foreign key to users)
-- slug (text, unique)
-- created_at (timestamp)
+- **Clean & Simple**: Black and white minimalist design
+- **Private Rooms**: Each creator gets their own custom URL
+- **Age Verified**: 18+ only platform
+- **Privacy First**: Peer-to-peer video, no recording
 
 ## Setup
 
-### 1. Install Dependencies
+### Environment Variables
+
+Create a `.env` file or set these in your Vercel project:
 
 ```bash
+# Required for production
+POSTGRES_URL=your_postgres_connection_string
+POSTGRES_PRISMA_URL=your_postgres_pooled_connection_string
+JWT_SECRET=your_jwt_secret_key_here
+
+# Optional - for local dev
+NODE_ENV=development
+
+# BETA MODE - Set to 'true' to enable registration
+BETA_MODE=true
+```
+
+### Local Development
+
+```bash
+# Install dependencies
 npm install
+
+# Run locally (mock database if no Postgres configured)
+npm run dev
+
+# The app will use in-memory mock database if POSTGRES_URL is not set
 ```
 
-### 2. Environment Variables
+### Database Schema
 
-Create a `.env` file with:
+The application code will attempt to auto-create tables on first use when using the mock database or when tables don't exist. For production deployments with Postgres, you can optionally create the required tables manually:
 
+> **Note:** The `gen_random_uuid()` default values require the `pgcrypto` extension or PostgreSQL 13+. On PostgreSQL versions before 13, run:
+>
+> ```sql
+> CREATE EXTENSION IF NOT EXISTS pgcrypto;
+> ```
+>
+> If your deployment uses a migration system or ORM to manage the database, prefer that mechanism over running the DDL below directly.
+
+```sql
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(255),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255),
+  display_name VARCHAR(255),
+  is_active BOOLEAN DEFAULT true,
+  role VARCHAR(50),
+  age_attested_at TIMESTAMPTZ,
+  tos_accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Creators table
+CREATE TABLE IF NOT EXISTS creators (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  slug VARCHAR(100) UNIQUE NOT NULL,
+  display_name VARCHAR(255),
+  plan_status VARCHAR(50),
+  status VARCHAR(50),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Rooms table  
+CREATE TABLE IF NOT EXISTS rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id UUID REFERENCES creators(id),
+  room_slug VARCHAR(100),
+  room_name VARCHAR(255),
+  room_type VARCHAR(50),
+  enabled BOOLEAN DEFAULT true,
+  join_mode VARCHAR(50),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Sessions table (optional)
+CREATE TABLE IF NOT EXISTS sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  token TEXT,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
-POSTGRES_URL=postgresql://username:password@host:port/database
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
 
-### 3. Initialize Database
+## Deployment
 
-Run the SQL schema:
+### Vercel (Recommended)
 
-```bash
-psql $POSTGRES_URL < schema.sql
-```
+1. Push to GitHub
+2. Import project in Vercel
+3. Set environment variables
+4. Deploy
 
-### 4. Deploy to Vercel
+### Other Platforms
 
-```bash
-vercel
-```
-
-Set environment variables in Vercel dashboard:
-- `POSTGRES_URL`
-- `JWT_SECRET`
+CamBridge is a standard Node.js app and can be deployed to any platform that supports:
+- Node.js 18+
+- PostgreSQL database
+- Serverless functions
 
 ## API Endpoints
 
-### POST /api/register
-**Input:** `{ email, password, ageConfirmed }`  
-**Returns:** `{ ok: true }` or `{ ok: false, error: "..." }`
+- `POST /api/auth/password-register` - Create account
+- `POST /api/auth/password-login` - Login
+- `GET /api/creator/info` - Get creator profile (auth required)
+- `POST /api/auth/logout` - Logout
 
-### POST /api/login
-**Input:** `{ email, password }`  
-**Returns:** `{ ok: true }` (sets HttpOnly cookie)
+## Pages
 
-### POST /api/logout
-**Returns:** `{ ok: true }` (clears cookie)
-
-### GET /api/me
-**Returns:** `{ ok: true, user: { id, email } }` (requires auth)
-
-### POST /api/rooms-create
-**Input:** `{ slug }`  
-**Returns:** `{ ok: true }` (requires auth)
-
-### GET /api/rooms-list
-**Returns:** Array of rooms owned by current user (requires auth)
-
-### GET /api/rooms-public?slug=...
-**Returns:** Public room info
-
-## User Flow
-
-1. Visitor → `/` → Click Register
-2. `/register` → POST `/api/register` → Redirect `/login`
-3. `/login` → POST `/api/login` → Cookie set → Redirect `/dashboard`
-4. `/dashboard` → Create room → `/room/myroom` → Public page loads
-
-## Security
-
-- Passwords hashed with bcrypt (cost: 12)
-- JWT tokens expire after 7 days
-- HttpOnly cookies prevent XSS attacks
-- All emails stored lowercase
-- All slugs stored lowercase
+- `/` - Landing page
+- `/register` - Create account
+- `/login` - Login
+- `/dashboard` - User dashboard (shows room link)
+- `/terms` - Terms of Service
+- `/privacy` - Privacy Policy
+- `/:slug` - Creator's video room (TODO)
 
 ## License
 

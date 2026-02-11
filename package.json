@@ -16,6 +16,7 @@
     "create:test-user": "node scripts/create-test-user.js"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.5.1",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.11.3"

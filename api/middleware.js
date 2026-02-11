@@ -214,7 +214,7 @@ export async function authenticate(req) {
 // Admin access check
 export async function requireAdmin(userId, queryfn = null) {
   if (!queryfn) {
-    queryfn = sql;
+    queryfn = await getSqlApi();
   }
 
   try {
